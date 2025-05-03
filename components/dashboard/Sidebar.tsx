@@ -29,7 +29,11 @@ import {
   ChevronRight, 
   User, 
   Bot, 
-  FolderClosed 
+  FolderClosed,
+  MessageSquare,
+  List,
+  MemoryStick,
+  ToyBrick
 } from "lucide-react";
 import { useDashboard } from './context/DashboardContext';
 import { cn } from "@/lib/utils"; // Assuming you have a utility for class names
@@ -43,12 +47,22 @@ export default function Sidebar() {
     isLoadingAgents, 
     agentError,
     selectedAgentId,
-    setSelectedAgentId
+    setSelectedAgentId,
+    activeAgentView,
+    setActiveAgentView
   } = useDashboard();
+
+  // Sub-menu items configuration
+  const agentSubMenuItems = [
+    { id: 'chat', label: 'Chat', icon: MessageSquare },
+    { id: 'conversations', label: 'Conversations', icon: List },
+    { id: 'memory', label: 'Memory', icon: MemoryStick },
+    { id: 'actions', label: 'Actions', icon: ToyBrick },
+  ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r border-gray-800 bg-gray-950 sm:flex">
-      <nav className="flex flex-col gap-4 px-4 py-4">
+      <nav className="flex flex-1 flex-col gap-4 px-4 py-4">
         {/* Organization Selector - Placeholder */} 
         <div className="group flex h-9 w-full shrink-0 items-center justify-center rounded-md border border-dashed border-gray-700 text-sm font-medium text-gray-400">
           <FolderClosed className="h-4 w-4 mr-2" />
@@ -66,15 +80,41 @@ export default function Sidebar() {
             <div className="p-2 text-sm text-gray-400">No agents found.</div>
           ) : (
             agents.map((agent) => (
-              <Button
-                key={agent.id}
-                variant={selectedAgentId === agent.id ? "secondary" : "ghost"}
-                className="w-full justify-start text-sm h-9"
-                onClick={() => setSelectedAgentId(agent.id)}
-              >
-                <Bot className="mr-2 h-4 w-4" />
-                {`${agent.firstName} ${agent.lastName}`}
-              </Button>
+              <div key={agent.id} className="flex flex-col">
+                {/* Agent Selection Button */}
+                <Button
+                  variant={selectedAgentId === agent.id ? "secondary" : "ghost"}
+                  className="w-full justify-start text-sm h-9 font-medium"
+                  onClick={() => setSelectedAgentId(agent.id)}
+                >
+                  <Bot className="mr-2 h-4 w-4" />
+                  {`${agent.firstName} ${agent.lastName}`}
+                </Button>
+                
+                {/* Sub-menu for the selected agent */}
+                {selectedAgentId === agent.id && (
+                  <div className="mt-1 mb-2 pl-5 flex flex-col gap-1">
+                    {agentSubMenuItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeAgentView === item.id;
+                      return (
+                        <Button
+                          key={item.id}
+                          variant={isActive ? "secondary" : "ghost"}
+                          className={cn(
+                            "w-full justify-start text-sm h-8",
+                            isActive ? "font-semibold" : "font-normal text-gray-400 hover:text-gray-200"
+                          )}
+                          onClick={() => setActiveAgentView(item.id as any)}
+                        >
+                          <Icon className="mr-2 h-4 w-4" />
+                          {item.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>

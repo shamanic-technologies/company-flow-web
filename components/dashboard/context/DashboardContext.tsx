@@ -1,8 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ApiKey, PlatformUser, ServiceResponse, Agent } from '@agent-base/types';
+import { ApiKey, PlatformUser, ServiceResponse, Agent, Conversation } from '@agent-base/types';
 
 
 // Define the context type with agent-related state
@@ -27,6 +27,8 @@ interface DashboardContextType {
   agentError: string | null;
   fetchAgents: () => Promise<void>; // Changed to no args, token used internally
   authToken: string; // Add authToken to the context type
+  activeAgentView: 'chat' | 'conversations' | 'memory' | 'actions'; // New state for active view
+  setActiveAgentView: (view: 'chat' | 'conversations' | 'memory' | 'actions') => void; // Setter for active view
 }
 
 // Create the context with a default value
@@ -51,6 +53,8 @@ const DashboardContext = createContext<DashboardContextType>({
   agentError: null,
   fetchAgents: async () => {},
   authToken: '', // Add default value for authToken
+  activeAgentView: 'chat', // New state for active view
+  setActiveAgentView: () => {}, // Setter for active view
 });
 
 // Provider component that wraps the dashboard pages
@@ -65,8 +69,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(true);
   const [agentError, setAgentError] = useState<string | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentIdState] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string>(''); // Store token here
+  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('chat'); // New state for active view
   // --- End Agent State ---
 
   // Get auth token early
@@ -149,7 +154,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
          console.log(`Dashboard Context: Successfully fetched/created ${fetchedAgents.length} agents.`);
 
          // Auto-select first agent if none selected *and* no agent is currently selected in context
-         setSelectedAgentId(prevSelectedId => {
+         setSelectedAgentIdState(prevSelectedId => {
             if (!prevSelectedId && fetchedAgents.length > 0) {
                 console.log("Dashboard Context: Auto-selecting first agent:", fetchedAgents[0].id);
                 return fetchedAgents[0].id;
@@ -165,7 +170,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       console.error("Dashboard Context: Error fetching agents:", err);
       setAgentError(err.message || 'An unknown error occurred while fetching/creating agents.');
       setAgents([]); // Clear agents on error
-      setSelectedAgentId(null); // Clear selection on error
+      setSelectedAgentIdState(null); // Clear selection on error
     } finally {
         setIsLoadingAgents(false); 
     }
@@ -289,31 +294,87 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     router.push('/');
   };
 
+  // Reset selected agent and view if agents list changes (e.g., after initial load or error)
+  useEffect(() => {
+    // If there are agents and no agent is selected, select the first one by default
+    if (agents.length > 0 && !selectedAgentId) {
+      setSelectedAgentIdState(agents[0].id);
+      setActiveAgentView('chat'); // Reset view when auto-selecting agent
+    } else if (agents.length === 0) {
+      // If no agents are available, clear selection
+      setSelectedAgentIdState(null);
+      setActiveAgentView('chat'); // Reset view
+    } else if (selectedAgentId && !agents.find(agent => agent.id === selectedAgentId)) {
+       // If the currently selected agent is no longer in the list, select the first one or null
+       setSelectedAgentIdState(agents.length > 0 ? agents[0].id : null);
+       setActiveAgentView('chat'); // Reset view
+    }
+    // Only re-run when agents array identity changes, not on selectedAgentId change itself
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents]); 
+
+  // --- Enhanced Agent Selection Logic ---
+  const setSelectedAgentId = useCallback((id: string | null) => {
+    setSelectedAgentIdState(id);
+    if (id) {
+      setActiveAgentView('chat'); // Reset to chat view when a new agent is selected
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoadingAgents && agents.length > 0 && !selectedAgentId) {
+       setSelectedAgentIdState(agents[0].id);
+       setActiveAgentView('chat');
+    }
+    else if (selectedAgentId && !agents.find(agent => agent.id === selectedAgentId)) {
+       setSelectedAgentIdState(agents.length > 0 ? agents[0].id : null);
+       setActiveAgentView('chat');
+    }
+    else if (agents.length === 0) {
+       setSelectedAgentIdState(null);
+       setActiveAgentView('chat');
+    }
+  }, [agents, isLoadingAgents, selectedAgentId]);
+  // --- End Enhanced Agent Selection Logic ---
+
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
+    user,
+    setUser,
+    isLoading,
+    setIsLoading,
+    apiKeys,
+    setApiKeys,
+    refreshApiKeys,
+    error,
+    setError,
+    getUserInitials,
+    handleLogout,
+    // Agent state and functions
+    agents,
+    setAgents, // Pass setter if needed, though fetchAgents handles updates
+    selectedAgentId,
+    setSelectedAgentId, // Pass the wrapper function
+    isLoadingAgents,
+    agentError, // Pass agent-specific error
+    fetchAgents, // Pass fetch function
+    authToken, // Pass auth token
+    activeAgentView, // Provide active view state
+    setActiveAgentView, // Provide setter for active view
+  }), [
+    user, 
+    isLoading, 
+    error, 
+    authToken, 
+    agents, 
+    isLoadingAgents, 
+    agentError, 
+    selectedAgentId,
+    activeAgentView // Include active view in dependencies
+  ]);
+
   return (
-    <DashboardContext.Provider
-      value={{
-        user,
-        setUser,
-        isLoading,
-        setIsLoading,
-        apiKeys,
-        setApiKeys,
-        refreshApiKeys,
-        error,
-        setError,
-        getUserInitials,
-        handleLogout,
-        // Agent state and functions
-        agents,
-        setAgents, // Pass setter if needed, though fetchAgents handles updates
-        selectedAgentId,
-        setSelectedAgentId, // Pass setter for selection changes
-        isLoadingAgents,
-        agentError, // Pass agent-specific error
-        fetchAgents, // Pass fetch function
-        authToken, // Pass auth token
-      }}
-    >
+    <DashboardContext.Provider value={value}>
       {children}
     </DashboardContext.Provider>
   );
@@ -321,5 +382,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
 // Custom hook to use the dashboard context
 export function useDashboard() {
-  return useContext(DashboardContext);
+  const context = useContext(DashboardContext);
+  if (context === undefined) {
+    throw new Error('useDashboard must be used within a DashboardProvider');
+  }
+  return context;
 } 
