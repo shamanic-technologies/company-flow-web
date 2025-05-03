@@ -1,10 +1,8 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { 
-  Header, 
-  DashboardProvider 
-} from '@/components/dashboard';
+import { DashboardProvider } from '@/components/dashboard/context/DashboardContext';
+import Sidebar from '@/components/dashboard/Sidebar';
 
 /**
  * Dashboard Layout
@@ -15,18 +13,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   
   return (
     <DashboardProvider>
-      <div className="flex flex-col h-screen overflow-hidden bg-gray-950">
-        {/* Header */}
-        <Header>
-        </Header>
+      <div className="flex h-screen overflow-hidden bg-gray-950">
+        {/* Sidebar */}
+        <Sidebar />
 
-        <div className="flex flex-1 overflow-hidden h-[calc(100vh-64px)]">
-          
-          {/* Main Content - Takes full width now */}
-          <main className="flex-1 overflow-hidden flex flex-col bg-gray-950 text-gray-200">
-            <div className="p-4 flex flex-col flex-1 overflow-hidden">
-              {children}
-            </div>
+        {/* Main Content Area - Adjusted for Sidebar */}
+        <div className="flex flex-1 flex-col overflow-hidden ml-64">
+          <main className="flex-1 overflow-y-auto flex flex-col bg-gray-950 text-gray-200 p-6">
+            {children}
           </main>
         </div>
       </div>

@@ -75,17 +75,19 @@ const mockMessages: { [key: string]: ChatMessage[] } = {
  * Uses the dashboard context for user data
  */
 export default function PlaygroundPage() {
-  const { user } = useDashboard();
-  const [authToken, setAuthToken] = useState<string>('');
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    user, 
+    agents, // Get agents from context
+    isLoadingAgents, // Get loading state from context
+    agentError, // Get agent error from context
+    selectedAgentId, // Get selected agent ID from context
+    setSelectedAgentId, // Get setter from context
+    authToken // Get auth token from context
+  } = useDashboard();
   
   // --- NEW State for selected agent and messages ---
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [historyMessages, setHistoryMessages] = useState<VercelMessage[]>([]); 
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false); // New state for loading
   // --- End NEW State ---
@@ -104,68 +106,6 @@ export default function PlaygroundPage() {
   // State to control active tab
   const [activeTab, setActiveTab] = useState('chat'); // Default to chat
 
-  // Function to fetch agents (now gets or creates)
-  const fetchAgents = async (token: string) => {
-    setIsLoadingAgents(true);
-    setError(null);
-    console.log("Fetching agents (or creating default if none exist)...");
-    try {
-      // Call the new get-or-create endpoint
-      const response = await fetch('/api/agents/get-or-create', { 
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        // Try to parse error from backend
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to get/create agents: ${errorData.error || response.statusText}`);
-      }
-
-      const apiResponse = await response.json();
-      console.log("Data received from /api/agents/get-or-create:", apiResponse);
-
-      // Expects { success: true, data: Agent[] } from the API route
-      if (apiResponse.success && Array.isArray(apiResponse.data)) { 
-         const fetchedAgents: Agent[] = apiResponse.data; 
-         setAgents(fetchedAgents);
-         console.log(`Successfully fetched/created ${fetchedAgents.length} agents.`);
-
-         // Auto-select first agent if none selected and agents were returned
-         setSelectedAgentId(prevSelectedId => {
-            if (!prevSelectedId && fetchedAgents.length > 0) {
-                return fetchedAgents[0].id;
-            } 
-            return prevSelectedId; // Keep current selection if one exists
-         });
-      } else {
-          const errorMsg = apiResponse?.error || 'Invalid data structure received from get/create agents API';
-          throw new Error(errorMsg);
-      }
-
-    } catch (err: any) {
-      console.error("Error in fetchAgents catch block:", err);
-      setError(err.message || 'An unknown error occurred while fetching/creating agents.');
-      setAgents([]); // Clear agents on error
-    } finally {
-        setIsLoadingAgents(false); // Stop loading regardless of outcome
-    }
-  };
-
-  // Get auth token from localStorage and fetch agents when component mounts
-  useEffect(() => {
-    const token = localStorage.getItem('auth-token') || '';
-    setAuthToken(token);
-
-    if (token) {
-      fetchAgents(token); // Initial fetch (will also create if needed)
-    } else {
-      console.warn("No auth token found. Cannot fetch or create agents.");
-      setError("Authentication required to load agents.");
-      setIsLoadingAgents(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
-  
   // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!user?.displayName) return 'U';
@@ -180,7 +120,6 @@ export default function PlaygroundPage() {
   useEffect(() => {
     if (!selectedAgentId || !authToken) {
       setHistoryMessages([]);
-      setHistoryError(null);
       setIsLoadingHistory(false);
       setCurrentConversationId(null);
       setConversationList([]); // Reset conversation list
@@ -192,7 +131,6 @@ export default function PlaygroundPage() {
       // Combined loading state for now
       setIsLoadingHistory(true); 
       setIsLoadingConversations(true);
-      setHistoryError(null); 
       setHistoryMessages([]);
       setCurrentConversationId(null);
       setConversationList([]); // Clear previous list
@@ -226,7 +164,6 @@ export default function PlaygroundPage() {
         } else {
              // This should not happen with the list-or-create endpoint
              console.error("Unexpected: No conversations returned from list-or-create endpoint");
-             setHistoryError("Unexpected error: No conversations returned.");
              setIsLoadingHistory(false);
              return; 
         }
@@ -257,10 +194,8 @@ export default function PlaygroundPage() {
 
       } catch (error: any) { 
         console.error(`Error loading data for agent:`, error);
-        setHistoryError(error.message || 'An unknown error occurred while loading agent data.'); 
-      } finally { 
-        setIsLoadingHistory(false); // Ensure history loading stops
-        setIsLoadingConversations(false); // Ensure conversation loading stops
+        setIsLoadingHistory(false);
+        setIsLoadingConversations(false);
       }
     };
     loadDataForAgent();
@@ -270,13 +205,11 @@ export default function PlaygroundPage() {
   const handleCreateNewChat = async () => {
     if (!selectedAgentId || !authToken || !user) {
       console.error("Cannot create new chat: Missing agent ID, auth token, or user info.");
-      setHistoryError("Could not start a new chat. Please select an agent and ensure you are logged in.");
       return;
     }
 
     console.log(`Starting new chat for agent ${selectedAgentId}...`);
     setIsCreatingConversation(true);
-    setHistoryError(null); // Clear previous errors
 
     try {
       // --- REAL API CALL --- 
@@ -331,7 +264,6 @@ export default function PlaygroundPage() {
 
     } catch (error: any) {
       console.error("Error creating new chat:", error);
-      setHistoryError(error.message || "Failed to start a new chat. Please try again.");
     } finally {
       setIsCreatingConversation(false); // Stop loading indicator
     }
@@ -343,9 +275,6 @@ export default function PlaygroundPage() {
     if (agentId === selectedAgentId) return;
     setSelectedAgentId(agentId);
     setHistoryMessages([]);
-    setHistoryError(null);
-    setCurrentConversationId(null);
-    setConversationList([]); // Reset list on agent change
     setIsLoadingHistory(true); 
     setIsLoadingConversations(true);
   };
@@ -377,7 +306,6 @@ export default function PlaygroundPage() {
         
         console.log(`Fetching messages for selected conversation: ${conversationId}`);
         setIsLoadingHistory(true);
-        setHistoryError(null);
         setHistoryMessages([]); // Clear previous messages
         
         try {
@@ -399,7 +327,6 @@ export default function PlaygroundPage() {
             
         } catch (error: any) {
             console.error("Error fetching messages for selected conversation:", error);
-            setHistoryError(error.message || "Failed to load messages for this conversation.");
             setHistoryMessages([]); // Clear messages on error
         } finally {
             setIsLoadingHistory(false);
@@ -437,47 +364,38 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex flex-col h-full">
-      
-      {/* Main Content Area - Two Columns */}
-      <div className="flex-1 flex overflow-hidden min-h-0 space-x-4">
-        {/* Left Column: Agent List */}
-        <AgentList
-          agents={agents}
-          isLoadingAgents={isLoadingAgents}
-          error={error}
-          selectedAgentId={selectedAgentId}
-          onAgentSelect={handleAgentSelect}
-        />
-
-        {/* Right Column: Agent Header + Tabs below */} 
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-800 rounded-lg">
-            {/* --- Agent Header Component --- */}
+       
+      {/* Main Content Area - Takes full space now */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-800 rounded-lg">
+          {/* Render Agent Header only if an agent is selected */} 
+          {selectedAgent && (
             <AgentHeader 
               agent={selectedAgent} 
               onCreateNewChat={handleCreateNewChat} // Pass the handler
               isCreatingChat={isCreatingConversation} // Pass the loading state
             />
-            {/* --- End Agent Header --- */}
-
-            {/* --- Tabs for Chat / Conversation List / Memory / Actions --- */} 
-            {selectedAgentId && ( // Render tabs only if an agent is selected
-                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                    {/* Tabs List (Header for sub-tabs) */} 
-                    <TabsList className="flex-shrink-0 grid w-full grid-cols-4 bg-gray-800 rounded-none border-b border-gray-700 p-0 h-10">
-                      <TabsTrigger value="chat" className={tabTriggerStyles}><MessageSquare className="h-4 w-4 mr-1.5"/>Chat</TabsTrigger>
-                      <TabsTrigger value="conversations" className={tabTriggerStyles}><List className="h-4 w-4 mr-1.5"/>Conversations</TabsTrigger>
-                      <TabsTrigger value="memory" className={tabTriggerStyles}><MemoryStick className="h-4 w-4 mr-1.5"/>Memory</TabsTrigger>
-                      <TabsTrigger value="actions" className={tabTriggerStyles}><ToyBrick className="h-4 w-4 mr-1.5"/>Actions</TabsTrigger>
-                    </TabsList>
-                    
-                    {/* Chat Tab Content - Apply overflow-y-auto */} 
-                    <TabsContent value="chat" className="flex-1 overflow-hidden flex flex-col p-0 m-0 data-[state=inactive]:hidden">
-                       {/* Loading/Error states for conversation */} 
-                       {isLoadingHistory && ( <div className="flex justify-center items-center h-full text-gray-400">Loading messages...</div> )}
-                       {historyError && !isLoadingHistory && ( <div className="p-4 text-center text-red-400">Error: {historyError}</div> )}
-                         
-                       {/* Render ChatInterface only when conversation ID is available and not loading/error */} 
-                       {!isLoadingHistory && !historyError && currentConversationId ? (
+          )}
+          
+          {/* --- Tabs for Chat / Conversation List / Memory / Actions --- */} 
+          {selectedAgentId && ( // Render tabs only if an agent is selected
+               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                  {/* Tabs List (Header for sub-tabs) */} 
+                  <TabsList className="flex-shrink-0 grid w-full grid-cols-4 bg-gray-800 rounded-none border-b border-gray-700 p-0 h-10">
+                    <TabsTrigger value="chat" className={tabTriggerStyles}><MessageSquare className="h-4 w-4 mr-1.5"/>Chat</TabsTrigger>
+                    <TabsTrigger value="conversations" className={tabTriggerStyles}><List className="h-4 w-4 mr-1.5"/>Conversations</TabsTrigger>
+                    <TabsTrigger value="memory" className={tabTriggerStyles}><MemoryStick className="h-4 w-4 mr-1.5"/>Memory</TabsTrigger>
+                    <TabsTrigger value="actions" className={tabTriggerStyles}><ToyBrick className="h-4 w-4 mr-1.5"/>Actions</TabsTrigger>
+                  </TabsList>
+                  
+                  {/* Chat Tab Content - Apply overflow-y-auto */} 
+                  <TabsContent value="chat" className="flex-1 overflow-hidden flex flex-col p-0 m-0 data-[state=inactive]:hidden">
+                     {/* Loading/Error states for conversation */} 
+                     {isLoadingHistory && ( <div className="flex justify-center items-center h-full text-gray-400">Loading messages...</div> )}
+                     {/* Display agentError if there was an issue loading conversations/initial data */}
+                     {agentError && !isLoadingHistory && !isLoadingConversations && ( <div className="p-4 text-center text-red-400">Error: {agentError}</div> )}
+                     
+                     {/* Render ChatInterface only when conversation ID is available and not loading/error */} 
+                     {!isLoadingHistory && !agentError && currentConversationId ? (
                          <ChatInterface 
                            key={`${selectedAgentId}-${currentConversationId}`} // Key ensures re-render on conversation change
                            authToken={authToken}
@@ -487,39 +405,49 @@ export default function PlaygroundPage() {
                            conversationId={currentConversationId} 
                          />
                        ) : (
-                         !isLoadingHistory && !historyError && <div className="flex justify-center items-center h-full text-gray-500">Select or start a conversation.</div>
+                         !isLoadingHistory && !agentError && (
+                           <div className="flex justify-center items-center h-full text-gray-500">
+                              {/* Show agent error message if relevant, otherwise generic prompt */} 
+                              {agentError ? `Error: ${agentError}` : "Select or start a conversation."}
+                           </div>
+                         )
                        )}
-                    </TabsContent>
+                  </TabsContent>
 
-                    {/* Conversations Tab Content - Apply overflow-y-auto */} 
-                    <TabsContent value="conversations" className="flex-1 overflow-y-auto flex flex-col p-0 m-0 data-[state=inactive]:hidden">
-                      <ConversationListPanel 
-                        conversationList={conversationList} 
-                        isLoadingConversations={isLoadingConversations} 
-                        historyError={historyError}
-                        currentConversationId={currentConversationId} 
-                        onConversationSelect={handleConversationSelect} 
-                      />
-                    </TabsContent>
+                  {/* Conversations Tab Content - Apply overflow-y-auto */} 
+                  <TabsContent value="conversations" className="flex-1 overflow-y-auto flex flex-col p-0 m-0 data-[state=inactive]:hidden">
+                    <ConversationListPanel 
+                      conversationList={conversationList} 
+                      isLoadingConversations={isLoadingConversations} 
+                      historyError={agentError}
+                      currentConversationId={currentConversationId} 
+                      onConversationSelect={handleConversationSelect} 
+                    />
+                  </TabsContent>
 
-                    {/* NEW Memory Tab Content - Apply overflow-y-auto */} 
-                    <TabsContent value="memory" className="flex-1 overflow-y-auto flex flex-col p-0 m-0 data-[state=inactive]:hidden">
-                       <MemoryPanel 
-                         selectedAgent={selectedAgent}
-                       />
-                    </TabsContent>
+                  {/* NEW Memory Tab Content - Apply overflow-y-auto */} 
+                  <TabsContent value="memory" className="flex-1 overflow-y-auto flex flex-col p-0 m-0 data-[state=inactive]:hidden">
+                     <MemoryPanel 
+                       selectedAgent={selectedAgent}
+                     />
+                  </TabsContent>
 
-                    {/* Actions Tab Content - Apply overflow-y-auto */}
-                    <TabsContent value="actions" className="flex-1 overflow-y-auto p-4 m-0 data-[state=inactive]:hidden">
-                      <ActionsPanel 
-                        onSelectConversation={handleActionNavigation}
-                        authToken={authToken}
-                        agentId={selectedAgentId || ''}
-                      />
-                    </TabsContent>
-                 </Tabs>
-            )}
-        </div>
+                  {/* Actions Tab Content - Apply overflow-y-auto */}
+                  <TabsContent value="actions" className="flex-1 overflow-y-auto p-4 m-0 data-[state=inactive]:hidden">
+                    <ActionsPanel 
+                      onSelectConversation={handleActionNavigation}
+                      authToken={authToken}
+                      agentId={selectedAgentId || ''}
+                    />
+                  </TabsContent>
+               </Tabs>
+          )}
+          {/* Placeholder if no agent is selected */}
+          {!selectedAgentId && !isLoadingAgents && (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              Select an agent from the sidebar to start.
+            </div>
+          )}
       </div>
     </div>
   );
