@@ -70,14 +70,6 @@ export default function Header({ children }: HeaderProps) {
               <DropdownMenuContent align="end" className="w-56 bg-gray-900 border-gray-700">
                 <DropdownMenuLabel className="text-gray-300">My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-700" />
-                <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="text-gray-200 focus:bg-gray-800 focus:text-gray-100">
-                  <Avatar className="h-4 w-4 mr-2">
-                    <AvatarImage src={user?.profileImage || ''} alt={user?.displayName || 'User'} />
-                    <AvatarFallback className="bg-gray-700 text-gray-200">{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-700" />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:bg-gray-800 focus:text-red-300">
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout

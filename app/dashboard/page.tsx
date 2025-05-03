@@ -1,20 +1,14 @@
-'use client';
-
-import { 
-  WelcomeSection
-} from '../../components/dashboard';
-import { useDashboard } from '@/components/dashboard/context/DashboardContext';
+import { redirect } from 'next/navigation';
 
 /**
- * Professional Dashboard Page
- * Displays welcome information and getting started guide
- * Uses the dashboard context for user data
+ * Default Dashboard Page
+ * Redirects users immediately to the playground section.
  */
-export default function Dashboard() {
-  const { user } = useDashboard();
-
-  return (
-    /* Welcome Section */
-    <WelcomeSection userId={user?.id} />
-  );
+export default function DashboardPage() {
+  // Redirect to the playground page
+  redirect('/dashboard/playground');
+  
+  // Return null or an empty fragment as redirect throws an error
+  // and stops execution, but React requires a return value.
+  return null; 
 } 

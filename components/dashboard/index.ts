@@ -5,11 +5,11 @@
  */
 
 // Dashboard components
-export { default as WelcomeSection } from './WelcomeSection';
+// export { default as WelcomeSection } from './WelcomeSection';
 export { default as Header } from './Header';
-export { default as Sidebar } from './Sidebar';
-export { default as QuickStartGuide } from './QuickStartGuide';
-export { default as UtilitiesSection } from './UtilitiesSection';
+// export { default as Sidebar } from './Sidebar';
+// export { default as QuickStartGuide } from './QuickStartGuide';
+// export { default as UtilitiesSection } from './UtilitiesSection';
 
 // Context
 export { DashboardProvider, useDashboard } from './context/DashboardContext';
@@ -18,9 +18,10 @@ export { DashboardProvider, useDashboard } from './context/DashboardContext';
 export * from './Chat';
 
 // Export utility data
-export { utilityCategories } from './utility-data';
+// export { utilityCategories } from './utility-data';
 
 // Re-export budget components
+/*
 export { 
   TransactionHistory,
   MonthlyUsage,
@@ -28,4 +29,5 @@ export {
   RechargeCreditsDialog,
   AutoRechargeSettingsDialog
 } from './budget';
+*/
 
