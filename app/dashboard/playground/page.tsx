@@ -437,11 +437,6 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header Section */}
-      <div className="flex-shrink-0 mb-4">
-        <h1 className="text-2xl font-bold text-gray-100">Playground</h1>
-        <p className="text-gray-400">Experience real-time streaming responses with Vercel AI SDK</p>
-      </div>
       
       {/* Main Content Area - Two Columns */}
       <div className="flex-1 flex overflow-hidden min-h-0 space-x-4">
