@@ -82,7 +82,8 @@ export default function PlaygroundPage() {
     selectedAgentId, // Get selected agent ID from context
     authToken, // Get auth token from context
     activeAgentView, // Get the active view from context
-    getUserInitials // ADDED getUserInitials back from context
+    getUserInitials,
+    setActiveAgentView // ADDED setActiveAgentView from context
   } = useDashboard();
   
   // State for the current conversation's messages
@@ -100,9 +101,6 @@ export default function PlaygroundPage() {
 
   // State for displaying historical/selected messages
   const [displayedMessages, setDisplayedMessages] = useState<ChatMessage[]>([]);
-
-  // State to control active tab
-  const [activeTab, setActiveTab] = useState('chat'); // Default to chat
 
   // Effect to fetch data when selectedAgentId changes
   useEffect(() => {
@@ -229,26 +227,16 @@ export default function PlaygroundPage() {
       }
       
       console.log("API success. New conversation created:", responseData);
+      const newConversation: Conversation = responseData.data; // Assuming API returns created conversation
 
       // --- Update State ---
-      // Create a minimal conversation object for the list (consistent with previous mock)
-      const newConversationForList: Conversation = {
-          conversationId: newConversationId,
-          agentId: selectedAgentId,
-          channelId: channelId,
-          messages: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-      };
-
-      // Add to the beginning of the list for immediate UI update
-      setConversationList(prevList => [newConversationForList, ...prevList]); 
-      // Set as current conversation
+      setConversationList(prevList => [newConversation, ...prevList]); 
       setCurrentConversationId(newConversationId); 
-      // Clear messages for the new chat
       setHistoryMessages([]); 
-      // Switch to the chat tab
-      setActiveTab('chat'); 
+      
+      // REPLACE setActiveTab with setActiveAgentView
+      // setActiveTab('chat'); 
+      setActiveAgentView('chat'); // Switch the main view to the chat interface
 
     } catch (error: any) {
       console.error("Error creating new chat:", error);
@@ -278,6 +266,9 @@ export default function PlaygroundPage() {
       } finally {
           setIsLoadingHistory(false);
       }
+      
+      // ADD switching view when selecting a conversation from the list
+      setActiveAgentView('chat'); 
   };
 
   // Find the selected agent details for display
@@ -295,28 +286,6 @@ export default function PlaygroundPage() {
       } 
       return []; // Default empty
   };
-
-  // Handler for tab switching from Actions panel
-  const handleActionNavigation = useCallback((conversationId: string, tabName: string) => {
-    console.log(`Navigating to ${tabName} tab with conversation: ${conversationId}`);
-    
-    // Set the conversation ID
-    setCurrentConversationId(conversationId);
-    
-    // Switch to the requested tab
-    setActiveTab(tabName);
-    
-    // Load messages for this conversation
-    if (conversationId && tabName === 'chat') {
-      // You may want to fetch messages for this conversation here
-      // For now, we'll use the mock messages
-      const messages = getMockMessages(conversationId);
-      setDisplayedMessages(messages);
-      
-      // If needed, trigger a message fetch
-      // In a real app, you might fetch real messages for this conversation
-    }
-  }, []);
 
   // Helper function to render the main content based on activeAgentView
   const renderMainContent = () => {
