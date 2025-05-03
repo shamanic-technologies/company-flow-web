@@ -32,7 +32,7 @@ interface DashboardContextType {
 }
 
 // Create the context with a default value
-const DashboardContext = createContext<DashboardContextType>({
+export const DashboardContext = createContext<DashboardContextType>({
   user: null,
   setUser: () => {},
   isLoading: true,

@@ -61,8 +61,8 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r border-gray-800 bg-gray-950 sm:flex">
-      <nav className="flex flex-1 flex-col gap-4 px-4 py-4">
+    <aside className="w-64 flex flex-col h-screen border-r border-gray-800 bg-gray-950 sm:flex flex-shrink-0">
+      <nav className="flex flex-1 flex-col gap-4 px-4 py-4 overflow-y-auto">
         {/* Organization Selector - Placeholder */} 
         <div className="group flex h-9 w-full shrink-0 items-center justify-center rounded-md border border-dashed border-gray-700 text-sm font-medium text-gray-400">
           <FolderClosed className="h-4 w-4 mr-2" />

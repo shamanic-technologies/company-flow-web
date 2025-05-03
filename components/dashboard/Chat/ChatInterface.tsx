@@ -20,8 +20,8 @@ interface ChatInterfaceProps {
   authToken: string;
   userInitials: string;
   initialMessages?: Message[];
-  agentId: string;
-  conversationId: string;
+  agentId: string | null;
+  conversationId: string | null;
 }
 
 export const ChatInterface = ({ 
@@ -63,7 +63,7 @@ export const ChatInterface = ({
     append,
     addToolResult
   } = useChat({
-    id: conversationId, // Defines the Chat ID for Vercel AI SDK
+    id: conversationId || undefined, // Pass undefined if conversationId is null
     // Use the agents/run API route
     api: '/api/agents/run',
     // Include authorization header with user token from localStorage
