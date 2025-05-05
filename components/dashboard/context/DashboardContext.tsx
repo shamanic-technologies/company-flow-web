@@ -586,6 +586,104 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Depend on agent ID, list length, loading state, and the load function itself
   }, [selectedAgentIdState, conversationList.length, isLoadingConversations, loadConversationListForAgent]);
 
+  // NEW: Function to handle agent selection and trigger conversation loading
+  const handleAgentSelection = useCallback(async (agentId: string | null) => {
+    console.log(`🔄 Dashboard Context: Agent selected: ${agentId}`);
+    setSelectedAgentIdState(agentId);
+    setActiveAgentView('chat'); // Default to chat view when agent changes
+    setCurrentConversationId(null); // Clear previous conversation selection
+    setCurrentMessages([]); // Clear previous messages
+    setConversationList([]); // Clear old conversation list
+    setConversationError(null); // Clear previous errors
+
+    if (agentId && authToken) {
+      console.log(`🔍 Dashboard Context: Fetching conversations for agent ${agentId}...`);
+      await fetchConversationsForAgent(agentId, authToken); 
+      // The logic to select the latest conversation will be inside fetchConversationsForAgent
+    } else {
+      // If agentId is null or no token, clear conversation state
+      setIsLoadingConversations(false); 
+    }
+  }, [authToken]); // Add fetchConversationsForAgent later if needed, avoid circular dependency for now
+
+  // Fetch Conversations for a specific agent
+  const fetchConversationsForAgent = useCallback(async (agentId: string, token: string) => {
+    if (!agentId) {
+      console.warn("Dashboard Context: fetchConversationsForAgent called with null agentId.");
+      setConversationList([]);
+      setCurrentConversationId(null);
+      setCurrentMessages([]);
+      setIsLoadingConversations(false);
+      return;
+    }
+    console.log(`📚 Dashboard Context: Fetching conversations for agent ${agentId}...`);
+    setIsLoadingConversations(true);
+    setConversationError(null);
+    // Clear existing messages when fetching conversations for a *new* agent
+    // but maybe not if just refreshing? Let's clear for now on explicit fetch.
+    // Update: Clearing happens in handleAgentSelection now.
+    // setCurrentMessages([]); 
+    // setCurrentConversationId(null); // Clear selection while loading new list
+
+    try {
+      const response = await fetch(`/api/conversations/list?agentId=${agentId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      console.log(`📊 Dashboard Context: Conversation list API response status for agent ${agentId}:`, response.status);
+
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('🚫 Dashboard Context: Unauthorized fetching conversations, logging out.');
+          handleLogout();
+          return;
+        }
+        let errorDetail = `Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorDetail;
+        } catch (e) { /* ignore */ }
+        throw new Error(`API error fetching conversations: ${errorDetail}`);
+      }
+
+      const result: ServiceResponse<Conversation[]> = await response.json();
+
+      if (result.success && result.data) {
+        console.log(`✅ Dashboard Context: Successfully fetched ${result.data.length} conversations for agent ${agentId}.`);
+        const sortedConversations = result.data.sort((a, b) => 
+          new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+        );
+        setConversationList(sortedConversations);
+        
+        // --- Step 2: Select Latest Conversation ---
+        if (sortedConversations.length > 0) {
+          const latestConversation = sortedConversations[0];
+          console.log(`📌 Dashboard Context: Automatically selecting latest conversation: ${latestConversation.conversationId}`);
+          // Directly call the function that handles message fetching
+          selectConversationId(latestConversation.conversationId); 
+        } else {
+          console.log(`🤷 Dashboard Context: No conversations found for agent ${agentId}.`);
+          // No conversation to select, ensure state reflects this
+          setCurrentConversationId(null); 
+          setCurrentMessages([]); 
+          setIsLoadingMessages(false); // No messages to load
+        }
+        // --- End Step 2 ---
+
+      } else {
+        throw new Error(result.error || 'Invalid data format from conversation list API');
+      }
+    } catch (error: any) {
+      console.error(`❌ Dashboard Context: Error fetching conversations for agent ${agentId}:`, error);
+      setConversationError(error.message || 'Failed to fetch conversations.');
+      setConversationList([]);
+      setCurrentConversationId(null);
+      setCurrentMessages([]);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, [authToken, handleLogout]); // Dependency on authToken and handleLogout
 
   // Memoize the context value
   const contextValue = useMemo(() => ({
@@ -595,41 +693,45 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setIsLoading,
     apiKeys,
     setApiKeys,
-    refreshApiKeys: fetchApiKeys, // Keep original name for external use
+    refreshApiKeys: fetchApiKeys, // Rename for clarity externally
     error,
     setError,
     getUserInitials,
     handleLogout,
-    // Agent values
+    // Agent context
     agents,
-    setAgents, 
-    selectedAgentId: selectedAgentIdState, 
-    setSelectedAgentId, // Smart setter
+    setAgents, // Keep setter if direct manipulation is needed elsewhere (rarely)
+    selectedAgentId: selectedAgentIdState, // Expose the state value
+    setSelectedAgentId: handleAgentSelection, // Use the new handler
     isLoadingAgents,
     agentError,
     fetchAgents,
     authToken,
     activeAgentView,
     setActiveAgentView,
-    // Conversation/Message values
+    // Conversation & Message context
     conversationList,
-    isLoadingConversations, // Loading state for the *list*
-    currentConversationId,
-    currentMessages, // Messages for the *selected* conversation
-    isLoadingMessages, // Loading state for *selected* conversation's messages
+    isLoadingConversations,
+    currentConversationId: currentConversationId, // Expose state value
+    currentMessages,
+    isLoadingMessages,
     isCreatingConversation,
-    conversationError, // Combined error state
-    fetchConversationsForAgent: loadConversationListForAgent, // Expose list loader internally named loadConversationListForAgent
+    conversationError,
+    fetchConversationsForAgent, // Expose if needed externally
     handleCreateNewChat,
-    selectConversationId, // Expose ID setter
-    setSelectedAgentIdDirectly: setSelectedAgentIdState,
+    selectConversationId, // Expose the selector function
+    setSelectedAgentIdDirectly: setSelectedAgentIdState, // Expose direct setter if absolutely needed
   }), [
-    user, isLoading, apiKeys, error, getUserInitials, handleLogout, 
-    agents, selectedAgentIdState, setSelectedAgentId, isLoadingAgents, agentError, fetchAgents, authToken, 
-    activeAgentView, setActiveAgentView,
-    conversationList, isLoadingConversations, currentConversationId, currentMessages, 
-    isLoadingMessages, isCreatingConversation, conversationError, loadConversationListForAgent,
-    handleCreateNewChat, selectConversationId, fetchApiKeys // Use renamed func and add fetchApiKeys
+    user, isLoading, apiKeys, error, getUserInitials, handleLogout,
+    agents, selectedAgentIdState, handleAgentSelection, isLoadingAgents, agentError, fetchAgents, authToken, activeAgentView, // Agent values
+    conversationList, isLoadingConversations, currentConversationId, currentMessages, isLoadingMessages, isCreatingConversation, conversationError, fetchConversationsForAgent, handleCreateNewChat, selectConversationId, // Conversation values
+    // fetchApiKeys is stable due to useCallback
+    // setActiveAgentView is stable
+    // setSelectedAgentIdState is stable
+    // setError is stable
+    // setIsLoading is stable
+    // setUser is stable
+    // setAgents is stable
   ]);
 
   return (
