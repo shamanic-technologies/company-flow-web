@@ -73,6 +73,13 @@ export default function Sidebar() {
           Personal
         </div>
 
+        {/* Dashboards Section */}
+        <div className="flex flex-col gap-1">
+          <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Dashboards</h3>
+          {/* Placeholder for Dashboards content */}
+          <div className="p-2 text-sm text-gray-400">Dashboards coming soon...</div>
+        </div>
+
         {/* AI Agents Section */} 
         <div className="flex flex-col gap-1">
           <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Agents</h3>
