@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ApiKey, PlatformUser, ServiceResponse, Agent, Conversation } from '@agent-base/types';
+import { ApiKey, PlatformUser, ServiceResponse, Agent, Conversation, CreateConversationInput } from '@agent-base/types';
+import { Message as VercelMessage } from 'ai/react';
 
 
 // Define the context type with agent-related state
@@ -29,6 +30,19 @@ interface DashboardContextType {
   authToken: string; // Add authToken to the context type
   activeAgentView: 'chat' | 'conversations' | 'memory' | 'actions'; // New state for active view
   setActiveAgentView: (view: 'chat' | 'conversations' | 'memory' | 'actions') => void; // Setter for active view
+
+  // --- Conversation & Message Related ---
+  conversationList: Conversation[];
+  isLoadingConversations: boolean;
+  currentConversationId: string | null;
+  currentMessages: VercelMessage[]; 
+  isLoadingMessages: boolean;
+  isCreatingConversation: boolean;
+  conversationError: string | null; // Specific error for conversation/message loading
+  handleCreateNewChat: () => Promise<void>;
+  handleConversationSelect: (conversationId: string) => Promise<void>;
+  // Expose setter for selectedAgentId for direct use
+  setSelectedAgentIdDirectly: (agentId: string | null) => void; 
 }
 
 // Create the context with a default value
@@ -55,6 +69,17 @@ export const DashboardContext = createContext<DashboardContextType>({
   authToken: '', // Add default value for authToken
   activeAgentView: 'chat', // New state for active view
   setActiveAgentView: () => {}, // Setter for active view
+  // Default conversation/message state
+  conversationList: [],
+  isLoadingConversations: false,
+  currentConversationId: null,
+  currentMessages: [],
+  isLoadingMessages: false,
+  isCreatingConversation: false,
+  conversationError: null,
+  handleCreateNewChat: async () => {},
+  handleConversationSelect: async () => {},
+  setSelectedAgentIdDirectly: () => {}, 
 });
 
 // Provider component that wraps the dashboard pages
@@ -69,37 +94,82 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(true);
   const [agentError, setAgentError] = useState<string | null>(null);
-  const [selectedAgentId, setSelectedAgentIdState] = useState<string | null>(null);
-  const [authToken, setAuthToken] = useState<string>(''); // Store token here
-  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('chat'); // New state for active view
+  const [selectedAgentIdState, setSelectedAgentIdState] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string>('');
+  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('chat');
   // --- End Agent State ---
+
+  // --- Conversation & Message State ---
+  const [conversationList, setConversationList] = useState<Conversation[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState<boolean>(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentMessages, setCurrentMessages] = useState<VercelMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
+  const [isCreatingConversation, setIsCreatingConversation] = useState<boolean>(false);
+  const [conversationError, setConversationError] = useState<string | null>(null);
+  // --- End Conversation State ---
 
   // Get auth token early
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
+    if (!token) {
+        console.warn("Dashboard Context: No auth token found in local storage.");
+        router.push('/'); // Redirect if no token on initial load
+    }
     setAuthToken(token || '');
-  }, []);
+  }, [router]);
 
-  // Function to fetch API keys for a user
-  const fetchApiKeys = async () => {
+  // --- Utility Functions ---
+  const getUserInitials = useCallback(() => {
+    if (user?.displayName) {
+      const names = user.displayName.split(' ');
+      if (names.length > 1) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+      } else if (names.length === 1 && names[0].length > 0) {
+        return names[0][0].toUpperCase();
+      }
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return '?'; // Default fallback
+  }, [user]);
+
+  // --- Logout Handler ---
+  const handleLogout = useCallback(() => {
+    console.log('Logging out...');
+    localStorage.removeItem('auth-token');
+    setUser(null);
+    setApiKeys([]);
+    setAgents([]);
+    setSelectedAgentIdState(null);
+    setConversationList([]);
+    setCurrentConversationId(null);
+    setCurrentMessages([]);
+    setAuthToken('');
+    setError(null);
+    setAgentError(null);
+    setConversationError(null);
+    router.push('/'); // Redirect to home page after logout
+  }, [router]);
+
+  // --- Data Fetching Functions ---
+
+  // Function to fetch API keys
+  const fetchApiKeys = useCallback(async () => {
     try {
-      // Get auth token from state
       if (!authToken) {
-        console.error('Unauthorized - no token found');
-        router.push('/');
-        return;
+        console.error('Unauthorized - no token found for API keys');
+        return; 
       }
       
-      // Call our server-side API route
       const response = await fetch('/api/keys', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
+        headers: { 'Authorization': `Bearer ${authToken}` }
       });
       
       if (response.status === 401) {
-        console.error('Unauthorized - redirecting to home page');
-        router.push('/');
+        console.error('Unauthorized fetching keys - logging out.');
+        handleLogout(); // Call logout which handles redirect
         return;
       }
       
@@ -110,25 +180,73 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       } else {
         console.error('Failed to fetch API keys:', data);
         setApiKeys([]);
+        setError(data.error || 'Failed to fetch API keys'); 
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching API keys:', error);
       setApiKeys([]);
+       setError(error.message || 'Error fetching API keys'); 
     }
-  };
+  }, [authToken, handleLogout]);
 
-  // Function to refresh API keys (for use in other components)
-  const refreshApiKeys = async () => {
-    await fetchApiKeys();
-  };
-
-  // --- Agent Fetching Logic (moved from Playground) ---
-  const fetchAgents = async () => {
+  // Function to fetch user data
+  const fetchUserData = useCallback(async () => {
     if (!authToken) {
-      console.warn("No auth token available for fetching agents.");
+      console.error('⚠️ Dashboard Context - fetchUserData called without auth token!');
+      return; 
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('👤 Dashboard Context - Fetching user data...');
+      
+      const userFetch = await fetch('/api/me', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      console.log('📊 Dashboard Context - User API response status:', userFetch.status);
+
+      if (userFetch.status === 401) {
+        console.error('🚫 Dashboard Context - Unauthorized fetching user, logging out.');
+        handleLogout(); // Use logout handler
+        return;
+      }
+      
+      if (!userFetch.ok) {
+        let errorDetail = `Status: ${userFetch.status}`;
+        try {
+          const errorData = await userFetch.json();
+          errorDetail = errorData.error || errorDetail;
+        } catch (e) { /* ignore parsing error */ }
+        throw new Error(`API error fetching user: ${errorDetail}`);
+      }
+
+      const userResponse: ServiceResponse<PlatformUser> = await userFetch.json();
+      
+      if (userResponse.success && userResponse.data) {
+        console.log('✅ Dashboard Context - User data retrieved successfully.');
+        setUser(userResponse.data);
+      } else {
+        throw new Error(userResponse.error || 'Invalid data format from user API');
+      }
+    } catch (error: any) {
+      console.error('❌ Dashboard Context - Error fetching user data:', error);
+      setError(error.message || 'Failed to fetch user data.');
+      setUser(null); 
+    } finally {
+        setIsLoading(false);
+    }
+  }, [authToken, handleLogout]);
+
+  // Fetch Agents Logic
+  const fetchAgents = useCallback(async () => {
+    if (!authToken) {
+      console.warn("Dashboard Context: Auth token not available for fetching agents.");
       setAgentError("Authentication required to load agents.");
       setIsLoadingAgents(false);
-      setAgents([]); // Ensure agents list is empty
+      setAgents([]); 
       return;
     }
     
@@ -140,27 +258,31 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         headers: { 'Authorization': `Bearer ${authToken}` },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to get/create agents: ${errorData.error || response.statusText}`);
+      if (response.status === 401) {
+          console.error('🚫 Dashboard Context - Unauthorized fetching agents, logging out.');
+          handleLogout();
+          return;
       }
 
-      const apiResponse = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to get/create agents: ${errorData.error || response.statusText} (${response.status})`);
+      }
+
+      const apiResponse: ServiceResponse<Agent[]> = await response.json();
       console.log("Dashboard Context: Agent data received:", apiResponse);
 
       if (apiResponse.success && Array.isArray(apiResponse.data)) { 
          const fetchedAgents: Agent[] = apiResponse.data; 
          setAgents(fetchedAgents);
          console.log(`Dashboard Context: Successfully fetched/created ${fetchedAgents.length} agents.`);
-
-         // Auto-select first agent if none selected *and* no agent is currently selected in context
-         setSelectedAgentIdState(prevSelectedId => {
-            if (!prevSelectedId && fetchedAgents.length > 0) {
-                console.log("Dashboard Context: Auto-selecting first agent:", fetchedAgents[0].id);
-                return fetchedAgents[0].id;
-            } 
-            return prevSelectedId; // Keep current selection if one exists
-         });
+         
+         if (!selectedAgentIdState && fetchedAgents.length > 0) {
+             console.log("Dashboard Context: Auto-selecting first agent:", fetchedAgents[0].id);
+             setSelectedAgentIdState(fetchedAgents[0].id); 
+         } else if (fetchedAgents.length === 0) {
+             setSelectedAgentIdState(null);
+         }
       } else {
           const errorMsg = apiResponse?.error || 'Invalid data structure received from get/create agents API';
           throw new Error(errorMsg);
@@ -169,176 +291,292 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error("Dashboard Context: Error fetching agents:", err);
       setAgentError(err.message || 'An unknown error occurred while fetching/creating agents.');
-      setAgents([]); // Clear agents on error
-      setSelectedAgentIdState(null); // Clear selection on error
+      setAgents([]); 
+      setSelectedAgentIdState(null); 
     } finally {
         setIsLoadingAgents(false); 
     }
-  };
-  // --- End Agent Fetching Logic ---
+  }, [authToken, selectedAgentIdState, handleLogout]);
 
-  // Function to fetch user data from API
-  const fetchUserData = async () => {
-    if (!authToken) {
-      console.error('⚠️ Dashboard - No auth token found, redirecting to home page');
-      router.push('/');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log('👤 Dashboard - Fetching user data from API');
-      
-      // Use Authorization Bearer header for API requests
-      const userFetch = await fetch('/api/me', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      
-      console.log('📊 Dashboard - User API response status:', userFetch.status);
-
-      if (userFetch.status === 401) {
-        console.error('🚫 Dashboard - Unauthorized response from API, redirecting to home page');
-        localStorage.removeItem('auth-token'); // Clear invalid token
-        router.push('/');
-        return;
+  // Load Conversations and Messages for a Specific Agent
+  const loadConversationDataForAgent = useCallback(async (agentId: string) => {
+      if (!authToken) {
+          console.warn("Dashboard Context: Auth token missing, cannot load conversations.");
+          setConversationError("Authentication required.");
+          return;
       }
-      
-      // Handle different error scenarios
-      if (!userFetch.ok) {
-        let errorDetail;
-        try {
-          const errorData = await userFetch.json();
-          errorDetail = errorData.error || `Status: ${userFetch.status}`;
-          console.error('❌ Dashboard - API error details:', errorData);
-        } catch (e) {
-          errorDetail = `Status: ${userFetch.status}`;
-          console.error('❌ Dashboard - Could not parse error details');
-        }
-        
-        if (userFetch.status === 503) {
-          throw new Error(`Service unavailable - API gateway connection issue. ${errorDetail}`);
+      if (!agentId) {
+          console.log("Dashboard Context: No agent selected, clearing conversation data.");
+          setConversationList([]);
+          setCurrentConversationId(null);
+          setCurrentMessages([]);
+          setIsLoadingConversations(false);
+          setIsLoadingMessages(false);
+          setConversationError(null);
+          return;
+      }
+
+      console.log(`Dashboard Context: Loading conversation data for agent ${agentId}...`);
+      setIsLoadingConversations(true);
+      setIsLoadingMessages(true); 
+      setConversationError(null);
+      setConversationList([]); 
+      setCurrentConversationId(null); 
+      setCurrentMessages([]); 
+
+      try {
+          // Step 1: Fetch conversations or create one
+          const convListResponse = await fetch(`/api/conversations/list-or-create?agent_id=${agentId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+          
+          if (convListResponse.status === 401) {
+              console.error('🚫 Dashboard Context - Unauthorized loading conversations, logging out.');
+              handleLogout();
+              return;
+          }
+          if (!convListResponse.ok) {
+              const errData = await convListResponse.json().catch(() => ({}));
+              throw new Error(`Failed to list/create conversations: ${errData.error || convListResponse.statusText} (${convListResponse.status})`);
+          }
+          const convListData: ServiceResponse<Conversation[]> = await convListResponse.json();
+          if (!convListData.success || !Array.isArray(convListData.data)) {
+              throw new Error(`API error listing/creating conversations: ${convListData.error || 'Invalid data format'}`);
+          }
+
+          const fetchedConversations: Conversation[] = convListData.data;
+          setConversationList(fetchedConversations);
+          setIsLoadingConversations(false);
+          console.log(`Dashboard Context: Fetched ${fetchedConversations.length} conversations.`);
+
+          // Step 2: Select latest conversation and fetch its messages
+          if (fetchedConversations.length > 0) {
+              const latestConversationId = fetchedConversations[0].conversationId;
+              setCurrentConversationId(latestConversationId);
+              console.log(`Dashboard Context: Selected conversation ${latestConversationId}, fetching messages...`);
+
+              const messagesResponse = await fetch(`/api/messages/list?conversation_id=${latestConversationId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+              
+              if (messagesResponse.status === 401) {
+                 console.error('🚫 Dashboard Context - Unauthorized loading messages, logging out.');
+                 handleLogout();
+                 return;
+              }
+              if (!messagesResponse.ok) {
+                  const errData = await messagesResponse.json().catch(() => ({}));
+                  throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
+              }
+              
+              const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json(); 
+              if (!messagesData.success || !Array.isArray(messagesData.data)) {
+                  throw new Error(`API error listing messages: ${messagesData.error || 'Invalid data format'}`);
+              }
+              
+              setCurrentMessages(messagesData.data);
+              console.log(`Dashboard Context: Loaded ${messagesData.data.length} messages.`);
+          } else {
+              console.warn("Dashboard Context: No conversations returned from list-or-create, cannot load messages.");
+              setCurrentConversationId(null); 
+              setCurrentMessages([]); 
+          }
+
+      } catch (error: any) { 
+          console.error(`Dashboard Context: Error loading conversation data for agent ${agentId}:`, error);
+          setConversationError(`Failed to load data: ${error.message}`);
+          setConversationList([]);
+          setCurrentConversationId(null);
+          setCurrentMessages([]);
+      } finally {
+          setIsLoadingConversations(false); 
+          setIsLoadingMessages(false);
+      }
+  }, [authToken, handleLogout]);
+
+  // --- State Setters & Handlers ---
+
+  // Refresh API keys
+  const refreshApiKeys = useCallback(async () => {
+    await fetchApiKeys();
+  }, [fetchApiKeys]);
+
+  // Smart Setter for Selected Agent ID
+  const setSelectedAgentId = useCallback((agentId: string | null) => {
+    console.log(`Dashboard Context: setSelectedAgentId called with ${agentId}`);
+    if (agentId !== selectedAgentIdState) {
+        setSelectedAgentIdState(agentId);
+        if (agentId) {
+            loadConversationDataForAgent(agentId);
         } else {
-          throw new Error(`API error: ${errorDetail}`);
+            // Clear conversation data
+            setConversationList([]);
+            setCurrentConversationId(null);
+            setCurrentMessages([]);
+            setIsLoadingConversations(false);
+            setIsLoadingMessages(false);
+            setConversationError(null);
         }
-      }
-
-      const userResponse: ServiceResponse<PlatformUser> = await userFetch.json();
-      
-      if (userResponse.success && userResponse.data) {
-        console.log('✅ Dashboard - User data retrieved successfully');
-        // Extract user profile from the API response
-        const userData: PlatformUser = {
-          id: userResponse.data.id,
-          displayName: userResponse.data.displayName || 'Guest',
-          email: userResponse.data.email,
-          createdAt: userResponse.data.createdAt,
-          oauthProvider: userResponse.data.oauthProvider || 'local',
-          providerUserId: userResponse.data.providerUserId || '',
-          lastLogin: userResponse.data.lastLogin || null,
-          updatedAt: userResponse.data.updatedAt || null
-        };
-        setUser(userData);
-      } else {
-        console.error('❌ Dashboard - Invalid data format from API');
-        throw new Error('Invalid data format from API');
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load user data');
-      
-      // Show clear error messaging for connection problems
-      if (error instanceof Error && 
-          (error.message.includes('gateway') || 
-           error.message.includes('unavailable') || 
-           error.message.includes('connection'))) {
-        setError('Connection to backend services failed. Please ensure all services are running.');
-      }
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [selectedAgentIdState, loadConversationDataForAgent]);
 
-  // Fetch user data and agents when provider mounts and token is available
+  // Handler to Create New Chat
+  const handleCreateNewChat = useCallback(async () => {
+      if (!selectedAgentIdState || !authToken || !user) {
+          console.error("Dashboard Context: Cannot create new chat - Missing agent ID, auth token, or user info.");
+          setConversationError("Cannot create new chat: Missing required information.");
+          return;
+      }
+
+      console.log(`Dashboard Context: Starting new chat creation for agent ${selectedAgentIdState}...`);
+      setIsCreatingConversation(true);
+      setConversationError(null);
+
+      try {
+          const newConversationId = crypto.randomUUID();
+          const channelId = 'web'; 
+
+          const requestBody: CreateConversationInput = {
+              agentId: selectedAgentIdState,
+              channelId: channelId,
+              conversationId: newConversationId 
+          };
+
+          const response = await fetch('/api/conversations/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify(requestBody)
+          });
+
+          if (response.status === 401) {
+              console.error('🚫 Dashboard Context - Unauthorized creating conversation, logging out.');
+              handleLogout();
+              return;
+          }
+
+          const responseData: ServiceResponse<Conversation> = await response.json();
+          if (!response.ok || !responseData.success || !responseData.data) {
+              throw new Error(responseData?.error || `Failed to create conversation (HTTP ${response.status})`);
+          }
+          
+          console.log("Dashboard Context: New conversation created successfully:", responseData.data);
+          const newConversation = responseData.data;
+
+          setConversationList(prevList => [newConversation, ...prevList]); 
+          setCurrentConversationId(newConversationId); 
+          setCurrentMessages([]); 
+          setActiveAgentView('chat'); 
+
+      } catch (error: any) {
+          console.error("Dashboard Context: Error creating new chat:", error);
+          setConversationError(`Error creating chat: ${error.message}`);
+      } finally {
+          setIsCreatingConversation(false); 
+      }
+  }, [selectedAgentIdState, authToken, user, handleLogout]);
+
+  // Handler to Select Existing Conversation
+  const handleConversationSelect = useCallback(async (conversationId: string) => {
+      if (!authToken || !conversationId) {
+          console.warn("Dashboard Context: Conversation selection cancelled - missing token or ID.");
+          setConversationError("Cannot select conversation: Missing information.");
+          return;
+      }
+      if (conversationId === currentConversationId) {
+          console.log(`Dashboard Context: Conversation ${conversationId} already selected.`);
+          setActiveAgentView('chat'); 
+          return;
+      }
+
+      console.log(`Dashboard Context: Selecting conversation ${conversationId}`);
+      setIsLoadingMessages(true);
+      setCurrentConversationId(conversationId);
+      setCurrentMessages([]); 
+      setConversationError(null);
+      
+      try {
+          console.log(`Dashboard Context: Fetching messages for ${conversationId}`);
+          const messagesResponse = await fetch(`/api/messages/list?conversation_id=${conversationId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+          
+          if (messagesResponse.status === 401) {
+              console.error('🚫 Dashboard Context - Unauthorized selecting conversation, logging out.');
+              handleLogout();
+              return;
+          }
+          if (!messagesResponse.ok) {
+              const errData = await messagesResponse.json().catch(() => ({}));
+              throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
+          }
+          
+          const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json();
+          
+          if (!messagesData.success || !Array.isArray(messagesData.data)) {
+              throw new Error(messagesData.error || 'Invalid message data received from API');
+          }
+          
+          setCurrentMessages(messagesData.data);
+          console.log(`Dashboard Context: Loaded ${messagesData.data.length} messages for ${conversationId}.`);
+          setActiveAgentView('chat'); 
+
+      } catch (error: any) {
+          console.error(`Dashboard Context: Error loading messages for ${conversationId}:`, error);
+          setConversationError(`Error loading messages: ${error.message}`);
+          setCurrentMessages([]); 
+      } finally {
+          setIsLoadingMessages(false);
+      }
+  }, [authToken, currentConversationId, handleLogout]);
+
+  // --- Initial Data Load Effect ---
   useEffect(() => {
     if (authToken) {
-      fetchUserData();
-      fetchAgents(); // Fetch agents after getting token
+      console.log("Dashboard Context: Auth token available, fetching initial data...");
+      fetchUserData(); 
+      fetchApiKeys();   
+      fetchAgents();    
     } else {
-      // If no token on mount, push to login/home (handled in fetchUserData already)
-      console.log("Dashboard Context: No token on mount, deferring fetches.");
-      setIsLoading(false); // Stop general loading indicator
-      setIsLoadingAgents(false); // Stop agent loading indicator
+        // This case should be handled by the initial token check effect which redirects
+        console.log("Dashboard Context: No auth token available on mount, waiting for redirect.");
+        // Ensure loading states are false if we somehow get here without a token
+        setIsLoading(false);
+        setIsLoadingAgents(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]); // Depend on authToken
+  }, [authToken, fetchUserData, fetchApiKeys, fetchAgents]); // Add all fetch functions
 
-  // Get user initials for avatar
-  const getUserInitials = () => {
-    if (!user?.displayName) return 'U';
-    
-    const nameParts = user.displayName.split(' ');
-    if (nameParts.length === 1) return nameParts[0].substring(0, 1).toUpperCase();
-    
-    return (nameParts[0].substring(0, 1) + nameParts[nameParts.length - 1].substring(0, 1)).toUpperCase();
-  };
-
-  // Handle logout
-  const handleLogout = () => {
-    // Clear auth token, user data, etc.
-    localStorage.removeItem('auth-token');
-    setUser(null);
-    router.push('/');
-  };
-
-  // Reset selected agent and view if agents list changes (e.g., after initial load or error)
+  // --- Agent List Change Effect ---
+  // Handles auto-selection or clearing selection when agent list changes
   useEffect(() => {
-    // If there are agents and no agent is selected, select the first one by default
-    if (agents.length > 0 && !selectedAgentId) {
+    if (isLoadingAgents) return; // Don't run while agents are loading
+
+    if (agents.length > 0 && !selectedAgentIdState) {
+      // Auto-select first agent if list is populated and nothing is selected
+      console.log("Dashboard Context (Agent Effect): Auto-selecting first agent.");
       setSelectedAgentIdState(agents[0].id);
-      setActiveAgentView('chat'); // Reset view when auto-selecting agent
-    } else if (agents.length === 0) {
-      // If no agents are available, clear selection
+      // Data loading is handled by the `loadConversationDataForAgent` called via the smart setter below
+    } else if (selectedAgentIdState && !agents.find(agent => agent.id === selectedAgentIdState)) {
+      // If selected agent is removed from list, select first or null
+      const newAgentId = agents.length > 0 ? agents[0].id : null;
+      console.log(`Dashboard Context (Agent Effect): Selected agent removed, selecting ${newAgentId}.`);
+      setSelectedAgentIdState(newAgentId);
+    } else if (agents.length === 0 && selectedAgentIdState) {
+      // If list becomes empty, clear selection
+      console.log("Dashboard Context (Agent Effect): Agent list empty, clearing selection.");
       setSelectedAgentIdState(null);
-      setActiveAgentView('chat'); // Reset view
-    } else if (selectedAgentId && !agents.find(agent => agent.id === selectedAgentId)) {
-       // If the currently selected agent is no longer in the list, select the first one or null
-       setSelectedAgentIdState(agents.length > 0 ? agents[0].id : null);
-       setActiveAgentView('chat'); // Reset view
     }
-    // Only re-run when agents array identity changes, not on selectedAgentId change itself
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agents]); 
+  }, [agents, isLoadingAgents, selectedAgentIdState]); // Depend on agents list, loading state, and selection
 
-  // --- Enhanced Agent Selection Logic ---
-  const setSelectedAgentId = useCallback((id: string | null) => {
-    setSelectedAgentIdState(id);
-    if (id) {
-      setActiveAgentView('chat'); // Reset to chat view when a new agent is selected
-    }
-  }, []);
-
+  // --- Trigger Load Data For Initial Auto-Selected Agent ---
+  // Separate effect to call loadConversationDataForAgent when the agent is first auto-selected.
   useEffect(() => {
-    if (!isLoadingAgents && agents.length > 0 && !selectedAgentId) {
-       setSelectedAgentIdState(agents[0].id);
-       setActiveAgentView('chat');
-    }
-    else if (selectedAgentId && !agents.find(agent => agent.id === selectedAgentId)) {
-       setSelectedAgentIdState(agents.length > 0 ? agents[0].id : null);
-       setActiveAgentView('chat');
-    }
-    else if (agents.length === 0) {
-       setSelectedAgentIdState(null);
-       setActiveAgentView('chat');
-    }
-  }, [agents, isLoadingAgents, selectedAgentId]);
-  // --- End Enhanced Agent Selection Logic ---
+      // Only run if an agent IS selected AND conversation data hasn't been loaded/attempted yet
+      // (conversationList is empty, and not currently loading)
+      if (selectedAgentIdState && conversationList.length === 0 && !isLoadingConversations && !isLoadingMessages) {
+          console.log(`Dashboard Context (Load Effect): Triggering initial data load for auto-selected agent ${selectedAgentIdState}`);
+          loadConversationDataForAgent(selectedAgentIdState);
+      }
+  // Intentionally only run when selectedAgentIdState changes or load function definition changes
+  // Avoid depending on conversationList/loading states here to prevent loops
+  }, [selectedAgentIdState, loadConversationDataForAgent]);
 
-  // Memoize context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({
+
+  // Memoize the context value
+  const contextValue = useMemo(() => ({
     user,
     setUser,
     isLoading,
@@ -350,31 +588,39 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setError,
     getUserInitials,
     handleLogout,
-    // Agent state and functions
+    // Agent values
     agents,
-    setAgents, // Pass setter if needed, though fetchAgents handles updates
-    selectedAgentId,
-    setSelectedAgentId, // Pass the wrapper function
+    setAgents, 
+    selectedAgentId: selectedAgentIdState, 
+    setSelectedAgentId, // Smart setter
     isLoadingAgents,
-    agentError, // Pass agent-specific error
-    fetchAgents, // Pass fetch function
-    authToken, // Pass auth token
-    activeAgentView, // Provide active view state
-    setActiveAgentView, // Provide setter for active view
+    agentError,
+    fetchAgents,
+    authToken,
+    activeAgentView,
+    setActiveAgentView,
+    // Conversation/Message values
+    conversationList,
+    isLoadingConversations,
+    currentConversationId,
+    currentMessages,
+    isLoadingMessages,
+    isCreatingConversation,
+    conversationError,
+    handleCreateNewChat,
+    handleConversationSelect,
+    setSelectedAgentIdDirectly: setSelectedAgentIdState, 
   }), [
-    user, 
-    isLoading, 
-    error, 
-    authToken, 
-    agents, 
-    isLoadingAgents, 
-    agentError, 
-    selectedAgentId,
-    activeAgentView // Include active view in dependencies
+    user, isLoading, apiKeys, error, getUserInitials, handleLogout, 
+    agents, selectedAgentIdState, setSelectedAgentId, isLoadingAgents, agentError, fetchAgents, authToken, 
+    activeAgentView, setActiveAgentView,
+    conversationList, isLoadingConversations, currentConversationId, currentMessages, 
+    isLoadingMessages, isCreatingConversation, conversationError, 
+    handleCreateNewChat, handleConversationSelect, refreshApiKeys, setAgents // Added setAgents, refreshApiKeys
   ]);
 
   return (
-    <DashboardContext.Provider value={value}>
+    <DashboardContext.Provider value={contextValue}>
       {children}
     </DashboardContext.Provider>
   );
