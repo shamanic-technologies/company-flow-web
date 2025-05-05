@@ -35,7 +35,7 @@ import {
   MemoryStick,
   ToyBrick
 } from "lucide-react";
-import { useDashboard } from './context/DashboardContext';
+import { useDashboard } from '../context/DashboardContext';
 import { cn } from "@/lib/utils"; // Assuming you have a utility for class names
 
 export default function Sidebar() {

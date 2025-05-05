@@ -2,7 +2,7 @@
 
 import { DashboardProvider } from '@/components/dashboard/context/DashboardContext';
 // Import the actual components we intend to use
-import Sidebar from '@/components/dashboard/Sidebar'; 
+import Sidebar from '@/components/dashboard/left-panel/Sidebar'; 
 import MiddlePanel from '@/components/dashboard/MiddlePanel'; 
 import ChatInterface from '@/components/dashboard/Chat/ChatInterface'; 
 
