@@ -22,6 +22,8 @@ interface ChatInterfaceProps {
   userInitials: string;
   initialMessages?: Message[];
   agentId: string | null;
+  agentFirstName: string;
+  agentLastName: string;
   conversationId: string | null;
   isLoading?: boolean;
   error?: string | null;
@@ -32,6 +34,8 @@ export const ChatInterface = ({
   userInitials, 
   initialMessages = [],
   agentId,
+  agentFirstName,
+  agentLastName,
   conversationId,
   isLoading: propIsLoading,
   error: propError
@@ -312,6 +316,8 @@ export const ChatInterface = ({
                   key={message.id} 
                   message={message} 
                   userInitials={userInitials} 
+                  agentFirstName={agentFirstName}
+                  agentLastName={agentLastName}
                   append={append}
                   addToolResult={addToolResult}
                   messages={messages}

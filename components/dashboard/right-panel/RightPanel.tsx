@@ -142,6 +142,8 @@ export default function RightPanel() {
                             authToken={authToken}
                             userInitials={getUserInitials()}
                             agentId={selectedAgentId} // Already checked selectedAgent exists
+                            agentFirstName={selectedAgent.firstName} // Pass agent first name
+                            agentLastName={selectedAgent.lastName}   // Pass agent last name
                             conversationId={currentConversationId} // Pass the selected ID
                             initialMessages={currentMessages} // Pass messages from context
                             // TODO: Update ChatInterface props if needed

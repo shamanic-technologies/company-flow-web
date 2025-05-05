@@ -19,12 +19,14 @@ import remarkGfm from 'remark-gfm';
 interface ChatMessageProps {
   message: Message;
   userInitials: string;
+  agentFirstName: string;
+  agentLastName: string;
   append: UseChatHelpers['append'];
   addToolResult: ReturnType<typeof useChat>['addToolResult'];
   messages: Message[];
 }
 
-export const ChatMessage = ({ message, userInitials, append, addToolResult, messages }: ChatMessageProps) => {
+export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastName, append, addToolResult, messages }: ChatMessageProps) => {
   // Track expanded tool calls by their index
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
   
@@ -45,11 +47,23 @@ export const ChatMessage = ({ message, userInitials, append, addToolResult, mess
     <div 
       className={`flex items-start gap-3 px-2 py-3 rounded-lg ${message.role === 'user' ? "bg-gray-800/50" : "bg-gray-850/30"}`}
     >
-      {/* Avatar Removed */}
+      {/* Avatar Re-added and placed inline */}
       
       <div className="flex-1 overflow-hidden">
-        <div className="text-xs font-medium mb-1 text-gray-300">
-          {message.role === 'user' ? 'You' : 'Assistant'}
+        {/* Flex container for Avatar and Sender Name */}
+        <div className="flex items-center gap-2 mb-1">
+            {/* Small Avatar */}
+            <Avatar className={`h-4 w-4 text-xs ${message.role === 'user' ? "border border-blue-600" : "bg-gradient-to-br from-indigo-600 to-purple-600"}`}>
+                {message.role === 'user' ? (
+                <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
+                ) : (
+                <AvatarFallback className="text-[10px] bg-gradient-to-br from-indigo-600 to-purple-600 text-white">AI</AvatarFallback>
+                )}
+            </Avatar>
+            {/* Sender Name */}
+            <div className="text-xs font-medium text-gray-300">
+              {message.role === 'user' ? 'You' : `${agentFirstName} ${agentLastName}`}
+            </div>
         </div>
         
         {message.role === 'assistant' && message.parts ? (

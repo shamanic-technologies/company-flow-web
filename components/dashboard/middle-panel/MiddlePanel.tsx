@@ -145,13 +145,15 @@ export default function MiddlePanel() {
           <ChatInterface
             key={`${selectedAgentId}-${currentConversationId}`} // Key ensures re-render on conversation change
             agentId={selectedAgentId}
+            agentFirstName={selectedAgent.firstName} // Pass agent first name
+            agentLastName={selectedAgent.lastName}   // Pass agent last name
             conversationId={currentConversationId} // Pass current ID
             initialMessages={currentMessages} // Pass messages fetched by context
             userInitials={getUserInitials()}
             authToken={authToken}
-            // TODO: Modify ChatInterface to potentially accept isLoading/error props if needed
-            // isLoading={isLoadingMessages}
-            // error={conversationError}
+            // Pass loading/error state from context if ChatInterface is updated to use them
+            isLoading={isLoadingMessages} 
+            error={conversationError}     
           />
         );
 
