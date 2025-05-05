@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from "next/link";
 import { 
   Avatar, 
@@ -26,7 +27,7 @@ import {
   Settings, 
   LogOut, 
   ChevronDown, 
-  ChevronRight, 
+  ChevronRight,
   User, 
   Bot, 
   FolderClosed,
@@ -51,6 +52,9 @@ export default function Sidebar() {
     activeAgentView,
     setActiveAgentView
   } = useDashboard();
+
+  // State to track which agent's sub-menu is expanded
+  const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
 
   // Sub-menu items configuration
   const agentSubMenuItems = [
@@ -84,30 +88,41 @@ export default function Sidebar() {
                 {/* Agent Selection Button */}
                 <Button
                   variant={selectedAgentId === agent.id ? "secondary" : "ghost"}
-                  className="w-full justify-start text-sm h-9 font-medium"
-                  onClick={() => setSelectedAgentId(agent.id)}
+                  className="w-full justify-start text-xs h-8 font-medium pl-2 pr-2"
+                  onClick={() => {
+                    setSelectedAgentId(agent.id);
+                    setExpandedAgentId(prevId => (prevId === agent.id ? null : agent.id));
+                  }}
                 >
-                  <Bot className="mr-2 h-4 w-4" />
-                  {`${agent.firstName} ${agent.lastName}`}
+                  <ChevronRight 
+                    className={cn(
+                      "mr-1 h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200",
+                      expandedAgentId === agent.id && "rotate-90"
+                    )} 
+                  />
+                  <span className="truncate pl-1">{`${agent.firstName} ${agent.lastName}`}</span>
                 </Button>
                 
-                {/* Sub-menu for the selected agent */}
-                {selectedAgentId === agent.id && (
-                  <div className="mt-1 mb-2 pl-5 flex flex-col gap-1">
+                {/* Sub-menu for the selected and expanded agent */}
+                {expandedAgentId === agent.id && (
+                  <div className="mt-1 mb-1 pl-7 flex flex-col gap-0.5">
                     {agentSubMenuItems.map((item) => {
                       const Icon = item.icon;
-                      const isActive = activeAgentView === item.id;
+                      const isActive = activeAgentView === item.id && selectedAgentId === agent.id;
                       return (
                         <Button
                           key={item.id}
-                          variant={isActive ? "secondary" : "ghost"}
+                          variant={isActive ? "secondary" : "ghost"} 
                           className={cn(
-                            "w-full justify-start text-sm h-8",
-                            isActive ? "font-semibold" : "font-normal text-gray-400 hover:text-gray-200"
+                            "w-full justify-start text-xs h-7 pl-2",
+                            isActive 
+                              ? "font-semibold text-gray-100"
+                              : "font-normal text-gray-400 hover:text-gray-200 hover:bg-gray-800/50",
+                            !isActive && "hover:bg-gray-800/50"
                           )}
                           onClick={() => setActiveAgentView(item.id as any)}
                         >
-                          <Icon className="mr-2 h-4 w-4" />
+                          <Icon className="mr-2 h-3.5 w-3.5 shrink-0" />
                           {item.label}
                         </Button>
                       );
