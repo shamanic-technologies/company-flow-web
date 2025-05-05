@@ -4,8 +4,8 @@
  * MiddlePanel Component
  * 
  * This component represents the central area of the dashboard, displaying 
- * the active content based on the user's selection (chat, conversation list, memory, actions).
- * It relies on DashboardContext for agent, conversation, and message data.
+ * the active content based on the user's selection (chat, conversation list, memory, actions, webhook details).
+ * It relies on DashboardContext for agent, conversation, message, and webhook data.
  */
 
 import { useEffect, useState, useRef } from 'react';
@@ -13,11 +13,15 @@ import { ChatInterface } from '@/components/dashboard';
 import { useDashboard } from '@/components/dashboard/context/DashboardContext';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
+// Import Webhook type
+import { Webhook } from '@agent-base/types'; 
 
 // Import panel components
 import ConversationListPanel from './ConversationListPanel';
 import MemoryPanel from './MemoryPanel';
 import ActionsPanel from './ActionsPanel';
+// Import a new component for displaying webhook details
+import WebhookDetailPanel from './WebhookDetailPanel'; 
 
 // Import shared types (Use monorepo package)
 // import { Agent, Conversation, CreateConversationInput } from '@agent-base/types'; // Types used via context
@@ -57,7 +61,12 @@ export default function MiddlePanel() {
     conversationError, // Use context error state
 
     // Actions related (from context)
-    handleCreateNewChat // Use context action
+    handleCreateNewChat, // Use context action
+
+    // Webhook related (from context)
+    selectedWebhook, // Get the selected webhook
+    webhookError, // Get webhook specific error
+    isLoadingWebhooks // Get webhook loading state (might be useful)
   } = useDashboard();
 
   // State for the currently selected conversation ID - REMOVED (use currentConversationId from context)
@@ -94,15 +103,19 @@ export default function MiddlePanel() {
    * @returns JSX.Element The content to display in the middle panel.
    */
   const renderMainContent = () => {
-    // Case 1: No agent selected
-    if (!selectedAgentId || !selectedAgent) {
-      // Instruct the user to select an agent if none is chosen
-      return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to begin.</div>;
+    // Case 1: No agent selected (only relevant for agent-specific views)
+    if (!selectedAgentId && (activeAgentView === 'chat' || activeAgentView === 'conversations' || activeAgentView === 'memory' || activeAgentView === 'actions')) {
+      // Instruct the user to select an agent if none is chosen and view requires it
+      return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to view {activeAgentView}.</div>;
     }
 
     // Case 2: Determine content based on the active view
     switch (activeAgentView) {
       case 'chat':
+        // Ensure an agent IS selected for chat
+        if (!selectedAgentId || !selectedAgent) {
+            return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to start chatting.</div>;
+        }
         // Sub-case: Loading messages for the selected conversation (using context state)
         if (isLoadingMessages) {
              return (
@@ -147,7 +160,7 @@ export default function MiddlePanel() {
             agentId={selectedAgentId}
             agentFirstName={selectedAgent.firstName} // Pass agent first name
             agentLastName={selectedAgent.lastName}   // Pass agent last name
-            conversationId={currentConversationId} // Pass current ID
+            conversationId={currentConversationId ?? ''} // Pass current ID, handle null case
             initialMessages={currentMessages} // Pass messages fetched by context
             userInitials={getUserInitials()}
             authToken={authToken}
@@ -158,6 +171,10 @@ export default function MiddlePanel() {
         );
 
       case 'conversations':
+        // Ensure an agent IS selected for conversations
+        if (!selectedAgentId) {
+            return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to view conversations.</div>;
+        }
         // Render the list of conversations for the selected agent using context data
         return (
           <ConversationListPanel
@@ -170,13 +187,17 @@ export default function MiddlePanel() {
         );
 
       case 'memory':
+        // Ensure an agent IS selected for memory
+        if (!selectedAgentId || !selectedAgent) {
+             return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to view memory.</div>;
+        }
          // Render the memory panel for the selected agent
         return <MemoryPanel selectedAgent={selectedAgent} />;
 
       case 'actions':
-         // Render the actions panel
+        // Ensure an agent IS selected for actions
         if (!selectedAgentId) {
-             return <div className="p-4 text-gray-500 text-xs">Select an agent to view actions.</div>;
+             return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select an agent to view actions.</div>;
         }
         return (
            <ActionsPanel
@@ -185,8 +206,29 @@ export default function MiddlePanel() {
             />
         );
 
+      // --- New Case: Webhook Detail View ---
+      case 'webhookDetail':
+        // Check for webhook-specific errors
+        if (webhookError) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center text-xs">
+                   <p>Error related to webhooks:</p>
+                   <p className="text-xs text-red-300 mt-1">{webhookError}</p>
+                   {/* Maybe add a retry button for fetchUserWebhooks later */}
+                </div>
+             );
+        }
+        // Check if a webhook is selected
+        if (!selectedWebhook) {
+            return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select a webhook from the sidebar to view its details.</div>;
+        }
+        // Render the webhook details panel
+        return <WebhookDetailPanel webhook={selectedWebhook} />; 
+
       default:
-        console.warn(`MiddlePanel: Unknown activeAgentView encountered: ${activeAgentView}`);
+        // Handle potential unknown view state
+        const exhaustiveCheck: never = activeAgentView;
+        console.warn(`MiddlePanel: Unknown activeAgentView encountered: ${exhaustiveCheck}`);
         return <div className="p-4 text-yellow-500 text-xs">Unknown view selected. Please select a valid option.</div>;
     }
   };

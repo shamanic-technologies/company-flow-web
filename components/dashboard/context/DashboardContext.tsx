@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ApiKey, PlatformUser, ServiceResponse, Agent, Conversation, CreateConversationInput } from '@agent-base/types';
+import { ApiKey, PlatformUser, ServiceResponse, Agent, Conversation, CreateConversationInput, Webhook } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 
 
@@ -28,8 +28,8 @@ interface DashboardContextType {
   agentError: string | null;
   fetchAgents: () => Promise<void>; // Changed to no args, token used internally
   authToken: string; // Add authToken to the context type
-  activeAgentView: 'chat' | 'conversations' | 'memory' | 'actions'; // New state for active view
-  setActiveAgentView: (view: 'chat' | 'conversations' | 'memory' | 'actions') => void; // Setter for active view
+  activeAgentView: 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail'; // New state for active view
+  setActiveAgentView: (view: 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail') => void; // Setter for active view
 
   // --- Conversation & Message Related ---
   conversationList: Conversation[];
@@ -44,6 +44,14 @@ interface DashboardContextType {
   selectConversationId: (conversationId: string | null) => void;
   // Expose setter for selectedAgentId for direct use
   setSelectedAgentIdDirectly: (agentId: string | null) => void; 
+
+  // --- Webhook Related ---
+  userWebhooks: Webhook[]; // List of webhooks created by the user
+  isLoadingWebhooks: boolean; // Loading state for webhooks
+  webhookError: string | null; // Error state for webhooks
+  selectedWebhook: Webhook | null; // The currently selected webhook for detail view
+  fetchUserWebhooks: () => Promise<void>; // Function to fetch user's webhooks
+  selectWebhook: (webhook: Webhook | null) => void; // Function to select a webhook
 }
 
 // Create the context with a default value
@@ -82,6 +90,14 @@ export const DashboardContext = createContext<DashboardContextType>({
   handleCreateNewChat: async () => {},
   selectConversationId: () => {},
   setSelectedAgentIdDirectly: () => {}, 
+
+  // Default webhook state
+  userWebhooks: [],
+  isLoadingWebhooks: false,
+  webhookError: null,
+  selectedWebhook: null,
+  fetchUserWebhooks: async () => {},
+  selectWebhook: () => {},
 });
 
 // Provider component that wraps the dashboard pages
@@ -98,7 +114,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [agentError, setAgentError] = useState<string | null>(null);
   const [selectedAgentIdState, setSelectedAgentIdState] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string>('');
-  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('conversations'); // Default to 'conversations'
+  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail'>('conversations'); // Default to 'conversations'
   // --- End Agent State ---
 
   // --- Conversation & Message State ---
@@ -110,6 +126,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isCreatingConversation, setIsCreatingConversation] = useState<boolean>(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
   // --- End Conversation State ---
+
+  // --- Webhook State ---
+  const [userWebhooks, setUserWebhooks] = useState<Webhook[]>([]);
+  const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null);
+  // --- End Webhook State ---
 
   // Get auth token early
   useEffect(() => {
@@ -148,10 +171,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setConversationList([]);
     setCurrentConversationId(null);
     setCurrentMessages([]);
+    // Reset webhook state on logout
+    setUserWebhooks([]);
+    setSelectedWebhook(null); 
     setAuthToken('');
     setError(null);
     setAgentError(null);
     setConversationError(null);
+    setWebhookError(null); // Reset webhook error
     router.push('/'); // Redirect to home page after logout
   }, [router]);
 
@@ -534,21 +561,82 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     } // No need for the else-if block that also set the view
   }, [currentConversationId]); // Dependency: currentConversationId
 
+  // --- New: Fetch User Webhooks ---
+  const fetchUserWebhooks = useCallback(async () => {
+    if (!authToken) {
+      console.warn("Dashboard Context: Auth token not available for fetching webhooks.");
+      setWebhookError("Authentication required to load webhooks.");
+      setIsLoadingWebhooks(false);
+      return;
+    }
+
+    console.log("🎣 Dashboard Context - Fetching user webhooks...");
+    setIsLoadingWebhooks(true);
+    setWebhookError(null);
+    setUserWebhooks([]); // Clear previous webhooks
+
+    try {
+      const response = await fetch('/api/webhooks/get-created', {
+        method: 'POST', // Ensure POST method is used as defined in the API route
+        headers: { 
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json' // Specify content type if needed by the API
+        },
+        // Body might not be needed if the API route doesn't expect one for a GET-like action via POST
+        // body: JSON.stringify({}) 
+      });
+
+      console.log('📊 Dashboard Context - User Webhooks API response status:', response.status);
+
+      if (response.status === 401) {
+        console.error('🚫 Dashboard Context - Unauthorized fetching webhooks, logging out.');
+        handleLogout();
+        return;
+      }
+
+      const data: ServiceResponse<Webhook[]> = await response.json();
+
+      if (!response.ok) {
+         let errorDetail = `Status: ${response.status}`;
+         if (data && data.error) {
+            errorDetail = data.error;
+         }
+         throw new Error(`API error fetching webhooks: ${errorDetail}`);
+      }
+
+      if (data.success && data.data) {
+        console.log(`✅ Dashboard Context - ${data.data.length} User webhooks retrieved successfully.`);
+        setUserWebhooks(data.data);
+      } else {
+        throw new Error(data.error || 'Invalid data format from webhooks API');
+      }
+    } catch (error: any) {
+      console.error('❌ Dashboard Context - Error fetching user webhooks:', error);
+      setWebhookError(error.message || 'Failed to fetch webhooks.');
+      setUserWebhooks([]);
+    } finally {
+      setIsLoadingWebhooks(false);
+    }
+  }, [authToken, handleLogout]);
+  // --- End Fetch User Webhooks ---
+
   // --- Initial Data Load Effect ---
   useEffect(() => {
     if (authToken) {
-      console.log("Dashboard Context: Auth token available, fetching initial data...");
+      console.log("🔑 Dashboard Context: Auth token available, fetching initial data...");
       fetchUserData(); 
       fetchApiKeys();   
       fetchAgents();    
+      fetchUserWebhooks(); // Fetch webhooks after getting token
     } else {
         // This case should be handled by the initial token check effect which redirects
-        console.log("Dashboard Context: No auth token available on mount, waiting for redirect.");
+        console.log("⏳ Dashboard Context: Waiting for auth token...");
         // Ensure loading states are false if we somehow get here without a token
         setIsLoading(false);
         setIsLoadingAgents(false);
+        setIsLoadingWebhooks(false); // Set webhook loading false if no token
     }
-  }, [authToken, fetchUserData, fetchApiKeys, fetchAgents]); // Add all fetch functions
+  }, [authToken, fetchUserData, fetchApiKeys, fetchAgents, fetchUserWebhooks]); // Add all fetch functions
 
   // --- Agent List Change Effect ---
   // Handles auto-selection or clearing selection when agent list changes
@@ -682,6 +770,23 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [authToken, handleLogout]); // Dependency on authToken and handleLogout
 
+  // --- Select Webhook ---
+  const selectWebhook = useCallback((webhook: Webhook | null) => {
+    console.log('Selecting webhook:', webhook?.id ?? 'None');
+    setSelectedWebhook(webhook);
+    if (webhook) {
+      // Switch view to show webhook details when a webhook is selected
+      setActiveAgentView('webhookDetail'); 
+      // Optionally clear agent/conversation selection if webhook view is separate
+      // setSelectedAgentIdState(null); 
+      // setCurrentConversationId(null);
+    } else {
+        // Optionally revert to a default view if webhook is deselected
+        // setActiveAgentView('conversations'); 
+    }
+  }, [setActiveAgentView]); 
+  // --- End Select Webhook ---
+
   // Memoize the context value
   const contextValue = useMemo(() => ({
     user,
@@ -718,6 +823,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleCreateNewChat,
     selectConversationId, // Expose the selector function
     setSelectedAgentIdDirectly: setSelectedAgentIdState, // Expose direct setter if absolutely needed
+    // Webhook related
+    userWebhooks,
+    isLoadingWebhooks,
+    webhookError,
+    selectedWebhook,
+    fetchUserWebhooks,
+    selectWebhook,
   }), [
     user, isLoading, apiKeys, error, getUserInitials, handleLogout,
     agents, selectedAgentIdState, handleAgentSelection, isLoadingAgents, agentError, fetchAgents, authToken, activeAgentView, // Agent values
@@ -729,6 +841,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     // setIsLoading is stable
     // setUser is stable
     // setAgents is stable
+    // Add webhook state to dependency array
+    userWebhooks, isLoadingWebhooks, webhookError, selectedWebhook,
+    // List all functions
+    setUser, setIsLoading, setApiKeys, setError, getUserInitials, handleLogout, setAgents, setSelectedAgentIdState, fetchAgents, setActiveAgentView,
+    fetchConversationsForAgent, handleCreateNewChat, selectConversationId, setSelectedAgentIdState,
+    // Add webhook functions to dependency array
+    fetchUserWebhooks, selectWebhook, fetchApiKeys // Added fetchApiKeys
   ]);
 
   return (
