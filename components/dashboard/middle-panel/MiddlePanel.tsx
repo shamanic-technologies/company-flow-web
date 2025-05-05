@@ -38,7 +38,8 @@ export default function MiddlePanel() {
     authToken, // Get auth token from context
     activeAgentView, // Get the active view from context
     getUserInitials,
-    setActiveAgentView // Need this to switch view after selecting conversation
+    setActiveAgentView, // Need this to switch view after selecting conversation
+    selectConversation, 
   } = useDashboard();
   
   // State for the current conversation's messages (history fetched from API)
@@ -375,7 +376,7 @@ export default function MiddlePanel() {
             // Pass potential errors if needed (using agentError for now, might need specific error state)
             historyError={agentError} // TODO: Refine error handling/passing 
             currentConversationId={currentConversationId} 
-            onConversationSelect={handleConversationSelect} // Pass the handler function
+            onConversationSelect={selectConversation} // USE THE NEW FUNCTION HERE
           />
         );
 

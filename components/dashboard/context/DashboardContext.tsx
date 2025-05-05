@@ -42,6 +42,7 @@ interface DashboardContextType {
   fetchConversationsForAgent: (agentId: string, authToken: string) => Promise<void>;
   handleCreateNewChat: () => Promise<void>;
   handleConversationSelect: (conversationId: string) => Promise<void>;
+  selectConversation: (conversationId: string | null) => void;
   // Expose setter for selectedAgentId for direct use
   setSelectedAgentIdDirectly: (agentId: string | null) => void; 
 }
@@ -81,6 +82,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   fetchConversationsForAgent: async () => {},
   handleCreateNewChat: async () => {},
   handleConversationSelect: async () => {},
+  selectConversation: () => {},
   setSelectedAgentIdDirectly: () => {}, 
 });
 
@@ -587,6 +589,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [handleLogout]); // Dependency: handleLogout
   // --- END: ADD FETCH CONVERSATIONS FOR AGENT ---
 
+  // --- START: ADD NEW selectConversation HANDLER ---
+  // Simple state setter for currentConversationId
+  const selectConversation = useCallback((conversationId: string | null) => {
+    console.log(`Dashboard Context: Setting current conversation ID only to: ${conversationId}`);
+    if (conversationId !== currentConversationId) {
+        setCurrentConversationId(conversationId);
+        // NOTE: We intentionally DO NOT fetch messages or change the active view here.
+        // The RightPanel's ChatInterface will react to the conversationId change.
+        // We also don't clear messages here, maybe ChatInterface handles that? Or handleConversationSelect if used.
+    }
+  }, [currentConversationId]); // Dependency: currentConversationId
+  // --- END: ADD NEW selectConversation HANDLER ---
+
   // --- Initial Data Load Effect ---
   useEffect(() => {
     if (authToken) {
@@ -674,6 +689,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchConversationsForAgent,
     handleCreateNewChat,
     handleConversationSelect,
+    selectConversation,
     setSelectedAgentIdDirectly: setSelectedAgentIdState, 
   }), [
     user, isLoading, apiKeys, error, getUserInitials, handleLogout, 
@@ -681,7 +697,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     activeAgentView, setActiveAgentView,
     conversationList, isLoadingConversations, currentConversationId, currentMessages, 
     isLoadingMessages, isCreatingConversation, conversationError, fetchConversationsForAgent,
-    handleCreateNewChat, handleConversationSelect, fetchApiKeys // Added fetchApiKeys
+    handleCreateNewChat, handleConversationSelect, selectConversation, fetchApiKeys // Add selectConversation
   ]);
 
   return (
