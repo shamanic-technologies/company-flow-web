@@ -137,6 +137,20 @@ export default function Sidebar() {
             ))
           )}
         </div>
+
+        {/* Tools Section */}
+        <div className="flex flex-col gap-1">
+          <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tools</h3>
+          {/* Placeholder for Tools content */}
+          <div className="p-2 text-sm text-gray-400">Tools coming soon...</div>
+        </div>
+
+        {/* Webhooks Section */}
+        <div className="flex flex-col gap-1">
+          <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Webhooks</h3>
+          {/* Placeholder for Webhooks content */}
+          <div className="p-2 text-sm text-gray-400">Webhooks coming soon...</div>
+        </div>
       </nav>
 
       {/* User Profile Section at the bottom */} 
