@@ -67,6 +67,7 @@ export default function RightPanel() {
                     {/* Skeleton for Chat Area */}
                     <div className="flex-1 flex items-center justify-center">
                         <p className="text-sm text-gray-500">Loading agent...</p>
+                        <p className="text-xs text-gray-500">Loading agent...</p>
                     </div>
                     <Skeleton className="h-10 w-full bg-gray-700" />
                 </div>
@@ -78,7 +79,7 @@ export default function RightPanel() {
             return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4 text-center">
                     <MessageCircle className="h-12 w-12 mb-4 text-gray-600" />
-                    <p className="text-sm">Select an agent from the list to view details and chat.</p>
+                    <p className="text-xs">Select an agent from the list to view details and chat.</p>
                 </div>
             );
         }
@@ -100,11 +101,11 @@ export default function RightPanel() {
                          return (
                              <div className="flex flex-col flex-1 items-center justify-center text-gray-500 p-4 text-center">
                                 <MessageCircle className="h-10 w-10 mb-3 text-gray-600" />
-                                <p className="text-sm">No conversation selected.</p>
+                                <p className="text-xs">No conversation selected.</p>
                                 <button
                                     onClick={handleCreateNewChat}
                                     disabled={isCreatingConversation}
-                                    className="text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 mt-1"
+                                    className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50 mt-1"
                                 >
                                     {isCreatingConversation ? 'Creating...' : 'Start a new chat.'}
                                 </button>
@@ -116,7 +117,8 @@ export default function RightPanel() {
                     if (isLoadingMessages) {
                          return (
                             <div className="flex flex-1 items-center justify-center text-gray-400 p-4">
-                                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading messages...
+                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                <span className="text-xs">Loading messages...</span>
                             </div>
                          );
                     }
@@ -126,7 +128,7 @@ export default function RightPanel() {
                          return (
                             <div className="flex flex-col flex-1 items-center justify-center text-red-400 p-4 text-center">
                                <AlertTriangle className="h-10 w-10 mb-3 text-red-500" />
-                               <p className="font-medium">Error loading messages</p>
+                               <p className="font-medium text-xs">Error loading messages</p>
                                <p className="text-xs text-red-300/80 mt-1 max-w-xs">{conversationError}</p>
                                {/* Optionally add a retry mechanism later */}
                             </div>

@@ -97,7 +97,7 @@ export default function MiddlePanel() {
     // Case 1: No agent selected
     if (!selectedAgentId || !selectedAgent) {
       // Instruct the user to select an agent if none is chosen
-      return <div className="flex items-center justify-center h-full text-gray-500 p-4">Please select an agent to begin.</div>;
+      return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Please select an agent to begin.</div>;
     }
 
     // Case 2: Determine content based on the active view
@@ -106,17 +106,17 @@ export default function MiddlePanel() {
         // Sub-case: Loading messages for the selected conversation (using context state)
         if (isLoadingMessages) {
              return (
-                <div className="flex items-center justify-center h-full text-gray-400 p-4">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading messages...
+                <div className="flex items-center justify-center h-full text-gray-400 p-4 text-xs">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading messages...
                 </div>
              );
         }
         // Sub-case: Error loading messages (using context state)
         if (conversationError) {
              return (
-                <div className="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center">
+                <div className="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center text-xs">
                    <p>Error loading messages:</p>
-                   <p className="text-sm text-red-300 mt-1">{conversationError}</p>
+                   <p className="text-xs text-red-300 mt-1">{conversationError}</p>
                    {/* Maybe add a retry button later */}
                 </div>
              );
@@ -125,13 +125,13 @@ export default function MiddlePanel() {
         if (!currentConversationId) {
             // This might happen briefly during transitions or if list loading fails
             return (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4 text-center">
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4 text-center text-xs">
                    <p>No conversation selected.</p>
-                   <p className="text-sm text-gray-500">Select one from the list or create a new chat.</p>
+                   <p className="text-xs text-gray-500">Select one from the list or create a new chat.</p>
                     <button
                         onClick={handleCreateNewChat} // Use context's creation handler
                         disabled={isCreatingConversation} // Use context's loading state
-                        className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm disabled:opacity-50"
+                        className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs disabled:opacity-50"
                     >
                         {isCreatingConversation ? 'Creating...' : 'New Chat'}
                     </button>
@@ -174,7 +174,7 @@ export default function MiddlePanel() {
       case 'actions':
          // Render the actions panel
         if (!selectedAgentId) {
-             return <div className="p-4 text-gray-500">Select an agent to view actions.</div>;
+             return <div className="p-4 text-gray-500 text-xs">Select an agent to view actions.</div>;
         }
         return (
            <ActionsPanel
@@ -185,7 +185,7 @@ export default function MiddlePanel() {
 
       default:
         console.warn(`MiddlePanel: Unknown activeAgentView encountered: ${activeAgentView}`);
-        return <div className="p-4 text-yellow-500">Unknown view selected. Please select a valid option.</div>;
+        return <div className="p-4 text-yellow-500 text-xs">Unknown view selected. Please select a valid option.</div>;
     }
   };
 
