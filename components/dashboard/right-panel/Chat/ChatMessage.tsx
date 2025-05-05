@@ -45,13 +45,7 @@ export const ChatMessage = ({ message, userInitials, append, addToolResult, mess
     <div 
       className={`flex items-start gap-3 px-2 py-3 rounded-lg ${message.role === 'user' ? "bg-gray-800/50" : "bg-gray-850/30"}`}
     >
-      <Avatar className={message.role === 'user' ? "border border-blue-600" : "bg-gradient-to-br from-indigo-600 to-purple-600"}>
-        {message.role === 'user' ? (
-          <AvatarFallback>{userInitials}</AvatarFallback>
-        ) : (
-          <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white">AI</AvatarFallback>
-        )}
-      </Avatar>
+      {/* Avatar Removed */}
       
       <div className="flex-1 overflow-hidden">
         <div className="text-xs font-medium mb-1 text-gray-300">
