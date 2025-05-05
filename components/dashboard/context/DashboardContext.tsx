@@ -527,14 +527,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (conversationId !== currentConversationId) {
         setCurrentConversationId(conversationId);
         // Message fetching is handled by the useEffect hook watching currentConversationId
-        // Optionally switch view if a valid conversation is selected
-        if (conversationId) {
-           setActiveAgentView('chat');
-        }
-    } else if (conversationId) {
-        // If clicking the already selected conversation, ensure the view is chat
-        setActiveAgentView('chat');
-    }
+        // View is no longer changed here
+        // if (conversationId) {
+        //    setActiveAgentView('chat'); 
+        // }
+    } // No need for the else-if block that also set the view
   }, [currentConversationId]); // Dependency: currentConversationId
 
   // --- Initial Data Load Effect ---
