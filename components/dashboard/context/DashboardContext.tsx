@@ -39,6 +39,7 @@ interface DashboardContextType {
   isLoadingMessages: boolean;
   isCreatingConversation: boolean;
   conversationError: string | null; // Specific error for conversation/message loading
+  fetchConversationsForAgent: (agentId: string, authToken: string) => Promise<void>;
   handleCreateNewChat: () => Promise<void>;
   handleConversationSelect: (conversationId: string) => Promise<void>;
   // Expose setter for selectedAgentId for direct use
@@ -77,6 +78,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   isLoadingMessages: false,
   isCreatingConversation: false,
   conversationError: null,
+  fetchConversationsForAgent: async () => {},
   handleCreateNewChat: async () => {},
   handleConversationSelect: async () => {},
   setSelectedAgentIdDirectly: () => {}, 
@@ -529,6 +531,62 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
   }, [authToken, currentConversationId, handleLogout]);
 
+  // --- START: ADD FETCH CONVERSATIONS FOR AGENT ---
+  const fetchConversationsForAgent = useCallback(async (agentId: string, token: string) => {
+    if (!agentId) {
+      console.warn('Dashboard Context: fetchConversationsForAgent called without agentId.');
+      return;
+    }
+    if (!token) {
+      console.warn('Dashboard Context: fetchConversationsForAgent called without token.');
+      setConversationError('Authentication required to load conversations.');
+      return;
+    }
+    
+    console.log(`Dashboard Context: Fetching conversations for agent ${agentId}...`);
+    setIsLoadingConversations(true);
+    setConversationError(null);
+    // Clear existing list for the new agent
+    setConversationList([]); 
+    // Reset current selection when fetching for a new agent
+    // setCurrentConversationId(null); 
+    // setCurrentMessages([]); // Keep messages until explicitly changed by handleConversationSelect
+    
+    try {
+      const response = await fetch(`/api/conversations/list?agentId=${agentId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        console.error('Dashboard Context: Unauthorized fetching conversations, logging out.');
+        handleLogout();
+        return;
+      }
+
+      const data: ServiceResponse<Conversation[]> = await response.json();
+
+      if (data.success && data.data) {
+        console.log(`Dashboard Context: Successfully fetched ${data.data.length} conversations for agent ${agentId}.`);
+        // Sort conversations by updatedAt descending (most recent first)
+        const sortedConversations = data.data.sort((a, b) => 
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+        setConversationList(sortedConversations);
+      } else {
+        console.error('Dashboard Context: Failed to fetch conversations:', data.error);
+        setConversationError(data.error || 'Failed to fetch conversations.');
+        setConversationList([]);
+      }
+    } catch (error: any) {
+      console.error('Dashboard Context: Error fetching conversations:', error);
+      setConversationError(error.message || 'An unexpected error occurred while fetching conversations.');
+      setConversationList([]);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, [handleLogout]); // Dependency: handleLogout
+  // --- END: ADD FETCH CONVERSATIONS FOR AGENT ---
+
   // --- Initial Data Load Effect ---
   useEffect(() => {
     if (authToken) {
@@ -589,7 +647,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setIsLoading,
     apiKeys,
     setApiKeys,
-    refreshApiKeys,
+    refreshApiKeys: fetchApiKeys,
     error,
     setError,
     getUserInitials,
@@ -613,6 +671,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoadingMessages,
     isCreatingConversation,
     conversationError,
+    fetchConversationsForAgent,
     handleCreateNewChat,
     handleConversationSelect,
     setSelectedAgentIdDirectly: setSelectedAgentIdState, 
@@ -621,8 +680,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     agents, selectedAgentIdState, setSelectedAgentId, isLoadingAgents, agentError, fetchAgents, authToken, 
     activeAgentView, setActiveAgentView,
     conversationList, isLoadingConversations, currentConversationId, currentMessages, 
-    isLoadingMessages, isCreatingConversation, conversationError, 
-    handleCreateNewChat, handleConversationSelect, refreshApiKeys, setAgents // Added setAgents, refreshApiKeys
+    isLoadingMessages, isCreatingConversation, conversationError, fetchConversationsForAgent,
+    handleCreateNewChat, handleConversationSelect, fetchApiKeys // Added fetchApiKeys
   ]);
 
   return (
