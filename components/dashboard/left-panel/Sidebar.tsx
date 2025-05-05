@@ -34,7 +34,8 @@ import {
   MessageSquare,
   List,
   MemoryStick,
-  ToyBrick
+  ToyBrick,
+  Webhook
 } from "lucide-react";
 import { useDashboard } from '../context/DashboardContext';
 import { cn } from "@/lib/utils"; // Assuming you have a utility for class names
@@ -50,7 +51,12 @@ export default function Sidebar() {
     selectedAgentId,
     setSelectedAgentId,
     activeAgentView,
-    setActiveAgentView
+    setActiveAgentView,
+    userWebhooks,       
+    isLoadingWebhooks,  
+    webhookError,       
+    selectedWebhook,    
+    selectWebhook,      
   } = useDashboard();
 
   // State to track which agent's sub-menu is expanded
@@ -155,8 +161,26 @@ export default function Sidebar() {
         {/* Webhooks Section */}
         <div className="flex flex-col gap-1">
           <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Webhooks</h3>
-          {/* Placeholder for Webhooks content */}
-          <div className="p-2 text-sm text-gray-400">Webhooks coming soon...</div>
+          {/* Display loading, error, or webhook list */}
+          {isLoadingWebhooks ? (
+            <div className="p-2 text-sm text-gray-400">Loading webhooks...</div>
+          ) : webhookError ? (
+            <div className="p-2 text-sm text-red-400">Error: {webhookError}</div>
+          ) : userWebhooks.length === 0 ? (
+            <div className="p-2 text-sm text-gray-400">No webhooks found.</div>
+          ) : (
+            userWebhooks.map((webhook) => (
+              <Button
+                key={webhook.id}
+                variant={selectedWebhook?.id === webhook.id ? "secondary" : "ghost"}
+                className="w-full justify-start text-xs h-8 font-medium pl-2 pr-2"
+                onClick={() => selectWebhook(webhook)}
+              >
+                <Webhook className="mr-2 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{webhook.name}</span>
+              </Button>
+            ))
+          )}
         </div>
       </nav>
 
