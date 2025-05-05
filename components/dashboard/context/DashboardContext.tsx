@@ -67,7 +67,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   agentError: null,
   fetchAgents: async () => {},
   authToken: '', // Add default value for authToken
-  activeAgentView: 'chat', // New state for active view
+  activeAgentView: 'conversations', // Default to 'conversations'
   setActiveAgentView: () => {}, // Setter for active view
   // Default conversation/message state
   conversationList: [],
@@ -96,7 +96,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [agentError, setAgentError] = useState<string | null>(null);
   const [selectedAgentIdState, setSelectedAgentIdState] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string>('');
-  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('chat');
+  const [activeAgentView, setActiveAgentView] = useState<'chat' | 'conversations' | 'memory' | 'actions'>('conversations'); // Default to 'conversations'
   // --- End Agent State ---
 
   // --- Conversation & Message State ---
@@ -249,54 +249,60 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setAgents([]); 
       return;
     }
-    
+
+    console.log("🤖 Dashboard Context - Fetching agents...");
     setIsLoadingAgents(true);
-    setAgentError(null);
-    console.log("Dashboard Context: Fetching agents...");
+    setAgentError(null); 
+    setAgents([]); // Clear previous agents
+
     try {
-      const response = await fetch('/api/agents/get-or-create', { 
-        headers: { 'Authorization': `Bearer ${authToken}` },
+      const agentsResponse = await fetch('/api/agents/get-or-create', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
       });
+      
+      console.log('📊 Dashboard Context - Agents API response status:', agentsResponse.status);
 
-      if (response.status === 401) {
-          console.error('🚫 Dashboard Context - Unauthorized fetching agents, logging out.');
-          handleLogout();
-          return;
+      if (agentsResponse.status === 401) {
+        console.error('🚫 Dashboard Context - Unauthorized fetching agents, logging out.');
+        handleLogout(); // Use logout handler
+        return; 
       }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to get/create agents: ${errorData.error || response.statusText} (${response.status})`);
+      if (!agentsResponse.ok) {
+        let errorDetail = `Status: ${agentsResponse.status}`;
+        try {
+          const errorData = await agentsResponse.json();
+          errorDetail = errorData.error || errorDetail;
+        } catch (e) { /* ignore */ }
+        throw new Error(`API error fetching agents: ${errorDetail}`);
       }
+      
+      const agentsData: ServiceResponse<Agent[]> = await agentsResponse.json();
 
-      const apiResponse: ServiceResponse<Agent[]> = await response.json();
-      console.log("Dashboard Context: Agent data received:", apiResponse);
+      if (agentsData.success && agentsData.data) {
+        console.log(`✅ Dashboard Context - Agents retrieved successfully: ${agentsData.data.length} agents found.`);
+        const fetchedAgents = agentsData.data;
+        setAgents(fetchedAgents);
+        
+        // --- Select first agent if none is selected ---
+        if (!selectedAgentIdState && fetchedAgents.length > 0) {
+          console.log(`🤖 Dashboard Context - No agent selected, defaulting to first agent: ${fetchedAgents[0].id}`);
+          setSelectedAgentIdState(fetchedAgents[0].id);
+        }
+        // --- End select first agent ---
 
-      if (apiResponse.success && Array.isArray(apiResponse.data)) { 
-         const fetchedAgents: Agent[] = apiResponse.data; 
-         setAgents(fetchedAgents);
-         console.log(`Dashboard Context: Successfully fetched/created ${fetchedAgents.length} agents.`);
-         
-         if (!selectedAgentIdState && fetchedAgents.length > 0) {
-             console.log("Dashboard Context: Auto-selecting first agent:", fetchedAgents[0].id);
-             setSelectedAgentIdState(fetchedAgents[0].id); 
-         } else if (fetchedAgents.length === 0) {
-             setSelectedAgentIdState(null);
-         }
       } else {
-          const errorMsg = apiResponse?.error || 'Invalid data structure received from get/create agents API';
-          throw new Error(errorMsg);
+        throw new Error(agentsData.error || 'Invalid data format from agents API');
       }
 
-    } catch (err: any) {
-      console.error("Dashboard Context: Error fetching agents:", err);
-      setAgentError(err.message || 'An unknown error occurred while fetching/creating agents.');
+    } catch (error: any) {
+      console.error('❌ Dashboard Context - Error fetching agents:', error);
+      setAgentError(error.message || 'Failed to fetch agents.');
       setAgents([]); 
-      setSelectedAgentIdState(null); 
     } finally {
-        setIsLoadingAgents(false); 
+      setIsLoadingAgents(false);
     }
-  }, [authToken, selectedAgentIdState, handleLogout]);
+  }, [authToken, handleLogout, selectedAgentIdState]); // Added selectedAgentIdState dependency
 
   // Load Conversations and Messages for a Specific Agent
   const loadConversationDataForAgent = useCallback(async (agentId: string) => {
