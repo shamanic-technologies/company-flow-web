@@ -41,8 +41,7 @@ interface DashboardContextType {
   conversationError: string | null; // Specific error for conversation/message loading
   fetchConversationsForAgent: (agentId: string, authToken: string) => Promise<void>;
   handleCreateNewChat: () => Promise<void>;
-  handleConversationSelect: (conversationId: string) => Promise<void>;
-  selectConversation: (conversationId: string | null) => void;
+  selectConversationId: (conversationId: string | null) => void;
   // Expose setter for selectedAgentId for direct use
   setSelectedAgentIdDirectly: (agentId: string | null) => void; 
 }
@@ -81,8 +80,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   conversationError: null,
   fetchConversationsForAgent: async () => {},
   handleCreateNewChat: async () => {},
-  handleConversationSelect: async () => {},
-  selectConversation: () => {},
+  selectConversationId: () => {},
   setSelectedAgentIdDirectly: () => {}, 
 });
 
@@ -308,36 +306,35 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [authToken, handleLogout, selectedAgentIdState]); // Added selectedAgentIdState dependency
 
-  // Load Conversations and Messages for a Specific Agent
-  const loadConversationDataForAgent = useCallback(async (agentId: string) => {
+  // Load ONLY Conversation LIST for a Specific Agent (No messages here)
+  const loadConversationListForAgent = useCallback(async (agentId: string) => { // Renamed for clarity
       if (!authToken) {
-          console.warn("Dashboard Context: Auth token missing, cannot load conversations.");
+          console.warn("Dashboard Context: Auth token missing, cannot load conversation list.");
           setConversationError("Authentication required.");
+          setIsLoadingConversations(false); // Ensure loading stops
           return;
       }
       if (!agentId) {
-          console.log("Dashboard Context: No agent selected, clearing conversation data.");
+          console.log("Dashboard Context: No agent selected, clearing conversation list.");
           setConversationList([]);
-          setCurrentConversationId(null);
-          setCurrentMessages([]);
+          setCurrentConversationId(null); // Also clear selected conversation ID
+          // setCurrentMessages([]); // Messages cleared by useEffect on ID change
           setIsLoadingConversations(false);
-          setIsLoadingMessages(false);
           setConversationError(null);
           return;
       }
 
-      console.log(`Dashboard Context: Loading conversation data for agent ${agentId}...`);
+      console.log(`Dashboard Context: Loading conversation list for agent ${agentId}...`);
       setIsLoadingConversations(true);
-      setIsLoadingMessages(true); 
       setConversationError(null);
-      setConversationList([]); 
-      setCurrentConversationId(null); 
-      setCurrentMessages([]); 
+      setConversationList([]); // Clear previous list
+      // Don't reset currentConversationId here, let selection handle it or initial load
 
       try {
-          // Step 1: Fetch conversations or create one
+          // Step 1: Fetch conversations list (using list-or-create or just list)
+          // Using list-or-create ensures we always have at least one if possible
           const convListResponse = await fetch(`/api/conversations/list-or-create?agent_id=${agentId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-          
+
           if (convListResponse.status === 401) {
               console.error('🚫 Dashboard Context - Unauthorized loading conversations, logging out.');
               handleLogout();
@@ -353,52 +350,94 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           }
 
           const fetchedConversations: Conversation[] = convListData.data;
-          setConversationList(fetchedConversations);
-          setIsLoadingConversations(false);
-          console.log(`Dashboard Context: Fetched ${fetchedConversations.length} conversations.`);
+           // Sort conversations by updatedAt descending (most recent first)
+          const sortedConversations = fetchedConversations.sort((a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+          setConversationList(sortedConversations);
+          console.log(`Dashboard Context: Fetched ${sortedConversations.length} conversations.`);
 
-          // Step 2: Select latest conversation and fetch its messages
-          if (fetchedConversations.length > 0) {
-              const latestConversationId = fetchedConversations[0].conversationId;
+          // Step 2: Set the initial conversation ID if none is set yet for this agent
+          // Check if current ID is null OR if the current ID doesn't belong to the new list
+          if (sortedConversations.length > 0 && (!currentConversationId || !sortedConversations.some(c => c.conversationId === currentConversationId))) {
+              const latestConversationId = sortedConversations[0].conversationId;
+              console.log(`Dashboard Context: Setting initial/default conversation ID to ${latestConversationId}`);
+              // Use the simplified setter - the useEffect will fetch messages
               setCurrentConversationId(latestConversationId);
-              console.log(`Dashboard Context: Selected conversation ${latestConversationId}, fetching messages...`);
-
-              const messagesResponse = await fetch(`/api/messages/list?conversation_id=${latestConversationId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-              
-              if (messagesResponse.status === 401) {
-                 console.error('🚫 Dashboard Context - Unauthorized loading messages, logging out.');
-                 handleLogout();
-                 return;
-              }
-              if (!messagesResponse.ok) {
-                  const errData = await messagesResponse.json().catch(() => ({}));
-                  throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
-              }
-              
-              const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json(); 
-              if (!messagesData.success || !Array.isArray(messagesData.data)) {
-                  throw new Error(`API error listing messages: ${messagesData.error || 'Invalid data format'}`);
-              }
-              
-              setCurrentMessages(messagesData.data);
-              console.log(`Dashboard Context: Loaded ${messagesData.data.length} messages.`);
-          } else {
-              console.warn("Dashboard Context: No conversations returned from list-or-create, cannot load messages.");
-              setCurrentConversationId(null); 
-              setCurrentMessages([]); 
+          } else if (sortedConversations.length === 0) {
+               console.log(`Dashboard Context: No conversations found for agent ${agentId}, clearing ID.`);
+               setCurrentConversationId(null); // Clear ID if no conversations exist
           }
+          // Message fetching is now handled by the useEffect below
 
-      } catch (error: any) { 
-          console.error(`Dashboard Context: Error loading conversation data for agent ${agentId}:`, error);
-          setConversationError(`Failed to load data: ${error.message}`);
+      } catch (error: any) {
+          console.error(`Dashboard Context: Error loading conversation list for agent ${agentId}:`, error);
+          setConversationError(`Failed to load conversation list: ${error.message}`);
           setConversationList([]);
-          setCurrentConversationId(null);
-          setCurrentMessages([]);
+          setCurrentConversationId(null); // Clear ID on error
       } finally {
-          setIsLoadingConversations(false); 
-          setIsLoadingMessages(false);
+          setIsLoadingConversations(false);
       }
-  }, [authToken, handleLogout]);
+  }, [authToken, handleLogout, currentConversationId]);
+
+  // --- useEffect to Fetch Messages when currentConversationId changes ---
+  useEffect(() => {
+    // Function to fetch messages
+    const fetchMessages = async (convId: string) => {
+        if (!authToken) {
+            console.warn("Dashboard Context: Auth token missing, cannot fetch messages.");
+            setConversationError("Authentication required to load messages.");
+            return;
+        }
+
+        console.log(`Dashboard Context (Effect): Fetching messages for conversation ${convId}`);
+        setIsLoadingMessages(true);
+        setCurrentMessages([]); // Clear previous messages
+        setConversationError(null);
+
+        try {
+            const messagesResponse = await fetch(`/api/messages/list?conversation_id=${convId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+
+            if (messagesResponse.status === 401) {
+                console.error('🚫 Dashboard Context (Effect) - Unauthorized loading messages, logging out.');
+                handleLogout();
+                return;
+            }
+            if (!messagesResponse.ok) {
+                const errData = await messagesResponse.json().catch(() => ({}));
+                throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
+            }
+
+            const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json();
+
+            if (!messagesData.success || !Array.isArray(messagesData.data)) {
+                throw new Error(messagesData.error || 'Invalid message data received from API');
+            }
+
+            setCurrentMessages(messagesData.data);
+            console.log(`Dashboard Context (Effect): Loaded ${messagesData.data.length} messages for ${convId}.`);
+
+        } catch (error: any) {
+            console.error(`Dashboard Context (Effect): Error loading messages for ${convId}:`, error);
+            setConversationError(`Error loading messages: ${error.message}`);
+            setCurrentMessages([]); // Ensure messages are empty on error
+        } finally {
+            setIsLoadingMessages(false);
+        }
+    };
+
+    // Only fetch if conversationId is selected
+    if (currentConversationId) {
+        fetchMessages(currentConversationId);
+    } else {
+        // If conversationId becomes null, clear messages and loading state
+        setCurrentMessages([]);
+        setIsLoadingMessages(false);
+        setConversationError(null);
+    }
+
+    // Dependencies: Fetch when ID or token changes
+  }, [currentConversationId, authToken, handleLogout]);
 
   // --- State Setters & Handlers ---
 
@@ -407,24 +446,23 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await fetchApiKeys();
   }, [fetchApiKeys]);
 
-  // Smart Setter for Selected Agent ID
+  // Smart Setter for Selected Agent ID - Triggers list load
   const setSelectedAgentId = useCallback((agentId: string | null) => {
     console.log(`Dashboard Context: setSelectedAgentId called with ${agentId}`);
     if (agentId !== selectedAgentIdState) {
         setSelectedAgentIdState(agentId);
+        // Trigger load of conversation LIST, which will then set an ID, triggering message load effect
         if (agentId) {
-            loadConversationDataForAgent(agentId);
+            loadConversationListForAgent(agentId);
         } else {
-            // Clear conversation data
+            // Clear agent-related data
             setConversationList([]);
-            setCurrentConversationId(null);
-            setCurrentMessages([]);
+            setCurrentConversationId(null); // This will trigger message clearing via useEffect
             setIsLoadingConversations(false);
-            setIsLoadingMessages(false);
             setConversationError(null);
         }
     }
-  }, [selectedAgentIdState, loadConversationDataForAgent]);
+  }, [selectedAgentIdState, loadConversationListForAgent]);
 
   // Handler to Create New Chat
   const handleCreateNewChat = useCallback(async () => {
@@ -440,12 +478,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       try {
           const newConversationId = crypto.randomUUID();
-          const channelId = 'web'; 
+          const channelId = 'web';
 
           const requestBody: CreateConversationInput = {
               agentId: selectedAgentIdState,
               channelId: channelId,
-              conversationId: newConversationId 
+              conversationId: newConversationId
           };
 
           const response = await fetch('/api/conversations/create', {
@@ -464,143 +502,40 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           if (!response.ok || !responseData.success || !responseData.data) {
               throw new Error(responseData?.error || `Failed to create conversation (HTTP ${response.status})`);
           }
-          
+
           console.log("Dashboard Context: New conversation created successfully:", responseData.data);
           const newConversation = responseData.data;
 
-          setConversationList(prevList => [newConversation, ...prevList]); 
-          setCurrentConversationId(newConversationId); 
-          setCurrentMessages([]); 
-          setActiveAgentView('chat'); 
+          // Add to list and set as current
+          setConversationList(prevList => [newConversation, ...prevList]);
+          // Set the ID - this will trigger the useEffect to load (empty) messages
+          setCurrentConversationId(newConversationId);
+          // Switch view
+          setActiveAgentView('chat');
 
       } catch (error: any) {
           console.error("Dashboard Context: Error creating new chat:", error);
           setConversationError(`Error creating chat: ${error.message}`);
       } finally {
-          setIsCreatingConversation(false); 
+          setIsCreatingConversation(false);
       }
   }, [selectedAgentIdState, authToken, user, handleLogout]);
 
-  // Handler to Select Existing Conversation
-  const handleConversationSelect = useCallback(async (conversationId: string) => {
-      if (!authToken || !conversationId) {
-          console.warn("Dashboard Context: Conversation selection cancelled - missing token or ID.");
-          setConversationError("Cannot select conversation: Missing information.");
-          return;
-      }
-      if (conversationId === currentConversationId) {
-          console.log(`Dashboard Context: Conversation ${conversationId} already selected.`);
-          setActiveAgentView('chat'); 
-          return;
-      }
-
-      console.log(`Dashboard Context: Selecting conversation ${conversationId}`);
-      setIsLoadingMessages(true);
-      setCurrentConversationId(conversationId);
-      setCurrentMessages([]); 
-      setConversationError(null);
-      
-      try {
-          console.log(`Dashboard Context: Fetching messages for ${conversationId}`);
-          const messagesResponse = await fetch(`/api/messages/list?conversation_id=${conversationId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-          
-          if (messagesResponse.status === 401) {
-              console.error('🚫 Dashboard Context - Unauthorized selecting conversation, logging out.');
-              handleLogout();
-              return;
-          }
-          if (!messagesResponse.ok) {
-              const errData = await messagesResponse.json().catch(() => ({}));
-              throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
-          }
-          
-          const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json();
-          
-          if (!messagesData.success || !Array.isArray(messagesData.data)) {
-              throw new Error(messagesData.error || 'Invalid message data received from API');
-          }
-          
-          setCurrentMessages(messagesData.data);
-          console.log(`Dashboard Context: Loaded ${messagesData.data.length} messages for ${conversationId}.`);
-          setActiveAgentView('chat'); 
-
-      } catch (error: any) {
-          console.error(`Dashboard Context: Error loading messages for ${conversationId}:`, error);
-          setConversationError(`Error loading messages: ${error.message}`);
-          setCurrentMessages([]); 
-      } finally {
-          setIsLoadingMessages(false);
-      }
-  }, [authToken, currentConversationId, handleLogout]);
-
-  // --- START: ADD FETCH CONVERSATIONS FOR AGENT ---
-  const fetchConversationsForAgent = useCallback(async (agentId: string, token: string) => {
-    if (!agentId) {
-      console.warn('Dashboard Context: fetchConversationsForAgent called without agentId.');
-      return;
-    }
-    if (!token) {
-      console.warn('Dashboard Context: fetchConversationsForAgent called without token.');
-      setConversationError('Authentication required to load conversations.');
-      return;
-    }
-    
-    console.log(`Dashboard Context: Fetching conversations for agent ${agentId}...`);
-    setIsLoadingConversations(true);
-    setConversationError(null);
-    // Clear existing list for the new agent
-    setConversationList([]); 
-    // Reset current selection when fetching for a new agent
-    // setCurrentConversationId(null); 
-    // setCurrentMessages([]); // Keep messages until explicitly changed by handleConversationSelect
-    
-    try {
-      const response = await fetch(`/api/conversations/list?agentId=${agentId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        console.error('Dashboard Context: Unauthorized fetching conversations, logging out.');
-        handleLogout();
-        return;
-      }
-
-      const data: ServiceResponse<Conversation[]> = await response.json();
-
-      if (data.success && data.data) {
-        console.log(`Dashboard Context: Successfully fetched ${data.data.length} conversations for agent ${agentId}.`);
-        // Sort conversations by updatedAt descending (most recent first)
-        const sortedConversations = data.data.sort((a, b) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-        setConversationList(sortedConversations);
-      } else {
-        console.error('Dashboard Context: Failed to fetch conversations:', data.error);
-        setConversationError(data.error || 'Failed to fetch conversations.');
-        setConversationList([]);
-      }
-    } catch (error: any) {
-      console.error('Dashboard Context: Error fetching conversations:', error);
-      setConversationError(error.message || 'An unexpected error occurred while fetching conversations.');
-      setConversationList([]);
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, [handleLogout]); // Dependency: handleLogout
-  // --- END: ADD FETCH CONVERSATIONS FOR AGENT ---
-
-  // --- START: ADD NEW selectConversation HANDLER ---
-  // Simple state setter for currentConversationId
-  const selectConversation = useCallback((conversationId: string | null) => {
-    console.log(`Dashboard Context: Setting current conversation ID only to: ${conversationId}`);
+  // Simple setter for currentConversationId - Triggers useEffect for message loading
+  const selectConversationId = useCallback((conversationId: string | null) => { // Renamed parameter
+    console.log(`Dashboard Context: Setting current conversation ID to: ${conversationId}`);
     if (conversationId !== currentConversationId) {
         setCurrentConversationId(conversationId);
-        // NOTE: We intentionally DO NOT fetch messages or change the active view here.
-        // The RightPanel's ChatInterface will react to the conversationId change.
-        // We also don't clear messages here, maybe ChatInterface handles that? Or handleConversationSelect if used.
+        // Message fetching is handled by the useEffect hook watching currentConversationId
+        // Optionally switch view if a valid conversation is selected
+        if (conversationId) {
+           setActiveAgentView('chat');
+        }
+    } else if (conversationId) {
+        // If clicking the already selected conversation, ensure the view is chat
+        setActiveAgentView('chat');
     }
   }, [currentConversationId]); // Dependency: currentConversationId
-  // --- END: ADD NEW selectConversation HANDLER ---
 
   // --- Initial Data Load Effect ---
   useEffect(() => {
@@ -627,7 +562,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       // Auto-select first agent if list is populated and nothing is selected
       console.log("Dashboard Context (Agent Effect): Auto-selecting first agent.");
       setSelectedAgentIdState(agents[0].id);
-      // Data loading is handled by the `loadConversationDataForAgent` called via the smart setter below
+      // Data loading is handled by the `loadConversationListForAgent` called via the smart setter below
     } else if (selectedAgentIdState && !agents.find(agent => agent.id === selectedAgentIdState)) {
       // If selected agent is removed from list, select first or null
       const newAgentId = agents.length > 0 ? agents[0].id : null;
@@ -640,18 +575,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [agents, isLoadingAgents, selectedAgentIdState]); // Depend on agents list, loading state, and selection
 
-  // --- Trigger Load Data For Initial Auto-Selected Agent ---
-  // Separate effect to call loadConversationDataForAgent when the agent is first auto-selected.
+  // --- Trigger Load CONVERSATION LIST For Initial Auto-Selected Agent ---
+  // Renamed function being called
   useEffect(() => {
-      // Only run if an agent IS selected AND conversation data hasn't been loaded/attempted yet
-      // (conversationList is empty, and not currently loading)
-      if (selectedAgentIdState && conversationList.length === 0 && !isLoadingConversations && !isLoadingMessages) {
-          console.log(`Dashboard Context (Load Effect): Triggering initial data load for auto-selected agent ${selectedAgentIdState}`);
-          loadConversationDataForAgent(selectedAgentIdState);
+      // Only run if an agent IS selected AND conversation list hasn't been loaded/attempted yet
+      if (selectedAgentIdState && conversationList.length === 0 && !isLoadingConversations) {
+          console.log(`Dashboard Context (Load Effect): Triggering initial conversation list load for auto-selected agent ${selectedAgentIdState}`);
+          loadConversationListForAgent(selectedAgentIdState); // Call the list loader
       }
-  // Intentionally only run when selectedAgentIdState changes or load function definition changes
-  // Avoid depending on conversationList/loading states here to prevent loops
-  }, [selectedAgentIdState, loadConversationDataForAgent]);
+  // Depend on agent ID, list length, loading state, and the load function itself
+  }, [selectedAgentIdState, conversationList.length, isLoadingConversations, loadConversationListForAgent]);
 
 
   // Memoize the context value
@@ -662,7 +595,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setIsLoading,
     apiKeys,
     setApiKeys,
-    refreshApiKeys: fetchApiKeys,
+    refreshApiKeys: fetchApiKeys, // Keep original name for external use
     error,
     setError,
     getUserInitials,
@@ -680,24 +613,23 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setActiveAgentView,
     // Conversation/Message values
     conversationList,
-    isLoadingConversations,
+    isLoadingConversations, // Loading state for the *list*
     currentConversationId,
-    currentMessages,
-    isLoadingMessages,
+    currentMessages, // Messages for the *selected* conversation
+    isLoadingMessages, // Loading state for *selected* conversation's messages
     isCreatingConversation,
-    conversationError,
-    fetchConversationsForAgent,
+    conversationError, // Combined error state
+    fetchConversationsForAgent: loadConversationListForAgent, // Expose list loader internally named loadConversationListForAgent
     handleCreateNewChat,
-    handleConversationSelect,
-    selectConversation,
-    setSelectedAgentIdDirectly: setSelectedAgentIdState, 
+    selectConversationId, // Expose ID setter
+    setSelectedAgentIdDirectly: setSelectedAgentIdState,
   }), [
     user, isLoading, apiKeys, error, getUserInitials, handleLogout, 
     agents, selectedAgentIdState, setSelectedAgentId, isLoadingAgents, agentError, fetchAgents, authToken, 
     activeAgentView, setActiveAgentView,
     conversationList, isLoadingConversations, currentConversationId, currentMessages, 
-    isLoadingMessages, isCreatingConversation, conversationError, fetchConversationsForAgent,
-    handleCreateNewChat, handleConversationSelect, selectConversation, fetchApiKeys // Add selectConversation
+    isLoadingMessages, isCreatingConversation, conversationError, loadConversationListForAgent,
+    handleCreateNewChat, selectConversationId, fetchApiKeys // Use renamed func and add fetchApiKeys
   ]);
 
   return (
