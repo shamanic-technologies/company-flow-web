@@ -8,7 +8,7 @@
 import React from 'react'; // Use React directly
 import { CheckCircle, XCircle, WrenchIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { MessagePart } from '@/components/dashboard/Chat/types';
+import type { MessagePart } from '@/components/dashboard/right-panel/Chat/types';
 import { hasToolError } from './utils';
 import { useSetupSteps } from '@/hooks/useSetupSteps'; // Import the custom hook
 import { SetupStepRenderer } from './SetupStepRenderer'; // Import the renderer
