@@ -16,9 +16,9 @@ import { Loader2 } from "lucide-react";
 import { Message as VercelMessage } from 'ai/react'; // Vercel AI SDK Message type
 
 // Import panel components (Assuming they are moved/created here)
-import ConversationListPanel from '@/components/dashboard/ConversationListPanel'; 
-import MemoryPanel from '@/components/dashboard/MemoryPanel';
-import ActionsPanel from '@/components/dashboard/ActionsPanel'; 
+import ConversationListPanel from './ConversationListPanel'; 
+import MemoryPanel from './MemoryPanel';
+import ActionsPanel from './ActionsPanel'; 
 
 // Import shared types (Use monorepo package)
 import { Agent, Conversation, CreateConversationInput } from '@agent-base/types';
