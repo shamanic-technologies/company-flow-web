@@ -90,8 +90,12 @@ export default function Sidebar() {
                   variant={selectedAgentId === agent.id ? "secondary" : "ghost"}
                   className="w-full justify-start text-xs h-8 font-medium pl-2 pr-2"
                   onClick={() => {
-                    setSelectedAgentId(agent.id);
-                    setExpandedAgentId(prevId => (prevId === agent.id ? null : agent.id));
+                    // Only select the agent if it's not already selected
+                    if (selectedAgentId !== agent.id) {
+                      setSelectedAgentId(agent.id); 
+                    }
+                    // Always toggle expansion
+                    setExpandedAgentId(prevId => (prevId === agent.id ? null : agent.id)); 
                   }}
                 >
                   <ChevronRight 
