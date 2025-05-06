@@ -89,7 +89,6 @@ export async function POST(req: NextRequest) {
     headers.set('x-vercel-ai-data-stream', 'v1');
 
     try {
-      console.log('[API /agents/run] Streaming response:', response);
       return new Response(response.body, { headers });
     } catch (streamError) {
       console.error('[API /agents/run] Stream creation error:', streamError);

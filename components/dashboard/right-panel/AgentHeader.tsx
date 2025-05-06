@@ -7,7 +7,6 @@ import { PlusSquare, Loader2 } from 'lucide-react';
 
 // Import shared type and helper
 import { Agent } from '@agent-base/types';
-import { getInitials } from '@/lib/utils/helpers';
 
 // Define props for the component
 interface AgentHeaderProps {
@@ -31,7 +30,7 @@ const AgentHeader = ({ agent, onCreateNewChat, isCreatingChat }: AgentHeaderProp
               alt={`${agent.firstName} ${agent.lastName}`} 
             />
             <AvatarFallback className="bg-gray-600 text-gray-300">
-              {getInitials(agent.firstName, agent.lastName)}
+              {agent.firstName?.charAt(0) || ''}{agent.lastName?.charAt(0) || ''}
             </AvatarFallback>
           </Avatar>
           <div>
