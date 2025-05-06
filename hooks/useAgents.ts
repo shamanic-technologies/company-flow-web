@@ -20,7 +20,6 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
 
   // --- Fetch Agents Logic --- 
   const fetchAgents = useCallback(async () => {
-    console.log("🎣 useAgents - Fetching agents...");
     setIsLoadingAgents(true);
     setAgentError(null);
     // Clear previous agents while fetching new list
@@ -29,14 +28,9 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
 
     try {
       const response = await fetch('/api/agents/get-or-create', {
-        method: 'POST', // Use POST as originally intended
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({}) // No body needed for get-or-create, send empty object
+        method: 'GET', // Changed from POST to GET
+        // headers and body removed as they are not typically used for GET requests
       });
-
-      console.log('�� useAgents - Agents API response status:', response.status);
 
       if (response.status === 401) {
         console.error('🚫 useAgents - Unauthorized fetching agents, logging out.');
@@ -53,10 +47,10 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
         throw new Error(`API error fetching agents: ${errorDetail}`);
       }
 
-      const agentsData: ServiceResponse<Agent[]> = await response.json();
+      const agentsData: Agent[] = await response.json();
 
-      if (agentsData.success && agentsData.data) {
-        const fetchedAgents = agentsData.data;
+      if (agentsData) {
+        const fetchedAgents = agentsData;
         console.log(`✅ useAgents - Agents retrieved successfully: ${fetchedAgents.length} agents found.`);
         setAgents(fetchedAgents);
 
@@ -64,7 +58,7 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
 
       } else {
         setAgents([]); // Clear agents on failed API call (but successful response)
-        throw new Error(agentsData.error || 'Invalid data format from agents API');
+        throw new Error('Invalid data format from agents API');
       }
 
     } catch (error: any) {

@@ -53,10 +53,7 @@ export async function GET(req: NextRequest) {
     const agents = getOrCreateAgentResponse.data;
 
     // Placeholder success response - Replace with actual logic and data
-    return createSuccessResponse({ 
-      message: "Successfully retrieved or created agents", 
-      agents: agents
-    }, 200); 
+    return createSuccessResponse(agents, 200); 
 
   } catch (error: any) {
     console.error('[API /agents/get-or-create] Error:', error);
