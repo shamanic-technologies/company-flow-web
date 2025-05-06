@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for load
 import RightPanel from '@/components/dashboard/right-panel/RightPanel'; // IMPORT THE NEW COMPONENT
 // Removed AgentList, ChatArea, AgentDetail, ConversationList, WebhookDetail imports as they are likely used within the panels
 import { useRouter } from 'next/navigation';
+// Import Clerk hook if needed for user data
+import { useUser } from '@clerk/nextjs';
 
 /**
  * Main Dashboard Page
@@ -17,20 +19,7 @@ import { useRouter } from 'next/navigation';
  * three-panel layout (Left, Middle, Right) using existing components.
  */
 export default function DashboardPage() {
-  // This outer component mainly sets up the Provider.
-  // We can add a basic loading/redirect check here before the provider mounts.
-  const router = useRouter();
-  // Minimal check: Attempt to get token. If absent after a brief moment, redirect.
-  // A more robust check happens in the useAuth hook within the provider.
-  useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
-    if (!token) {
-        // Delay redirect slightly to allow context/hook to potentially handle it
-        // Or redirect immediately if preferred
-        console.warn("DashboardPage: No token found on initial check, potential redirect soon.");
-        // Optional: router.push('/'); 
-    }
-  }, [router]);
+  // Removed the initial useEffect checking localStorage
 
   return (
     <DashboardProvider>
@@ -41,53 +30,47 @@ export default function DashboardPage() {
 
 // Separate component to access the context provided by DashboardProvider
 function DashboardLayout() {
-  // Destructure only what's needed for the LAYOUT component itself.
-  // Most data fetching/selection logic is now handled by hooks/provider.
+  // Use Clerk's hook directly for user state if context relies on it or pass it down
+  const { isLoaded, isSignedIn, user: clerkUser } = useUser();
+  
+  // Get necessary state from context if still needed, but avoid redundant user checks
   const { 
-    user, // Needed for potential checks or display
-    isLoadingUser, // Needed for loading state
-    isLoadingAgents, // Overall loading indicator can use this
-    isLoadingConversations, // Could combine for initial load skeleton
-    isLoadingWebhooks, // Could combine for initial load skeleton
-    // No need for agents, selectedAgentId, conversations etc. directly here
-    // unless the layout *itself* changes based on them.
-    // We also don't need the action functions (selectAgent, handleCreate, etc.) here.
-    // Those are used by the components *inside* the layout panels (Sidebar, MiddlePanel, RightPanel).
+    isLoadingAgents, // Example: Keep loading states relevant to UI structure
+    isLoadingConversations,
+    isLoadingWebhooks,
   } = useDashboard();
 
-  const router = useRouter(); // Keep router if needed for redirects inside layout
+  // const router = useRouter(); // Remove if not used for other navigation
 
-  // Redirect check specifically within the layout AFTER context is available
-  useEffect(() => {
-    if (!isLoadingUser && !user) {
-      console.log("DashboardLayout: Context loaded, no user found, redirecting.");
-      router.push('/');
-    }
-  }, [user, isLoadingUser, router]);
+  // --- REMOVED useEffect that redirected based on context's user state --- 
+  // Middleware handles unauthorized access. Clerk hooks handle client-side state.
 
-  // --- Removed all old useEffects for fetching/selecting agents/conversations --- 
-  // This logic is now handled within the custom hooks (useAgents, useConversations) 
-  // triggered by changes in authToken and selectedAgentId.
-
-  // Loading state for the entire dashboard shell before context is ready
-  // or while essential initial data (user, potentially agents) is loading.
-  const isInitialLoading = isLoadingUser || isLoadingAgents; // Combine loading states
+  // Loading state based on Clerk's user loading state and potentially other initial data
+  const isInitialLoading = !isLoaded || isLoadingAgents; // Wait for Clerk user + agents
 
   if (isInitialLoading) {
       return (
         <div className="flex h-full w-full items-center justify-center">
-          {/* Basic full-page skeleton or spinner */}
           <Skeleton className="h-16 w-16 rounded-full" /> 
           <p className="ml-4 text-lg">Loading Dashboard...</p>
         </div>
       );
   }
 
-  // Render the layout once essential data is ready
+  // Check if signed in after loading (Clerk handles redirect if not via middleware)
+  if (!isSignedIn) {
+    // This case should technically not be reached if middleware is correct,
+    // but as a fallback or during development, you might show a message or null.
+    // Returning null is often sufficient as middleware handles the redirect.
+    return null; 
+  }
+
+  // Render the layout once essential data is ready and user is signed in
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden"> {/* Use h-screen and overflow-hidden */}
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
       {/* Left Panel */}
-      <div className="w-64 flex-shrink-0 border-r border-border overflow-y-auto"> {/* Use border-border */}
+      <div className="w-64 flex-shrink-0 border-r border-border overflow-y-auto">
+        {/* Pass user info if Sidebar needs it directly, or let Sidebar use useUser() */}
         <Sidebar />
       </div>
 
@@ -97,7 +80,7 @@ function DashboardLayout() {
       </div>
 
       {/* Right Panel */}
-      <div className="w-96 flex-shrink-0 border-l border-border overflow-y-auto"> {/* Example width, use border-border */}
+      <div className="w-96 flex-shrink-0 border-l border-border overflow-y-auto">
         <RightPanel />
       </div>
     </div>
