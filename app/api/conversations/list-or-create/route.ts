@@ -24,6 +24,7 @@ export const GET = async (req: NextRequest) => {
     const token = getAuthToken(req);
     
     if (!token) {
+      console.error('[API /conversations/list-or-create] Missing token');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'No valid authorization token provided');
     }
     
@@ -34,8 +35,6 @@ export const GET = async (req: NextRequest) => {
       console.error('[API /conversations/list-or-create] Missing agent_id parameter');
       return createErrorResponse(400, 'INVALID_REQUEST', 'agent_id is required', 'Missing required query parameter: agent_id');
     }
-
-    console.log(`[API /conversations/list-or-create] Getting or creating conversations for agent_id: ${agentId}`);
     
     // --- Prepare credentials for API client ---
     const apiKey = await getOrCreateKeyByName(token, "Playground");
@@ -61,9 +60,6 @@ export const GET = async (req: NextRequest) => {
         credentials // Pass the credentials object
     );
     // --- End call API client function ---
-    
-    console.log(`[API /conversations/list-or-create] Retrieved ${data?.data?.length || 0} conversations from API client`);
-    console.log(`[API /conversations/list-or-create] Data:`, data);
 
     // Check if the API client call itself failed
     if (!data.success) {

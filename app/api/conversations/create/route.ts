@@ -21,6 +21,7 @@ export const POST = async (req: NextRequest) => {
     // 1. Get auth token
     const token = getAuthToken(req);
     if (!token) {
+      console.error('[API /conversations/create] No valid authorization token provided');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'No valid authorization token provided');
     }
 
@@ -45,8 +46,6 @@ export const POST = async (req: NextRequest) => {
       return createErrorResponse(400, 'INVALID_REQUEST', `Missing required fields: ${missing}`, `Request body must include agentId, channelId, and conversationId`);
     }
 
-    console.log(`[API /conversations/create] Request to create conversation ${conversationId} for agent ${agentId}`);
-
     // 4. Prepare credentials
     const apiKey = await getOrCreateKeyByName(token, "Playground"); // Use appropriate key name if needed
     const platformUserResponse: ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
@@ -68,7 +67,6 @@ export const POST = async (req: NextRequest) => {
       credentials // Pass the credentials object
     );
 
-    console.log(`[API /conversations/create] API client response for ${conversationId}:`, createResponse);
 
     // 6. Handle response from API client
     if (!createResponse.success) {

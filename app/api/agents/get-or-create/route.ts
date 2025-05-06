@@ -33,7 +33,6 @@ export async function GET(req: NextRequest) {
     
     // Get API key for the user
     const platformApiKey: string = await getOrCreateKeyByName(token, "Playground");
-    console.log('[API /agents/get-or-create] Platform API key:', platformApiKey);
     // Get platform client user id from token
     const platformUserResponse : ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
     if (!platformUserResponse.success) {
@@ -55,10 +54,8 @@ export async function GET(req: NextRequest) {
       return createErrorResponse(500, 'PLATFORM_USER_FETCH_FAILED', message, details);
     }
     const platformClientUserId = platformUserResponse.data.id;
-    console.log('[API /agents/get-or-create] Platform client user id:', platformClientUserId);
     // Call agent service's get-or-create endpoint
     const data = await callApiService('/agent/get-or-create-user-agents', 'GET', platformClientUserId, platformApiKey);
-    console.log('[API /agents/get-or-create] Agent service response:', data);
     // Return successful response (status code will be handled by agent-service response)
     return createSuccessResponse(data, data.status || 200); // Pass status from service if available
 
