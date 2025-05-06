@@ -17,6 +17,7 @@ import {
 import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
 import { PlatformUser } from '@agent-base/types';
 import { ServiceResponse } from '@agent-base/types';
+import { auth } from '@clerk/nextjs/server';
 
 /**
  * POST handler for agent run requests
@@ -37,32 +38,24 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Auth
-    const token = getAuthToken(req);
-    if (!token) {
-      console.error('[API /agents/run] Missing required field: token' + JSON.stringify(token));
-      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
-    }
-    const platformAPIKey : string = await getOrCreateKeyByName(token, "Playground");
-    const platformUserResponse : ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
-    if (!platformUserResponse.success) {
-      // Handle error when fetching platform user
-      console.error('[API /agents/run] Error getting platform user from token:', platformUserResponse);
-      
-      // Cast to access error properties when success is false
-      const errorResponse = platformUserResponse as unknown as { error?: any; details?: any };
+    const { userId } = await auth();
 
-      // Convert the ServiceResponse error into a standard Response object
-      const message = typeof errorResponse.error === 'string' 
-          ? errorResponse.error 
-          : JSON.stringify(errorResponse.error) || 'Failed to get platform user';
-      const details = typeof errorResponse.details === 'string'
-          ? errorResponse.details
-          : JSON.stringify(errorResponse.details) || message;
-
-      // Use a default status and code
-      return createErrorResponse(500, 'PLATFORM_USER_FETCH_FAILED', message, details);
+    // Check if the user is authenticated
+    if (!userId) {
+      console.error('[API /agents/run] User not authenticated via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
-    const platformClientUserId = platformUserResponse.data.id;
+
+    // Retrieve the shared API key from environment variables
+    const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
+
+    // Check if the API key is configured
+    if (!agentBaseApiKey) {
+      console.error('[API /agents/run] AGENT_BASE_API_KEY environment variable not set');
+      return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
+    }
+
+
     // 3. Call Gateway for /run endpoint
     const gatewayRunPath = '/agent/run'; // Path expected by api-gateway-service for agent-service /run
 
@@ -74,8 +67,8 @@ export async function POST(req: NextRequest) {
 
     const response = await callAgentServiceStream(
         gatewayRunPath, 
-        platformAPIKey, 
-        platformClientUserId,
+        agentBaseApiKey, 
+        userId,
         runPayload // Send the simplified payload
     );
 
