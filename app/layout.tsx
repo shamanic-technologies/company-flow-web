@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
-import React from 'react';
+import { ClerkProvider } from '@clerk/nextjs';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -12,13 +12,8 @@ const inter = Inter({ subsets: ["latin"] });
  * This defines the structure of all pages in the app
  */
 export const metadata: Metadata = {
-  title: 'Agent Base | Instant tools for your Agent SaaS',
-  description: 'All online tools instantly available without any pre-setup.',
-  openGraph: {
-    title: 'Agent Base | Instant tools for your Agent SaaS',
-    description: 'All online tools instantly available without any pre-setup.',
-    images: ['/agent-base-square-logo-dark.png'],
-  },
+  title: 'Company Flow',
+  description: 'Streamline your company workflows',
 };
 
 /**
@@ -27,17 +22,19 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
-      <body className={`${inter.className} antialiased`}>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
-        <Toaster />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning className="scroll-smooth">
+        <body className={`${inter.className} antialiased`}>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+          <Toaster />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 } 
