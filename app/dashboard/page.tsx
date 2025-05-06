@@ -5,17 +5,33 @@ import { DashboardProvider, useDashboard } from '@/components/dashboard/context/
 // Import the actual components we intend to use
 import Sidebar from '@/components/dashboard/left-panel/Sidebar'; 
 import MiddlePanel from '@/components/dashboard/middle-panel/MiddlePanel'; 
-import ChatInterface from '@/components/dashboard/right-panel/Chat/ChatInterface'; 
+// Removed ChatInterface import as it's likely used within MiddlePanel or RightPanel
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
 import RightPanel from '@/components/dashboard/right-panel/RightPanel'; // IMPORT THE NEW COMPONENT
+// Removed AgentList, ChatArea, AgentDetail, ConversationList, WebhookDetail imports as they are likely used within the panels
+import { useRouter } from 'next/navigation';
 
 /**
  * Main Dashboard Page
  * Wraps the dashboard content with the DashboardProvider and sets up the 
  * three-panel layout (Left, Middle, Right) using existing components.
- * Automatically selects the first agent and their most recent conversation on load.
  */
 export default function DashboardPage() {
+  // This outer component mainly sets up the Provider.
+  // We can add a basic loading/redirect check here before the provider mounts.
+  const router = useRouter();
+  // Minimal check: Attempt to get token. If absent after a brief moment, redirect.
+  // A more robust check happens in the useAuth hook within the provider.
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
+    if (!token) {
+        // Delay redirect slightly to allow context/hook to potentially handle it
+        // Or redirect immediately if preferred
+        console.warn("DashboardPage: No token found on initial check, potential redirect soon.");
+        // Optional: router.push('/'); 
+    }
+  }, [router]);
+
   return (
     <DashboardProvider>
       <DashboardLayout /> 
@@ -25,71 +41,53 @@ export default function DashboardPage() {
 
 // Separate component to access the context provided by DashboardProvider
 function DashboardLayout() {
+  // Destructure only what's needed for the LAYOUT component itself.
+  // Most data fetching/selection logic is now handled by hooks/provider.
   const { 
-    agents, 
-    isLoadingAgents,
-    selectedAgentId,
-    setSelectedAgentIdDirectly, // Renamed to setSelectedAgentIdDirectly if that's the context method
-    conversationList,
-    isLoadingConversations,
-    currentConversationId,
-    handleConversationSelect,
-    fetchAgents,
-    fetchConversationsForAgent, // Assuming this function exists in context
-    getUserInitials,
-    authToken
+    user, // Needed for potential checks or display
+    isLoadingUser, // Needed for loading state
+    isLoadingAgents, // Overall loading indicator can use this
+    isLoadingConversations, // Could combine for initial load skeleton
+    isLoadingWebhooks, // Could combine for initial load skeleton
+    // No need for agents, selectedAgentId, conversations etc. directly here
+    // unless the layout *itself* changes based on them.
+    // We also don't need the action functions (selectAgent, handleCreate, etc.) here.
+    // Those are used by the components *inside* the layout panels (Sidebar, MiddlePanel, RightPanel).
   } = useDashboard();
 
-  // Effect to fetch agents on initial load if needed (and token is available)
+  const router = useRouter(); // Keep router if needed for redirects inside layout
+
+  // Redirect check specifically within the layout AFTER context is available
   useEffect(() => {
-    if (authToken && agents.length === 0 && !isLoadingAgents) {
-        console.log("DashboardLayout: Auth token present, fetching agents...");
-        fetchAgents();
+    if (!isLoadingUser && !user) {
+      console.log("DashboardLayout: Context loaded, no user found, redirecting.");
+      router.push('/');
     }
-  }, [authToken, agents.length, isLoadingAgents, fetchAgents]);
+  }, [user, isLoadingUser, router]);
 
-  // Effect to select the first agent when agents are loaded
-  useEffect(() => {
-    // Only proceed if agents are loaded, not currently loading, and no agent is selected yet
-    if (!isLoadingAgents && agents.length > 0 && !selectedAgentId) {
-        const firstAgent = agents[0];
-        console.log(`DashboardLayout: Agents loaded, selecting first agent: ${firstAgent.id}`);
-        setSelectedAgentIdDirectly(firstAgent.id); // Use the direct setter from context
-    }
-  }, [agents, isLoadingAgents, selectedAgentId, setSelectedAgentIdDirectly]);
+  // --- Removed all old useEffects for fetching/selecting agents/conversations --- 
+  // This logic is now handled within the custom hooks (useAgents, useConversations) 
+  // triggered by changes in authToken and selectedAgentId.
 
-  // Effect to fetch conversations when an agent is selected
-  useEffect(() => {
-    // Only fetch if an agent is selected, auth token exists, and conversations aren't already loading
-    if (selectedAgentId && authToken && !isLoadingConversations) {
-        console.log(`DashboardLayout: Agent selected (${selectedAgentId}), fetching conversations...`);
-        // Assuming fetchConversationsForAgent exists and takes agentId and authToken
-        fetchConversationsForAgent(selectedAgentId, authToken); 
-    }
-    // Add fetchConversationsForAgent to dependency array if it's stable via useCallback in context
-  }, [selectedAgentId, authToken, fetchConversationsForAgent]);
+  // Loading state for the entire dashboard shell before context is ready
+  // or while essential initial data (user, potentially agents) is loading.
+  const isInitialLoading = isLoadingUser || isLoadingAgents; // Combine loading states
 
-  // Effect to select the first conversation when conversations are loaded for the selected agent
-  useEffect(() => {
-    // Only proceed if:
-    // - An agent is selected
-    // - Conversations are loaded for that agent (isLoadingConversations is false)
-    // - The conversation list is not empty
-    // - No conversation is currently selected (or the selected one doesn't belong to the current agent - handleConversationSelect likely resets this)
-    if (selectedAgentId && !isLoadingConversations && conversationList.length > 0 && !currentConversationId) {
-        // Assuming conversationList is sorted by recency, take the first one
-        const mostRecentConversation = conversationList[0];
-        console.log(`DashboardLayout: Conversations loaded for agent ${selectedAgentId}, selecting conversation: ${mostRecentConversation.conversationId}`);
-        // handleConversationSelect likely handles setting currentConversationId and fetching messages
-        handleConversationSelect(mostRecentConversation.conversationId);
-    }
-  }, [selectedAgentId, conversationList, isLoadingConversations, currentConversationId, handleConversationSelect]);
+  if (isInitialLoading) {
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          {/* Basic full-page skeleton or spinner */}
+          <Skeleton className="h-16 w-16 rounded-full" /> 
+          <p className="ml-4 text-lg">Loading Dashboard...</p>
+        </div>
+      );
+  }
 
-
+  // Render the layout once essential data is ready
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden"> {/* Use h-screen and overflow-hidden */}
       {/* Left Panel */}
-      <div className="w-64 flex-shrink-0 border-r border-gray-700 overflow-y-auto">
+      <div className="w-64 flex-shrink-0 border-r border-border overflow-y-auto"> {/* Use border-border */}
         <Sidebar />
       </div>
 
@@ -98,8 +96,10 @@ function DashboardLayout() {
         <MiddlePanel />
       </div>
 
-      {/* Right Panel - USE THE NEW COMPONENT */}
-      <RightPanel />
+      {/* Right Panel */}
+      <div className="w-96 flex-shrink-0 border-l border-border overflow-y-auto"> {/* Example width, use border-border */}
+        <RightPanel />
+      </div>
     </div>
   );
 } 
