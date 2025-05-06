@@ -35,12 +35,14 @@ export default function RightPanel() {
         isCreatingConversation, // For button state
 
         // Auth/User related
-        authToken,
-        getUserInitials,
+        // authToken, // REMOVED
+        getClerkUserInitials,
 
         // Actions
-        handleCreateNewChat,
-        selectConversationId // Needed if we allow creating chat from here
+        // handleCreateNewChat, // Use createNewChatAndSetView instead
+        createNewChatAndSetView, // CORRECT WRAPPER
+        // selectConversationId // Use selectConversationAndSetView instead
+        selectConversationAndSetView // CORRECT WRAPPER
     } = useDashboard();
 
     // Find the full agent object based on the selected ID
@@ -90,7 +92,7 @@ export default function RightPanel() {
                 {/* Always render header once agent is selected */}
                 <AgentHeader
                     agent={selectedAgent}
-                    onCreateNewChat={handleCreateNewChat} // Use context's create chat
+                    onCreateNewChat={createNewChatAndSetView} // Use context's view setting create chat
                     isCreatingChat={isCreatingConversation} // Use context's loading state
                  />
 
@@ -103,7 +105,7 @@ export default function RightPanel() {
                                 <MessageCircle className="h-10 w-10 mb-3 text-gray-600" />
                                 <p className="text-xs">No conversation selected.</p>
                                 <button
-                                    onClick={handleCreateNewChat}
+                                    onClick={createNewChatAndSetView} // Use context's view setting create chat
                                     disabled={isCreatingConversation}
                                     className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50 mt-1"
                                 >
@@ -139,8 +141,8 @@ export default function RightPanel() {
                     return (
                         <ChatInterface
                             key={`${selectedAgentId}-${currentConversationId}`} // Force re-mount on change
-                            authToken={authToken}
-                            userInitials={getUserInitials()}
+                            // authToken={authToken} // REMOVED
+                            userInitials={getClerkUserInitials()} // CORRECT NAME
                             agentId={selectedAgentId} // Already checked selectedAgent exists
                             agentFirstName={selectedAgent.firstName} // Pass agent first name
                             agentLastName={selectedAgent.lastName}   // Pass agent last name

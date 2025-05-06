@@ -1,105 +1,70 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
-// Removed useEffect as it's handled in hooks now
-// Removed useRouter as it's handled in useAuth
-import { ApiKey, PlatformUser, Agent, Conversation, Webhook } from '@agent-base/types';
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Added for post-logout redirect
+import { ApiKey, Agent, Conversation, Webhook } from '@agent-base/types'; // Removed PlatformUser
 import { Message as VercelMessage } from 'ai/react';
+import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
+import { UserResource } from '@clerk/types';
 
-// Import the new custom hooks
-import { useAuth } from '../../../hooks/useAuth'; // Adjusted path
-import { useApiKeys } from '../../../hooks/useApiKeys'; // Adjusted path
-import { useAgents } from '../../../hooks/useAgents'; // Adjusted path
-import { useConversations } from '../../../hooks/useConversations'; // Adjusted path
-import { useWebhooks } from '../../../hooks/useWebhooks'; // Adjusted path
-
-// --- Define the combined context type --- 
-// This combines the return types of all hooks plus any direct context state
+// Import the new custom hooks (paths might need checking after folder restructure if any)
+// import { useAuth } from '../../../hooks/useAuth'; // REMOVED
+import { useAgents } from '../../../hooks/useAgents';
+import { useConversations } from '../../../hooks/useConversations';
+import { useWebhooks } from '../../../hooks/useWebhooks';
 
 type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail';
 
 interface DashboardContextType {
-  // From useAuth
-  user: PlatformUser | null;
-  // setUser: (user: PlatformUser | null) => void; // Keep if needed?
-  isLoadingUser: boolean;
-  authError: string | null;
-  // setAuthError: (error: string | null) => void;
-  authToken: string;
-  // fetchUserData: () => Promise<void>;
-  getUserInitials: () => string;
-  handleLogout: () => void;
-
-  // From useApiKeys
-  apiKeys: ApiKey[];
-  isLoadingKeys: boolean;
-  keysError: string | null;
-  refreshApiKeys: () => Promise<void>;
+  // From Clerk
+  clerkUser: UserResource | null | undefined; // From useUser()
+  isClerkLoading: boolean; // Derived from !useUser().isLoaded
+  isSignedIn: boolean | undefined; // From useClerkAuth()
+  handleClerkLogout: () => Promise<void>;
+  getClerkUserInitials: () => string;
 
   // From useAgents
   agents: Agent[];
   selectedAgentId: string | null;
-  // Use the wrapper function below instead of direct hook function
-  // selectAgent: (agentId: string | null) => void; 
   isLoadingAgents: boolean;
   agentError: string | null;
-  // fetchAgents: () => Promise<void>; // Use wrapper below if needed
-
+  
   // From useConversations
   conversationList: Conversation[];
   currentConversationId: string | null;
-  // Use wrapper function below
-  // selectConversationId: (conversationId: string | null) => void; 
   currentMessages: VercelMessage[];
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
   isCreatingConversation: boolean;
   conversationError: string | null;
-  // Use wrapper function below
-  // handleCreateNewChat: () => Promise<string | null>; 
-  // refreshConversationList: () => Promise<void>; // Use wrapper below
 
   // From useWebhooks
   userWebhooks: Webhook[];
   selectedWebhook: Webhook | null;
-  // Use wrapper function below
-  // selectWebhook: (webhook: Webhook | null) => void; 
   isLoadingWebhooks: boolean;
   webhookError: string | null;
-  fetchUserWebhooks: () => Promise<void>; // Expose refresh directly
+  fetchUserWebhooks: () => Promise<void>;
 
-  // Direct Context State/Functions (UI, combined state, action wrappers)
+  // Direct Context State/Functions
   activeAgentView: ActiveAgentView;
   setActiveAgentView: (view: ActiveAgentView) => void;
 
-  // --- Action Wrappers (to handle side effects like view changes) --- 
+  // Action Wrappers
   selectAgentAndSetView: (agentId: string | null) => void;
   selectConversationAndSetView: (conversationId: string | null) => void;
   createNewChatAndSetView: () => Promise<void>;
   selectWebhookAndSetView: (webhook: Webhook | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>;
-
-  // Combined loading/error (optional, can be derived in components)
-  // isLoading: boolean;
-  // error: string | null;
 }
 
-// Create the context with a default value matching the new type
-// Note: Default functions should be basic stubs
 export const DashboardContext = createContext<DashboardContextType>({
-  // Auth defaults
-  user: null,
-  isLoadingUser: true,
-  authError: null,
-  authToken: '',
-  getUserInitials: () => '?',
-  handleLogout: () => { console.error("Logout called on default context"); },
-  // API Keys defaults
-  apiKeys: [],
-  isLoadingKeys: false,
-  keysError: null,
-  refreshApiKeys: async () => { console.warn("refreshApiKeys called on default context"); },
+  // Clerk defaults
+  clerkUser: undefined,
+  isClerkLoading: true,
+  isSignedIn: undefined,
+  handleClerkLogout: async () => { console.error("handleClerkLogout called on default context"); },
+  getClerkUserInitials: () => '?',
   // Agents defaults
   agents: [],
   selectedAgentId: null,
@@ -131,130 +96,126 @@ export const DashboardContext = createContext<DashboardContextType>({
   refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
 });
 
-// Provider component that wraps the dashboard pages
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  // --- Instantiate Hooks --- 
-  const { 
-    user, 
-    // setUser, 
-    isLoadingUser, 
-    authError, 
-    // setAuthError,
-    authToken, 
-    // fetchUserData, 
-    getUserInitials, 
-    handleLogout 
-  } = useAuth();
+  const router = useRouter();
+  // --- Clerk Hooks ---
+  const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
+  const { getToken, isSignedIn } = useClerkAuth();
+  const { signOut } = useClerk();
 
-  const { 
-    apiKeys, 
-    isLoadingKeys, 
-    keysError, 
-    refreshApiKeys 
-  } = useApiKeys({ authToken, handleLogout });
+  const handleClerkLogout = useCallback(async () => {
+    console.log("DashboardContext: Signing out with Clerk...");
+    try {
+      await signOut(() => {
+        // This callback is executed after sign out is complete.
+        // router.push('/') ensures redirect happens after Clerk's operations.
+        router.push('/'); 
+        console.log("DashboardContext: Clerk signOut successful, redirecting to /");
+      });
+    } catch (error) {
+      console.error("DashboardContext: Error during Clerk signOut:", error);
+      // Fallback redirect if signOut itself fails or doesn't redirect
+      router.push('/');
+    }
+  }, [signOut, router]);
+
+  const getClerkUserInitials = useCallback(() => {
+    if (!clerkUser) return '?';
+    const { firstName, lastName, primaryEmailAddress } = clerkUser;
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName[0].toUpperCase();
+    }
+    if (primaryEmailAddress) {
+      return primaryEmailAddress.emailAddress[0].toUpperCase();
+    }
+    return '?';
+  }, [clerkUser]);
+  
+  // --- Instantiate Custom Hooks (pass Clerk sessionToken and handleClerkLogout) ---
+  // NOTE: These hooks might need internal adjustments if they were relying on the old `PlatformUser` or specific `authToken` behaviors.
 
   const { 
     agents, 
     selectedAgentId, 
-    selectAgent, // Use the hook's internal selector
+    selectAgent,
     isLoadingAgents, 
     agentError, 
     fetchAgents 
-  } = useAgents({ authToken, handleLogout });
+  } = useAgents({ handleLogout: handleClerkLogout }); // Pass Clerk token and logout
 
   const { 
     conversationList, 
     currentConversationId, 
-    selectConversationId, // Use the hook's internal selector
+    selectConversationId,
     currentMessages, 
     isLoadingConversations, 
     isLoadingMessages, 
     isCreatingConversation, 
     conversationError, 
-    handleCreateNewChat, // Use the hook's internal creator
-    refreshConversationList // Use the hook's internal refresher
-  } = useConversations({ authToken, selectedAgentId, user, handleLogout });
+    handleCreateNewChat,
+    refreshConversationList
+  } = useConversations({ selectedAgentId, user: clerkUser, handleLogout: handleClerkLogout }); // Pass Clerk token, user, and logout
 
   const { 
     userWebhooks, 
     selectedWebhook, 
-    selectWebhook, // Use the hook's internal selector
+    selectWebhook,
     isLoadingWebhooks, 
     webhookError, 
     fetchUserWebhooks 
-  } = useWebhooks({ authToken, handleLogout });
+  } = useWebhooks({ handleLogout: handleClerkLogout }); // Pass Clerk token and logout
 
   // --- Direct Context State (UI related) --- 
-  const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations'); // Default to conversations
+  const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
 
   // --- Action Wrapper Functions (to combine hook actions + UI changes) --- 
-
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
-    console.log(`DashboardContext: Selecting agent ${agentId} and setting view.`);
-    selectAgent(agentId); // Call the hook's function to update state
-    // Only change view if an agent is selected
+    selectAgent(agentId);
     if (agentId) {
-      // Default to conversations view when agent changes, conversations hook will load list/messages
       setActiveAgentView('conversations'); 
-      // Clear webhook selection when switching back to an agent focus
       selectWebhook(null); 
     } else {
-        // If agent is deselected, maybe default to a specific view or keep current?
-        // Let's keep the current view for now, but clear webhook selection.
-        selectWebhook(null);
+      selectWebhook(null);
     }
-  }, [selectAgent, selectWebhook]); // Added selectWebhook dependency
+  }, [selectAgent, selectWebhook]);
 
   const selectConversationAndSetView = useCallback((conversationId: string | null) => {
-    console.log(`DashboardContext: Selecting conversation ${conversationId} and setting view.`);
-    selectConversationId(conversationId); // Call the hook's function to update state
-    // Switch to chat view only if a conversation is selected
+    selectConversationId(conversationId);
     if (conversationId) {
       setActiveAgentView('chat');
     }
-    // If conversationId is null, don't automatically change view (might be switching agents)
   }, [selectConversationId, setActiveAgentView]);
 
   const createNewChatAndSetView = useCallback(async () => {
-    console.log("DashboardContext: Creating new chat and setting view.");
-    const newConvId = await handleCreateNewChat(); // Call the hook's function
+    const newConvId = await handleCreateNewChat();
     if (newConvId) {
-      setActiveAgentView('chat'); // Switch to chat view on successful creation
+      setActiveAgentView('chat');
     }
   }, [handleCreateNewChat, setActiveAgentView]);
 
   const selectWebhookAndSetView = useCallback((webhook: Webhook | null) => {
-    console.log(`DashboardContext: Selecting webhook ${webhook?.id ?? 'None'} and setting view.`);
-    selectWebhook(webhook); // Call the hook's function
+    selectWebhook(webhook);
     if (webhook) {
       setActiveAgentView('webhookDetail');
-      // Optionally clear agent selection if webhook view is fully separate
-      // selectAgent(null); 
     } else {
-        // If webhook is deselected, revert to a default view? Maybe agent's conversation list?
-        // Let's revert to conversations view only if an agent is actually selected.
-        if (selectedAgentId) {
-            setActiveAgentView('conversations');
-        }
-        // If no agent selected either, stay in current view or pick another default?
-        // For now, just revert to 'conversations' if an agent exists.
+      if (selectedAgentId) {
+        setActiveAgentView('conversations');
+      }
     }
-  }, [selectWebhook, setActiveAgentView, selectedAgentId]); // Added selectedAgentId dependency
+  }, [selectWebhook, setActiveAgentView, selectedAgentId]);
 
-  // --- Memoize the context value --- 
+  const isClerkLoading = !clerkIsLoaded;
+
   const contextValue = useMemo(() => ({
-    // Auth
-    user,
-    isLoadingUser,
-    authError,
-    authToken,
-    getUserInitials,
-    handleLogout,
-    // API Keys
-    apiKeys,
-    isLoadingKeys,
-    keysError,
-    refreshApiKeys,
+    // Clerk
+    clerkUser,
+    isClerkLoading,
+    isSignedIn,
+    handleClerkLogout,
+    getClerkUserInitials,
     // Agents
     agents,
     selectedAgentId,
@@ -282,28 +243,27 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectConversationAndSetView,
     createNewChatAndSetView,
     selectWebhookAndSetView,
-    refreshAgents: fetchAgents, // Expose agent refresh
-    refreshConversations: refreshConversationList, // Expose conversation refresh
-
+    refreshAgents: fetchAgents,
+    refreshConversations: refreshConversationList,
   }), [
-    // List all state values and stable functions from hooks and local state
-    user, isLoadingUser, authError, authToken, getUserInitials, handleLogout,
-    apiKeys, isLoadingKeys, keysError, refreshApiKeys,
+    clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     agents, selectedAgentId, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationId, currentMessages, isLoadingConversations, isLoadingMessages, isCreatingConversation, conversationError, handleCreateNewChat, refreshConversationList,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
-    activeAgentView, setActiveAgentView,
-    // List all action wrappers
+    activeAgentView, // setActiveAgentView is stable
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView
+    // fetchAgents and refreshConversationList are included via agents and conversationList dependencies in their respective hooks
   ]);
+  
+  // This useEffect handles redirection if the user is not signed in AND Clerk has finished loading.
+  // It ensures that we don't redirect prematurely while Clerk is still determining the auth state.
+  useEffect(() => {
+    if (!isClerkLoading && !isSignedIn) {
+      console.log("DashboardContext: User not signed in after Clerk check, redirecting to /");
+      router.push('/');
+    }
+  }, [isClerkLoading, isSignedIn, router]);
 
-  // --- Initial Data Load (Handled within hooks based on authToken) --- 
-  // No top-level useEffect needed here anymore for initial fetches.
-
-  // --- Log context value changes for debugging (optional) ---
-  // useEffect(() => {
-  //   console.log("DashboardContext value updated:", contextValue);
-  // }, [contextValue]);
 
   return (
     <DashboardContext.Provider value={contextValue}>
@@ -312,7 +272,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook to use the dashboard context (remains the same)
 export function useDashboard() {
   const context = useContext(DashboardContext);
   if (context === undefined) {

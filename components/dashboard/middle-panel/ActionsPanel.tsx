@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search, Filter } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 // --- Type Definitions for Processed Data ---
 interface MonthlyCount {
@@ -119,12 +120,11 @@ const actionIcons: { [key: string]: React.ElementType } = {
 
 // --- Main Actions Panel Component ---
 interface ActionsPanelProps {
-  onSelectConversation?: (conversationId: string, tabName: string) => void;
-  authToken: string;
   agentId: string;
+  onSelectConversation?: (conversationId: string, tabName: string) => void;
 }
 
-const ActionsPanel: React.FC<ActionsPanelProps> = ({ onSelectConversation, authToken, agentId }) => {
+const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversation }) => {
   const [monthlyCounts, setMonthlyCounts] = useState<MonthlyCount>({});
   const [recentProcessedActions, setRecentProcessedActions] = useState<ProcessedAction[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -149,7 +149,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ onSelectConversation, authT
         console.log(`Calling /api/messages/list-by-agent for agent ${agentId}`);
         const response = await fetch(`/api/messages/list-by-agent?agent_id=${agentId}`, {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            // 'Authorization': `Bearer ${authToken}`
           }
         });
         if (!response.ok) {
@@ -242,7 +242,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ onSelectConversation, authT
     };
 
     fetchData();
-  }, [agentId, authToken]);
+  }, [agentId/* , authToken */]);
 
   // Apply filters whenever filter conditions or actions change
   useEffect(() => {
@@ -288,8 +288,6 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ onSelectConversation, authT
 
   // Function to handle row click
   const handleActionClick = (action: ProcessedAction) => {
-    if (!onSelectConversation) return;
-    
     // Extract conversation ID from action
     let conversationId = '';
     
@@ -306,13 +304,13 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ onSelectConversation, authT
     
     if (conversationId) {
       // Navigate to the chat tab with this conversation
-      onSelectConversation(conversationId, 'chat');
+      onSelectConversation?.(conversationId, 'chat');
     }
   };
 
   // --- Render Component --- 
   if (isLoading) {
-    return <div className="p-4 text-gray-400">Loading actions data...</div>;
+    return <div className="p-4 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block" /> Loading actions...</div>;
   }
 
   if (error) {

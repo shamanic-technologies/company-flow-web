@@ -4,16 +4,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { Agent, ServiceResponse } from '@agent-base/types';
 
 interface UseAgentsProps {
-  authToken: string;
   handleLogout: () => void;
 }
 
 /**
  * @description Hook to manage agent data fetching, selection, and state.
- * @param {UseAgentsProps} props - The authentication token and logout handler.
+ * @param {UseAgentsProps} props - The logout handler.
  * @returns An object containing agents list, selected agent ID, loading/error states, and related functions.
  */
-export function useAgents({ authToken, handleLogout }: UseAgentsProps) {
+export function useAgents({ handleLogout }: UseAgentsProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(false); // Initial loading false, true when fetching
@@ -21,15 +20,7 @@ export function useAgents({ authToken, handleLogout }: UseAgentsProps) {
 
   // --- Fetch Agents Logic --- 
   const fetchAgents = useCallback(async () => {
-    if (!authToken) {
-      console.warn("useAgents: Auth token not available for fetching agents.");
-      // Don't set error here, it's expected before auth is ready
-      setAgents([]);
-      setIsLoadingAgents(false);
-      return;
-    }
-
-    console.log("🤖 useAgents - Fetching agents...");
+    console.log("🎣 useAgents - Fetching agents...");
     setIsLoadingAgents(true);
     setAgentError(null);
     // Clear previous agents while fetching new list
@@ -37,28 +28,32 @@ export function useAgents({ authToken, handleLogout }: UseAgentsProps) {
     // Let's clear only if fetch succeeds or fails to avoid UI flicker
 
     try {
-      const agentsResponse = await fetch('/api/agents/get-or-create', {
-        headers: { 'Authorization': `Bearer ${authToken}` }
+      const response = await fetch('/api/agents/get-or-create', {
+        method: 'POST', // Use POST as originally intended
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({}) // No body needed for get-or-create, send empty object
       });
 
-      console.log('📊 useAgents - Agents API response status:', agentsResponse.status);
+      console.log('�� useAgents - Agents API response status:', response.status);
 
-      if (agentsResponse.status === 401) {
+      if (response.status === 401) {
         console.error('🚫 useAgents - Unauthorized fetching agents, logging out.');
         handleLogout();
         return;
       }
 
-      if (!agentsResponse.ok) {
-        let errorDetail = `Status: ${agentsResponse.status}`;
+      if (!response.ok) {
+        let errorDetail = `Status: ${response.status}`;
         try {
-          const errorData = await agentsResponse.json();
+          const errorData = await response.json();
           errorDetail = errorData.error || errorDetail;
         } catch (e) { /* ignore */ }
         throw new Error(`API error fetching agents: ${errorDetail}`);
       }
 
-      const agentsData: ServiceResponse<Agent[]> = await agentsResponse.json();
+      const agentsData: ServiceResponse<Agent[]> = await response.json();
 
       if (agentsData.success && agentsData.data) {
         const fetchedAgents = agentsData.data;
@@ -80,20 +75,12 @@ export function useAgents({ authToken, handleLogout }: UseAgentsProps) {
     } finally {
       setIsLoadingAgents(false);
     }
-  }, [authToken, handleLogout]);
+  }, [handleLogout]);
 
-  // --- Effect to Fetch Agents When Token Available --- 
+  // --- Effect to Fetch Agents When Token Available (now on component mount if not dependent on token) ---
   useEffect(() => {
-    if (authToken) {
-      fetchAgents();
-    } else {
-      // Clear agents state if token becomes invalid/null (logout)
-      setAgents([]);
-      setSelectedAgentId(null);
-      setIsLoadingAgents(false);
-      setAgentError(null);
-    }
-  }, [authToken, fetchAgents]);
+    fetchAgents();
+  }, [fetchAgents]);
 
   // --- Effect for Agent Auto-Selection Logic --- 
   useEffect(() => {

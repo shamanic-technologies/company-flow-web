@@ -140,14 +140,14 @@ export function useSetupSteps({
     setError(null);
 
     try {
-        const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
-        if (!authToken) throw new Error("Auth token not found");
+        // const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null; // REMOVED
+        // if (!authToken) throw new Error("Auth token not found"); // REMOVED
 
         const response = await fetch('/api/secrets/store-secret', { 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
+                // 'Authorization': `Bearer ${authToken}`, // REMOVED
             },
             body: JSON.stringify({
                 secrets: stepData.secrets, 

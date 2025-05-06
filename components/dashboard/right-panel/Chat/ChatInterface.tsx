@@ -18,27 +18,25 @@ import { processErrorMessage, classifyError, handleToolCallError } from './utils
 import { createIdGenerator } from 'ai';
 
 interface ChatInterfaceProps {
-  authToken: string;
   userInitials: string;
   initialMessages?: Message[];
   agentId: string | null;
   agentFirstName: string;
   agentLastName: string;
-  conversationId: string | null;
+  conversationId: string;
   isLoading?: boolean;
   error?: string | null;
 }
 
 export const ChatInterface = ({ 
-  authToken, 
   userInitials, 
   initialMessages = [],
   agentId,
   agentFirstName,
   agentLastName,
   conversationId,
-  isLoading: propIsLoading,
-  error: propError
+  isLoading: propIsLoading = false,
+  error: propError = null,
 }: ChatInterfaceProps) => {
   // Reference to the messages container bottom for auto-scrolling target
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,14 +73,6 @@ export const ChatInterface = ({
     id: conversationId || undefined, // Pass undefined if conversationId is null
     // Use the agents/run API route
     api: '/api/agents/run',
-    // Include authorization header with user token from localStorage
-    headers: {
-      'Authorization': `Bearer ${authToken}`
-    },
-    // Pass conversation_id in the body
-    // body: {
-    //   conversation_id: conversationId
-    // },
     // Use the passed initialMessages prop
     initialMessages: initialMessages,
     // Enable multi-step tool usage

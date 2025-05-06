@@ -35,37 +35,33 @@ function DashboardLayout() {
   
   // Get necessary state from context if still needed, but avoid redundant user checks
   const { 
-    isLoadingAgents, // Example: Keep loading states relevant to UI structure
-    isLoadingConversations,
-    isLoadingWebhooks,
+    isLoadingAgents, // We might still use this for more granular loading inside panels
+    // isLoadingConversations,
+    // isLoadingWebhooks,
   } = useDashboard();
 
   // const router = useRouter(); // Remove if not used for other navigation
 
   // --- REMOVED useEffect that redirected based on context's user state --- 
-  // Middleware handles unauthorized access. Clerk hooks handle client-side state.
 
-  // Loading state based on Clerk's user loading state and potentially other initial data
-  const isInitialLoading = !isLoaded || isLoadingAgents; // Wait for Clerk user + agents
+  // Loading state based ONLY on Clerk's user loading state now
+  const isInitialLoading = !isLoaded; // Wait only for Clerk user state resolution
 
   if (isInitialLoading) {
       return (
         <div className="flex h-full w-full items-center justify-center">
           <Skeleton className="h-16 w-16 rounded-full" /> 
-          <p className="ml-4 text-lg">Loading Dashboard...</p>
+          <p className="ml-4 text-lg">Loading User...</p> // Changed message slightly
         </div>
       );
   }
 
-  // Check if signed in after loading (Clerk handles redirect if not via middleware)
-  if (!isSignedIn) {
-    // This case should technically not be reached if middleware is correct,
-    // but as a fallback or during development, you might show a message or null.
-    // Returning null is often sufficient as middleware handles the redirect.
-    return null; 
-  }
+  // REMOVED the check for !isSignedIn - Middleware handles unauthorized access.
+  // if (!isSignedIn) {
+  //   return null; 
+  // }
 
-  // Render the layout once essential data is ready and user is signed in
+  // Render the layout once Clerk is loaded. Middleware ensures user is authenticated.
   return (
     <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
       {/* Left Panel */}

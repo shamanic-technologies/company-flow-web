@@ -1,66 +1,65 @@
 /**
  * API Route: /api/agents/get-or-create
  * 
- * Proxy to the agent-service's /get-or-create-user-agents endpoint via API gateway
- * Handles authentication, API key management, and retrieves agent list (creating one if none exist)
+ * Retrieves agent list for the authenticated user using Clerk for authentication.
+ * (Note: Actual agent retrieval logic via service call removed as per instruction)
  */
 import { NextRequest } from 'next/server';
 import { 
   createErrorResponse, 
   createSuccessResponse, 
-  getAuthToken,
-  callApiService,
   handleApiError
 } from '../../utils'; // Assuming utils path is correct
-import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
-import { ServiceResponse } from '@agent-base/types';
-import { PlatformUser } from '@agent-base/types';
+
+// Import Clerk's auth helper for server-side authentication
+import { auth } from "@clerk/nextjs/server";
+import { getOrCreateAgent } from '@agent-base/api-client';
 
 /**
- * GET handler for getting or creating agents
- * Returns a list of agents for the authenticated user.
- * If no agents exist, the agent-service will create a default one and return it.
+ * GET handler for getting or creating agents (placeholder)
+ * Retrieves the authenticated user's ID via Clerk and gets the agent service API key.
+ * The actual call to the agent service has been removed as per instructions.
  */
 export async function GET(req: NextRequest) {
   try {
-    // Get auth token from request headers
-    const token = getAuthToken(req);
-    
-    if (!token) {
-      console.error('[API /agents/get-or-create] No valid authorization token provided');
-      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'No valid authorization token provided');
-    }
-    
-    // Get API key for the user
-    const platformApiKey: string = await getOrCreateKeyByName(token, "Playground");
-    // Get platform client user id from token
-    const platformUserResponse : ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
-    if (!platformUserResponse.success) {
-      console.error('[API /agents/get-or-create] Error getting platform user from token:', platformUserResponse);
-      
-      // Cast to access error properties when success is false
-      const errorResponse = platformUserResponse as unknown as { error?: any; details?: any };
+    // Use Clerk's auth() helper to get the userId - Added await
+    const { userId } = await auth();
 
-      // Convert the ServiceResponse error into a standard Response object
-      // Access error details from the casted errorResponse
-      const message = typeof errorResponse.error === 'string' 
-          ? errorResponse.error 
-          : JSON.stringify(errorResponse.error) || 'Failed to get platform user';
-      const details = typeof errorResponse.details === 'string'
-          ? errorResponse.details
-          : JSON.stringify(errorResponse.details) || message;
-
-      // Use a default status and code, as they aren't directly on the failed ServiceResponse
-      return createErrorResponse(500, 'PLATFORM_USER_FETCH_FAILED', message, details);
+    // Check if the user is authenticated
+    if (!userId) {
+      console.error('[API /agents/get-or-create] User not authenticated via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
-    const platformClientUserId = platformUserResponse.data.id;
-    // Call agent service's get-or-create endpoint
-    const data = await callApiService('/agent/get-or-create-user-agents', 'GET', platformClientUserId, platformApiKey);
-    // Return successful response (status code will be handled by agent-service response)
-    return createSuccessResponse(data, data.status || 200); // Pass status from service if available
+
+    // Retrieve the shared API key from environment variables
+    const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
+
+    // Check if the API key is configured
+    if (!agentBaseApiKey) {
+      console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
+      return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
+    }
+
+    const platformUserApiServiceCredentials = {
+      platformClientUserId: userId,
+      platformApiKey: agentBaseApiKey
+    }
+    const getOrCreateAgentResponse = await getOrCreateAgent(platformUserApiServiceCredentials);
+    if (!getOrCreateAgentResponse.success) {
+      console.error('[API /agents/get-or-create] Error getting or creating agent:', getOrCreateAgentResponse.error);
+      return createErrorResponse(500, 'AGENT_ERROR', 'Error getting or creating agent', getOrCreateAgentResponse.error);
+    }
+
+    const agents = getOrCreateAgentResponse.data;
+
+    // Placeholder success response - Replace with actual logic and data
+    return createSuccessResponse({ 
+      message: "Successfully retrieved or created agents", 
+      agents: agents
+    }, 200); 
 
   } catch (error: any) {
     console.error('[API /agents/get-or-create] Error:', error);
-    return handleApiError(error, 'An unexpected error occurred while getting or creating agents');
+    return handleApiError(error, 'An unexpected error occurred');
   }
 } 

@@ -34,9 +34,8 @@ import WebhookDetailPanel from './WebhookDetailPanel';
 export default function MiddlePanel() {
   const {
     // User/Auth related
-    user,
-    authToken,
-    getUserInitials,
+    clerkUser,
+    getClerkUserInitials,
 
     // Agent related
     agents,
@@ -51,7 +50,7 @@ export default function MiddlePanel() {
     // Conversation List related (from context)
     conversationList,
     isLoadingConversations,
-    selectConversationId, // Use the context setter for ID only
+    selectConversationAndSetView,
 
     // Selected Conversation/Messages related (from context)
     currentConversationId,
@@ -61,7 +60,7 @@ export default function MiddlePanel() {
     conversationError, // Use context error state
 
     // Actions related (from context)
-    handleCreateNewChat, // Use context action
+    createNewChatAndSetView,
 
     // Webhook related (from context)
     selectedWebhook, // Get the selected webhook
@@ -142,8 +141,8 @@ export default function MiddlePanel() {
                    <p>No conversation selected.</p>
                    <p className="text-xs text-gray-500">Select one from the list or create a new chat.</p>
                     <button
-                        onClick={handleCreateNewChat} // Use context's creation handler
-                        disabled={isCreatingConversation} // Use context's loading state
+                        onClick={createNewChatAndSetView}
+                        disabled={isCreatingConversation}
                         className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs disabled:opacity-50"
                     >
                         {isCreatingConversation ? 'Creating...' : 'New Chat'}
@@ -162,8 +161,7 @@ export default function MiddlePanel() {
             agentLastName={selectedAgent.lastName}   // Pass agent last name
             conversationId={currentConversationId ?? ''} // Pass current ID, handle null case
             initialMessages={currentMessages} // Pass messages fetched by context
-            userInitials={getUserInitials()}
-            authToken={authToken}
+            userInitials={getClerkUserInitials()}
             // Pass loading/error state from context if ChatInterface is updated to use them
             isLoading={isLoadingMessages} 
             error={conversationError}     
@@ -182,7 +180,7 @@ export default function MiddlePanel() {
             isLoadingConversations={isLoadingConversations} // From context
             historyError={conversationError} // Use context conversation error
             currentConversationId={currentConversationId} // From context
-            onConversationSelect={selectConversationId} // Use context ID setter
+            onConversationSelect={selectConversationAndSetView} // CORRECTED: Use context's view setting wrapper
           />
         );
 
@@ -202,7 +200,6 @@ export default function MiddlePanel() {
         return (
            <ActionsPanel
               agentId={selectedAgentId}
-              authToken={authToken}
             />
         );
 

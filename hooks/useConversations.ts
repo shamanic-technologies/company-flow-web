@@ -1,22 +1,22 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Conversation, CreateConversationInput, ServiceResponse, PlatformUser } from '@agent-base/types';
+import { Conversation, CreateConversationInput, ServiceResponse } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
+import { UserResource } from '@clerk/types';
 
 interface UseConversationsProps {
-  authToken: string;
   selectedAgentId: string | null;
-  user: PlatformUser | null; // Needed for creating new conversations
+  user: UserResource | null | undefined;
   handleLogout: () => void;
 }
 
 /**
  * @description Hook to manage conversation list, current conversation, messages, and related actions for the selected agent.
- * @param {UseConversationsProps} props - Auth token, selected agent ID, user object, and logout handler.
+ * @param {UseConversationsProps} props - Selected agent ID, Clerk user object, and logout handler.
  * @returns An object containing conversation and message state, loading/error states, and related functions.
  */
-export function useConversations({ authToken, selectedAgentId, user, handleLogout }: UseConversationsProps) {
+export function useConversations({ selectedAgentId, user, handleLogout }: UseConversationsProps) {
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentMessages, setCurrentMessages] = useState<VercelMessage[]>([]);
@@ -27,14 +27,6 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
 
   // --- Function to load conversation LIST for the selected agent --- 
   const loadConversationListForAgent = useCallback(async (agentId: string) => {
-    if (!authToken) {
-      console.warn("useConversations: Auth token missing, cannot load conversation list.");
-      setConversationError("Authentication required.");
-      setConversationList([]);
-      setCurrentConversationId(null); 
-      setIsLoadingConversations(false);
-      return;
-    }
     if (!agentId) {
         // This case should ideally be handled by the effect watching selectedAgentId
         console.log("useConversations: No agent ID provided to loadConversationListForAgent.");
@@ -56,26 +48,30 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
     try {
       // Using list-or-create ensures we have one if possible, simplifying UI states
       // Note: The API endpoint might need adjustment if it strictly lists vs. list-or-create
-      // Switched to /api/conversations/list as per original context logic
-      const convListResponse = await fetch(`/api/conversations/list?agentId=${agentId}`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
+      // Switched to /api/conversations/list-or-create as per original context logic
+      const listResponse = await fetch(`/api/conversations/list-or-create?agent_id=${agentId}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ agent_id: agentId }) // Send agentId in body as well if API expects it
       });
 
-      if (convListResponse.status === 401) {
+      if (listResponse.status === 401) {
         console.error('🚫 useConversations - Unauthorized loading conversations, logging out.');
         handleLogout();
         return;
       }
-      if (!convListResponse.ok) {
-        const errData = await convListResponse.json().catch(() => ({}));
-        throw new Error(`Failed to list conversations: ${errData.error || convListResponse.statusText} (${convListResponse.status})`);
+      if (!listResponse.ok) {
+        const errData = await listResponse.json().catch(() => ({}));
+        throw new Error(`Failed to list conversations: ${errData.error || listResponse.statusText} (${listResponse.status})`);
       }
-      const convListData: ServiceResponse<Conversation[]> = await convListResponse.json();
-      if (!convListData.success || !Array.isArray(convListData.data)) {
-        throw new Error(`API error listing conversations: ${convListData.error || 'Invalid data format'}`);
+      const listData: ServiceResponse<Conversation[]> = await listResponse.json();
+      if (!listData.success || !Array.isArray(listData.data)) {
+        throw new Error(`API error listing conversations: ${listData.error || 'Invalid data format'}`);
       }
 
-      const fetchedConversations: Conversation[] = convListData.data;
+      const fetchedConversations: Conversation[] = listData.data;
       // Sort conversations by updatedAt descending (most recent first)
       const sortedConversations = fetchedConversations.sort((a, b) =>
         new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
@@ -105,11 +101,11 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
     } finally {
       setIsLoadingConversations(false);
     }
-  }, [authToken, handleLogout]);
+  }, [handleLogout]);
 
   // --- Effect to Load Conversation List when Selected Agent Changes --- 
   useEffect(() => {
-    if (selectedAgentId && authToken) {
+    if (selectedAgentId) {
       console.log(`useConversations (Effect): Selected agent changed to ${selectedAgentId}, loading conversations.`);
       loadConversationListForAgent(selectedAgentId);
     } else {
@@ -121,14 +117,14 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
       setConversationError(null);
     }
     // Only trigger when agent ID changes or token appears/disappears
-  }, [selectedAgentId, authToken, loadConversationListForAgent]);
+  }, [selectedAgentId, loadConversationListForAgent]);
 
 
   // --- Function to Fetch Messages for a Specific Conversation ID --- 
   const fetchMessages = useCallback(async (convId: string) => {
-    if (!authToken) {
-      console.warn("useConversations: Auth token missing, cannot fetch messages.");
-      setConversationError("Authentication required to load messages.");
+    if (!convId) {
+      console.warn("useConversations: No conversation ID provided to fetch messages.");
+      setConversationError("Cannot fetch messages: Missing conversation ID.");
       setCurrentMessages([]);
       setIsLoadingMessages(false);
       return;
@@ -140,7 +136,7 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
     setConversationError(null); // Clear previous errors
 
     try {
-      const messagesResponse = await fetch(`/api/messages/list?conversation_id=${convId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const messagesResponse = await fetch(`/api/messages/list?conversation_id=${convId}`);
 
       if (messagesResponse.status === 401) {
         console.error('🚫 useConversations - Unauthorized loading messages, logging out.');
@@ -168,11 +164,11 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [authToken, handleLogout]);
+  }, [handleLogout]);
 
   // --- Effect to Fetch Messages when Current Conversation ID changes --- 
   useEffect(() => {
-    if (currentConversationId && authToken) {
+    if (currentConversationId) {
        console.log(`useConversations (Effect): Current conversation ID changed to ${currentConversationId}, fetching messages.`);
        fetchMessages(currentConversationId);
     } else {
@@ -182,13 +178,13 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
       setIsLoadingMessages(false);
       // Don't clear conversationError here, might be relevant from list loading
     }
-  }, [currentConversationId, authToken, fetchMessages]);
+  }, [currentConversationId, fetchMessages]);
 
   // --- Handler to Create New Chat --- 
   const handleCreateNewChat = useCallback(async (): Promise<string | null> => { // Return new ID or null
-    if (!selectedAgentId || !authToken || !user) {
-      console.error("useConversations: Cannot create new chat - Missing agent ID, auth token, or user info.");
-      setConversationError("Cannot create new chat: Missing required information.");
+    if (!selectedAgentId || !user) {
+      console.warn("useConversations: Agent ID or user info missing for creating chat.");
+      setConversationError("Cannot create chat: missing required information.");
       return null;
     }
 
@@ -208,7 +204,7 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
 
       const response = await fetch('/api/conversations/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
@@ -240,7 +236,7 @@ export function useConversations({ authToken, selectedAgentId, user, handleLogou
     } finally {
       setIsCreatingConversation(false);
     }
-  }, [selectedAgentId, authToken, user, handleLogout]);
+  }, [selectedAgentId, user, handleLogout, loadConversationListForAgent]);
 
   // --- Simple setter for selecting a conversation ID --- 
   // This just updates the state; the message fetch effect handles the rest.

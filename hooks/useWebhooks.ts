@@ -4,16 +4,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { Webhook, ServiceResponse } from '@agent-base/types';
 
 interface UseWebhooksProps {
-  authToken: string;
   handleLogout: () => void;
 }
 
 /**
  * @description Hook to manage webhook data fetching, selection, and state.
- * @param {UseWebhooksProps} props - The authentication token and logout handler.
+ * @param {UseWebhooksProps} props - The logout handler.
  * @returns An object containing user webhooks, selected webhook, loading/error states, and related functions.
  */
-export function useWebhooks({ authToken, handleLogout }: UseWebhooksProps) {
+export function useWebhooks({ handleLogout }: UseWebhooksProps) {
   const [userWebhooks, setUserWebhooks] = useState<Webhook[]>([]);
   const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
@@ -21,13 +20,6 @@ export function useWebhooks({ authToken, handleLogout }: UseWebhooksProps) {
 
   // --- Fetch User Webhooks --- 
   const fetchUserWebhooks = useCallback(async () => {
-    if (!authToken) {
-      console.warn("useWebhooks: Auth token not available for fetching webhooks.");
-      setUserWebhooks([]);
-      setIsLoadingWebhooks(false);
-      return;
-    }
-
     console.log("🎣 useWebhooks - Fetching user webhooks...");
     setIsLoadingWebhooks(true);
     setWebhookError(null);
@@ -37,7 +29,6 @@ export function useWebhooks({ authToken, handleLogout }: UseWebhooksProps) {
       const response = await fetch('/api/webhooks/get-created', {
         method: 'POST', // Keep POST as per original context
         headers: {
-          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json' // Explicitly set content type
         },
         // body: JSON.stringify({}) // Assuming no body needed, uncomment if required
@@ -46,8 +37,7 @@ export function useWebhooks({ authToken, handleLogout }: UseWebhooksProps) {
       console.log('📊 useWebhooks - User Webhooks API response status:', response.status);
 
       if (response.status === 401) {
-        console.error('🚫 useWebhooks - Unauthorized fetching webhooks, logging out.');
-        handleLogout();
+        console.error('🚫 useWebhooks - Unauthorized fetching webhooks');
         return;
       }
 
@@ -76,20 +66,12 @@ export function useWebhooks({ authToken, handleLogout }: UseWebhooksProps) {
     } finally {
       setIsLoadingWebhooks(false);
     }
-  }, [authToken, handleLogout]);
+  }, [handleLogout]);
 
   // --- Effect to Fetch Webhooks When Token Available --- 
   useEffect(() => {
-    if (authToken) {
-      fetchUserWebhooks();
-    } else {
-      // Clear state if token disappears (logout)
-      setUserWebhooks([]);
-      setSelectedWebhook(null);
-      setIsLoadingWebhooks(false);
-      setWebhookError(null);
-    }
-  }, [authToken, fetchUserWebhooks]);
+    fetchUserWebhooks();
+  }, [fetchUserWebhooks]);
 
   // --- Select Webhook --- 
   // This hook only manages the state. The context provider will handle view changes.
