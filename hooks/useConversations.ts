@@ -50,40 +50,36 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       // Note: The API endpoint might need adjustment if it strictly lists vs. list-or-create
       // Switched to /api/conversations/list-or-create as per original context logic
       const listResponse = await fetch(`/api/conversations/list-or-create?agent_id=${agentId}`, {
-        method: 'POST',
+        method: 'GET',
         headers: { 
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ agent_id: agentId }) // Send agentId in body as well if API expects it
+        }
       });
 
       if (listResponse.status === 401) {
         console.error('🚫 useConversations - Unauthorized loading conversations, logging out.');
-        handleLogout();
         return;
       }
       if (!listResponse.ok) {
         const errData = await listResponse.json().catch(() => ({}));
         throw new Error(`Failed to list conversations: ${errData.error || listResponse.statusText} (${listResponse.status})`);
       }
-      const listData: ServiceResponse<Conversation[]> = await listResponse.json();
-      if (!listData.success || !Array.isArray(listData.data)) {
-        throw new Error(`API error listing conversations: ${listData.error || 'Invalid data format'}`);
+      const listData: Conversation[] = await listResponse.json();
+
+      if (!listData) {
+        throw new Error(`API error listing conversations: ${listData || 'Invalid data format'}`);
       }
 
-      const fetchedConversations: Conversation[] = listData.data;
       // Sort conversations by updatedAt descending (most recent first)
-      const sortedConversations = fetchedConversations.sort((a, b) =>
-        new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+      const sortedConversations = listData.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
       setConversationList(sortedConversations);
-      console.log(`useConversations: Fetched ${sortedConversations.length} conversations for agent ${agentId}.`);
 
       // --- Auto-select the latest conversation --- 
       if (sortedConversations.length > 0) {
         const latestConversationId = sortedConversations[0].conversationId;
-        console.log(`useConversations: Setting current conversation ID to latest: ${latestConversationId}`);
         // Setting the ID here will trigger the message fetching effect
         setCurrentConversationId(latestConversationId);
       } else {
@@ -106,11 +102,9 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
   // --- Effect to Load Conversation List when Selected Agent Changes --- 
   useEffect(() => {
     if (selectedAgentId) {
-      console.log(`useConversations (Effect): Selected agent changed to ${selectedAgentId}, loading conversations.`);
       loadConversationListForAgent(selectedAgentId);
     } else {
       // If agent is deselected or token disappears, clear conversation state
-      console.log(`useConversations (Effect): Agent deselected or token missing, clearing conversation state.`);
       setConversationList([]);
       setCurrentConversationId(null); // This will trigger message clearing via the other effect
       setIsLoadingConversations(false);
@@ -130,7 +124,6 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       return;
     }
 
-    console.log(`useConversations: Fetching messages for conversation ${convId}`);
     setIsLoadingMessages(true);
     setCurrentMessages([]); // Clear previous messages
     setConversationError(null); // Clear previous errors
@@ -144,6 +137,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
         return;
       }
       if (!messagesResponse.ok) {
+        console.error('🚫 useConversations - Unauthorized loading messages, logging out.');
         const errData = await messagesResponse.json().catch(() => ({}));
         throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
       }
@@ -151,11 +145,11 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json();
 
       if (!messagesData.success || !Array.isArray(messagesData.data)) {
+        console.error('🚫 useConversations - Invalid message data received from API');
         throw new Error(messagesData.error || 'Invalid message data received from API');
       }
 
       setCurrentMessages(messagesData.data);
-      console.log(`useConversations: Loaded ${messagesData.data.length} messages for ${convId}.`);
 
     } catch (error: any) {
       console.error(`useConversations: Error loading messages for ${convId}:`, error);
@@ -169,11 +163,9 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
   // --- Effect to Fetch Messages when Current Conversation ID changes --- 
   useEffect(() => {
     if (currentConversationId) {
-       console.log(`useConversations (Effect): Current conversation ID changed to ${currentConversationId}, fetching messages.`);
        fetchMessages(currentConversationId);
     } else {
       // If conversationId becomes null (e.g., agent change, list empty), clear messages
-      console.log(`useConversations (Effect): Current conversation ID is null, clearing messages.`);
       setCurrentMessages([]);
       setIsLoadingMessages(false);
       // Don't clear conversationError here, might be relevant from list loading
@@ -188,7 +180,6 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       return null;
     }
 
-    console.log(`useConversations: Starting new chat creation for agent ${selectedAgentId}...`);
     setIsCreatingConversation(true);
     setConversationError(null);
 
