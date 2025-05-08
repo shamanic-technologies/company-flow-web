@@ -57,7 +57,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       });
 
       if (listResponse.status === 401) {
-        console.error('🚫 useConversations - Unauthorized loading conversations, logging out.');
+        console.error('🚫 useConversations - Unauthorized loading conversations');
         return;
       }
       if (!listResponse.ok) {
@@ -129,27 +129,26 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
     setConversationError(null); // Clear previous errors
 
     try {
-      const messagesResponse = await fetch(`/api/messages/list?conversation_id=${convId}`);
+      const messagesResponse = await fetch(`/api/messages/list?conversationId=${convId}`);
 
       if (messagesResponse.status === 401) {
-        console.error('🚫 useConversations - Unauthorized loading messages, logging out.');
-        handleLogout();
+        console.error('🚫 useConversations - Unauthorized loading messages.');
         return;
       }
       if (!messagesResponse.ok) {
-        console.error('🚫 useConversations - Unauthorized loading messages, logging out.');
+        console.error('🚫 useConversations - Unauthorized loading messages');
         const errData = await messagesResponse.json().catch(() => ({}));
         throw new Error(`Failed to list messages: ${errData.error || messagesResponse.statusText} (${messagesResponse.status})`);
       }
 
-      const messagesData: ServiceResponse<VercelMessage[]> = await messagesResponse.json();
+      const messagesData: VercelMessage[] = await messagesResponse.json();
 
-      if (!messagesData.success || !Array.isArray(messagesData.data)) {
+      if (!messagesData) {
         console.error('🚫 useConversations - Invalid message data received from API');
-        throw new Error(messagesData.error || 'Invalid message data received from API');
+        throw new Error('Invalid message data received from API');
       }
 
-      setCurrentMessages(messagesData.data);
+      setCurrentMessages(messagesData);
 
     } catch (error: any) {
       console.error(`useConversations: Error loading messages for ${convId}:`, error);
@@ -185,7 +184,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
 
     try {
       const newConversationId = crypto.randomUUID();
-      const channelId = 'web'; // Hardcoded as before
+      const channelId = 'web';
 
       const requestBody: CreateConversationInput = {
         agentId: selectedAgentId,
@@ -200,21 +199,18 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       });
 
       if (response.status === 401) {
-        console.error('🚫 useConversations - Unauthorized creating conversation, logging out.');
-        handleLogout();
+        console.error('🚫 useConversations - Unauthorized creating conversation');
         return null;
       }
 
-      const responseData: ServiceResponse<Conversation> = await response.json();
-      if (!response.ok || !responseData.success || !responseData.data) {
-        throw new Error(responseData?.error || `Failed to create conversation (HTTP ${response.status})`);
+      const responseData: Conversation = await response.json();
+      
+      if (!responseData) {
+        console.error('🚫 useConversations - Invalid conversation data received from API');
+        throw new Error(`Failed to create conversation (HTTP ${response.status})`);
       }
-
-      console.log("useConversations: New conversation created successfully:", responseData.data);
-      const newConversation = responseData.data;
-
       // Add to list (most recent first)
-      setConversationList(prevList => [newConversation, ...prevList]);
+      setConversationList(prevList => [responseData, ...prevList]);
       // Set as current (will trigger message fetch effect)
       setCurrentConversationId(newConversationId);
 

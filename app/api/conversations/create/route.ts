@@ -15,17 +15,12 @@ import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-
 import { ServiceResponse, PlatformUser, PlatformUserApiServiceCredentials, CreateConversationInput } from '@agent-base/types';
 // Import the specific API client function
 import { createConversationExternalApiService } from '@agent-base/api-client';
+import { auth } from '@clerk/nextjs/server';
 
 export const POST = async (req: NextRequest) => {
   try {
-    // 1. Get auth token
-    const token = getAuthToken(req);
-    if (!token) {
-      console.error('[API /conversations/create] No valid authorization token provided');
-      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'No valid authorization token provided');
-    }
 
-    // 2. Parse request body
+    // Parse request body
     let body: CreateConversationInput;
     try {
       body = await req.json();
@@ -34,7 +29,7 @@ export const POST = async (req: NextRequest) => {
       return createErrorResponse(400, 'INVALID_REQUEST', 'Invalid JSON format in request body', 'Could not parse request body as JSON');
     }
 
-    // 3. Validate required fields in body
+    // Validate required fields in body
     const { agentId, channelId, conversationId } = body;
     if (!agentId || !channelId || !conversationId) {
       const missing = [
@@ -46,22 +41,29 @@ export const POST = async (req: NextRequest) => {
       return createErrorResponse(400, 'INVALID_REQUEST', `Missing required fields: ${missing}`, `Request body must include agentId, channelId, and conversationId`);
     }
 
-    // 4. Prepare credentials
-    const apiKey = await getOrCreateKeyByName(token, "Playground"); // Use appropriate key name if needed
-    const platformUserResponse: ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
-    if (!platformUserResponse.success || !platformUserResponse.data) {
-      console.error('[API /conversations/create] Error getting platform user from token:', platformUserResponse);
-      return createErrorResponse(500, 'USER_FETCH_FAILED', platformUserResponse.error || 'Failed to get user info', platformUserResponse.error);
-    }
-    const platformClientUserId = platformUserResponse.data.id;
+    // Prepare credentials
 
-    // Use PlatformUserApiServiceCredentials type
+    const { userId } = await auth();
+    const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
+
+    // Check if the user is authenticated
+    if (!userId) {
+      console.error('[API /agents/get-or-create] User not authenticated via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
+    }
+
+    // Check if the API key is configured
+    if (!agentBaseApiKey) {
+      console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
+      return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
+    }
+
     const credentials: PlatformUserApiServiceCredentials = {
-      platformClientUserId: platformClientUserId,
-      platformApiKey: apiKey
+        platformClientUserId: userId,
+        platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
 
-    // 5. Call API client function
+    // Call API client function
     const createResponse = await createConversationExternalApiService(
       body, // Pass the validated request body
       credentials // Pass the credentials object
@@ -71,26 +73,15 @@ export const POST = async (req: NextRequest) => {
     // 6. Handle response from API client
     if (!createResponse.success) {
       console.error('[API /conversations/create] API client call failed:', createResponse.error);
-      // Use default status code (e.g., 500) as statusCode might not be present in failed ServiceResponse
-      // const statusCode = typeof createResponse.statusCode === 'number' ? createResponse.statusCode : 500;
       return createErrorResponse(500, 'API_CLIENT_ERROR', createResponse.error || 'Failed to create conversation via API client', createResponse.error);
     }
 
-    // Return successful response (201 Created)
-    // createSuccessResponse defaults to 200, so specify 201
-    return new Response(
-      JSON.stringify(createResponse), // Return the full success response from the client
-      {
-        status: 201,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store'
-        }
-      }
-    );
+    const conversation = createResponse.data;
+
+    return createSuccessResponse(conversation, 201);
 
   } catch (error: any) {
-    // Use shared error handler for unexpected errors
+    console.log('Error in /conversations/create:', error);
     return handleApiError(error, 'An unexpected error occurred while creating the conversation');
   }
 }; 

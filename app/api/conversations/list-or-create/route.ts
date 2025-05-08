@@ -9,13 +9,9 @@ import { type NextRequest } from 'next/server';
 import { 
   createErrorResponse, 
   createSuccessResponse, 
-  getAuthToken, 
-  callApiService,
   handleApiError
 } from '../../utils';
-import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
-import { ServiceResponse, PlatformUser, PlatformUserApiServiceCredentials, Conversation } from '@agent-base/types';
-// Import the specific API client function
+import { PlatformUserApiServiceCredentials, Conversation } from '@agent-base/types';
 import { getOrCreateConversationsExternalApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
 
@@ -48,7 +44,6 @@ export const GET = async (req: NextRequest) => {
         platformClientUserId: userId,
         platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
-    // --- End prepare credentials ---
 
     // --- Call API client function ---
     // Replace callApiService with the specific client function
@@ -69,7 +64,7 @@ export const GET = async (req: NextRequest) => {
     // Return successful response with data from the API client
     // Directly construct the Response to bypass linter issue with createSuccessResponse signature
     return createSuccessResponse(conversations, 200);
-    
+
   } catch (error: any) {
     console.log('Error in /conversations/list-or-create:', error);
     return handleApiError(error, 'An unexpected error occurred while listing or creating conversations');
