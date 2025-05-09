@@ -2,73 +2,47 @@
  * API Route: Get User Created Webhooks
  * Fetches all webhook definitions created by the authenticated user.
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUserCreatedWebhooks } from '@agent-base/api-client';
-import { ServiceResponse, Webhook, InternalServiceCredentials, PlatformUser } from '@agent-base/types';
-import { getAuthToken } from '../../utils/types'; // Assuming location of getAuthToken
-import { getPlatformUserFromToken, getOrCreateKeyByName } from '../../utils/web-client'; // Added getOrCreateKeyByName
+import { ServiceResponse, Webhook, PlatformUserApiServiceCredentials } from '@agent-base/types';
+import { createErrorResponse, createSuccessResponse } from '../../utils/types'; // Assuming location of getAuthToken
+import { auth } from '@clerk/nextjs/server';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        // 1. Get Auth Token
-        const token = getAuthToken(request);
-        if (!token) {
-            console.error('❌ GetCreatedWebhooks API - No auth token found');
-            return NextResponse.json(
-                { success: false, error: 'Authentication required' },
-                { status: 401 }
-            );
-        }
 
-        // 2. Validate token and get user info
-        const userResponse: ServiceResponse<PlatformUser> = await getPlatformUserFromToken(token);
-        if (!userResponse.success || !userResponse.data) {
-            console.error('❌ GetCreatedWebhooks API - Invalid token or failed to get user');
-            return NextResponse.json(
-                { success: false, error: userResponse.error || 'Authentication failed' },
-                { status: 401 } // Or appropriate status from userResponse
-            );
+        const { userId } = await auth();
+        const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
+        
+        // Check if the user is authenticated
+        if (!userId) {
+          console.error('[API /agents/get-or-create] User not authenticated via Clerk');
+          return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
         }
-        const platformUserId = userResponse.data.id; 
-        // TODO: Verify how clientUserId should be obtained. Assuming it's the same as platformUserId for now.
-        const clientUserId = userResponse.data.id; 
-
-        // 3. Get Platform API Key
-        const platformApiKey = await getOrCreateKeyByName(token, "Playground"); // Use the common helper
-        if (!platformApiKey) {
-            console.error('❌ GetCreatedWebhooks API - Failed to get or create Platform API Key');
-            return NextResponse.json({ success: false, error: 'API Key retrieval failed' }, { status: 500 });
+    
+        // Check if the API key is configured
+        if (!agentBaseApiKey) {
+          console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
+          return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
         }
-
-        // 4. Prepare Credentials for SDK
-        const credentials: InternalServiceCredentials = {
-            platformUserId,
-            clientUserId, // Using platformUserId here, needs verification
-            platformApiKey,
-            agentId: undefined, 
+    
+        const credentials: PlatformUserApiServiceCredentials = {
+            platformClientUserId: userId,
+            platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
         };
-
+        
         // 5. Call the SDK function
         const webhooksResponse: ServiceResponse<Webhook[]> = await getUserCreatedWebhooks(credentials);
-
+        if (!webhooksResponse.success) {
+            console.error('[API /webhooks/get-created] Failed to fetch webhooks' + webhooksResponse.error);
+            return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Failed to fetch webhooks');
+        }
+        
         // 6. Return the response
-        return NextResponse.json(webhooksResponse);
+        return createSuccessResponse(webhooksResponse.data, 200);
 
     } catch (error: any) {
         console.error('❌ GetCreatedWebhooks API - Error:', error);
-
-        // Handle known errors with status code
-        if (error && typeof error === 'object' && 'status' in error) {
-            return NextResponse.json(
-                { success: false, error: error.message || 'Service error' },
-                { status: error.status }
-            );
-        }
-
-        // Default error handling
-        return NextResponse.json(
-            { success: false, error: 'Internal server error' },
-            { status: 500 }
-        );
+        return createErrorResponse(error.status, 'SERVICE_ERROR', error.message || 'Service error', 'Service error');
     }
 } 

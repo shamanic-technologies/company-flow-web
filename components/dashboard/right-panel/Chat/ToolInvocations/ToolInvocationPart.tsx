@@ -43,7 +43,6 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
     toolInvocation, 
     addToolResult 
   });
-  console.log('🟢[ToolInvocation]:', toolInvocation);
   // --- Render Logic --- 
 
   if (!toolInvocation) return null;

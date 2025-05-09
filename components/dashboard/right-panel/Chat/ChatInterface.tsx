@@ -9,12 +9,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChat, Message } from 'ai/react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import MessageInput, { MessageInputRef } from './MessageInput';
 import ThinkingIndicator from './ThinkingIndicator';
-import { processErrorMessage, classifyError, handleToolCallError } from './utils/errorHandlers';
+import { classifyError } from './utils/errorHandlers';
 import { createIdGenerator } from 'ai';
 
 interface ChatInterfaceProps {

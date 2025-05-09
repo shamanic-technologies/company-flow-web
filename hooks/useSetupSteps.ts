@@ -151,7 +151,8 @@ export function useSetupSteps({
             },
             body: JSON.stringify({
                 secrets: stepData.secrets, 
-                secretUtilityProvider: currentSetupData.utilityProvider
+                secretUtilityProvider: currentSetupData.utilityProvider,
+                secretUtilitySubProvider: currentSetupData.utilitySubProvider
             }),
         });
 

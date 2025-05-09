@@ -27,37 +27,21 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
     try {
       const response = await fetch('/api/webhooks/get-created', {
-        method: 'POST', // Keep POST as per original context
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json' // Explicitly set content type
         },
-        // body: JSON.stringify({}) // Assuming no body needed, uncomment if required
       });
-
-      console.log('📊 useWebhooks - User Webhooks API response status:', response.status);
 
       if (response.status === 401) {
         console.error('🚫 useWebhooks - Unauthorized fetching webhooks');
-        return;
+        throw new Error('Unauthorized fetching webhooks');
       }
 
-      const data: ServiceResponse<Webhook[]> = await response.json();
+      const webhookData: Webhook[] = await response.json();
 
-      if (!response.ok) {
-        let errorDetail = `Status: ${response.status}`;
-        if (data && data.error) {
-          errorDetail = data.error;
-        }
-        throw new Error(`API error fetching webhooks: ${errorDetail}`);
-      }
+      setUserWebhooks(webhookData);
 
-      if (data.success && data.data) {
-        console.log(`✅ useWebhooks - ${data.data.length} User webhooks retrieved successfully.`);
-        setUserWebhooks(data.data);
-      } else {
-        setUserWebhooks([]); // Clear on API error
-        throw new Error(data.error || 'Invalid data format from webhooks API');
-      }
     } catch (error: any) {
       console.error('❌ useWebhooks - Error fetching user webhooks:', error);
       setWebhookError(error.message || 'Failed to fetch webhooks.');
@@ -66,7 +50,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
     } finally {
       setIsLoadingWebhooks(false);
     }
-  }, [handleLogout]);
+  }, []);
 
   // --- Effect to Fetch Webhooks When Token Available --- 
   useEffect(() => {
