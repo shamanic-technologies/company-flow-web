@@ -7,7 +7,14 @@ import {
   handleApiError
 } from '../../utils';
 import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
-import { ServiceResponse, StoreSecretRequest, UserType, UtilityProvider, UtilitySecretType, PlatformUserApiServiceCredentials } from '@agent-base/types';
+import { ServiceResponse,
+  StoreSecretRequest,
+  StoreActionConfirmationRequest,
+  UserType,
+  UtilityProvider,
+  UtilitySecretType,
+  PlatformUserApiServiceCredentials
+} from '@agent-base/types';
 import { PlatformUser } from '@agent-base/types';
 import { storeSecretExternalApiClient } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
@@ -81,7 +88,7 @@ export async function POST(req: NextRequest) {
         const storeSecretRequest: StoreSecretRequest = {
           userType: UserType.Client,
           secretUtilityProvider: secretUtilityProvider as UtilityProvider,
-          secretUtilitySubProvider: secretUtilitySubProvider as UtilitySubProvider,
+          secretUtilitySubProvider: secretUtilitySubProvider as string,
           secretType: secretType as UtilitySecretType,
           secretValue: secretValue as string
         };
