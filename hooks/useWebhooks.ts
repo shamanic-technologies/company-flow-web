@@ -21,8 +21,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
   // --- Fetch User Webhooks --- 
   const fetchUserWebhooks = useCallback(async () => {
     console.log("🎣 useWebhooks - Polling for user webhooks...");
-    setIsLoadingWebhooks(true);
-    setWebhookError(null);
+
     // setUserWebhooks([]); // Clear previous webhooks while fetching? Let's clear on success/fail.
 
     try {
@@ -54,7 +53,10 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
   // --- Effect to Poll for Webhooks Every 5 Seconds --- 
   useEffect(() => {
+
     // Fetch immediately on mount
+    setIsLoadingWebhooks(true);
+    setWebhookError(null);
     fetchUserWebhooks(); 
 
     // Then set up the interval for polling
