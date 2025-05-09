@@ -20,7 +20,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
   // --- Fetch User Webhooks --- 
   const fetchUserWebhooks = useCallback(async () => {
-    console.log("🎣 useWebhooks - Fetching user webhooks...");
+    console.log("🎣 useWebhooks - Polling for user webhooks...");
     setIsLoadingWebhooks(true);
     setWebhookError(null);
     // setUserWebhooks([]); // Clear previous webhooks while fetching? Let's clear on success/fail.
@@ -52,10 +52,23 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
     }
   }, []);
 
-  // --- Effect to Fetch Webhooks When Token Available --- 
+  // --- Effect to Poll for Webhooks Every 5 Seconds --- 
   useEffect(() => {
-    fetchUserWebhooks();
-  }, [fetchUserWebhooks]);
+    // Fetch immediately on mount
+    fetchUserWebhooks(); 
+
+    // Then set up the interval for polling
+    const intervalId = setInterval(() => {
+      fetchUserWebhooks();
+    }, 5000); // 5000 milliseconds = 5 seconds
+
+    // Cleanup function to clear the interval when the component unmounts
+    // or if the dependencies of useEffect change (though fetchUserWebhooks is stable here)
+    return () => {
+      clearInterval(intervalId);
+      console.log("🛑 useWebhooks - Stopped polling for webhooks.");
+    };
+  }, [fetchUserWebhooks]); // fetchUserWebhooks is a dependency
 
   // --- Select Webhook --- 
   // This hook only manages the state. The context provider will handle view changes.
