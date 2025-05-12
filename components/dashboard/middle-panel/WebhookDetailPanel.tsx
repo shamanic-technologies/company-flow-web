@@ -1,8 +1,8 @@
 import React from 'react';
-import { Webhook } from '@agent-base/types'; // Import Webhook type
+import { SearchWebhookResultItem } from '@agent-base/types'; // Import the correct type
 
 interface WebhookDetailPanelProps {
-  webhook: Webhook; // The webhook object to display
+  webhook: SearchWebhookResultItem; // Use the correct type for the prop
 }
 
 /**
@@ -32,41 +32,22 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
             ? <span className="text-green-400"> Linked (Agent ID: {webhook.linkedAgentId || 'N/A'})</span> 
             : <span className="text-yellow-400"> Not Linked to Agent</span>}
         </p>
-         <p><span className="font-semibold text-gray-300">Webhook URL:</span> <code className="text-cyan-400 break-all">{webhook.webhookUrl}</code></p>
       </div>
 
-      <h3 className="text-md font-medium mb-1 text-gray-300">Event Payload Schema:</h3>
-      <pre className="bg-gray-800 p-3 rounded-md overflow-x-auto text-xs">
-        {JSON.stringify(webhook.eventPayloadSchema || {}, null, 2)}
-      </pre>
-
-      {/* Display requiredSecrets if present and not empty */}
-      {webhook.requiredSecrets && webhook.requiredSecrets.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-md font-medium mb-1 text-gray-300">Required Secrets:</h3>
-          <ul className="list-disc list-inside bg-gray-800 p-3 rounded-md text-xs">
-            {webhook.requiredSecrets.map(secret => <li key={secret}>{secret}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {/* Display clientUserIdentificationMapping if present */}
-      {webhook.clientUserIdentificationMapping && Object.keys(webhook.clientUserIdentificationMapping).length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-md font-medium mb-1 text-gray-300">Client User Identification Mapping:</h3>
-          <pre className="bg-gray-800 p-3 rounded-md overflow-x-auto text-xs">
-            {JSON.stringify(webhook.clientUserIdentificationMapping, null, 2)}
-          </pre>
-        </div>
-      )}
+      {/* Removed sections for eventPayloadSchema, requiredSecrets, clientUserIdentificationMapping as they are no longer part of the core webhook definition/search result */}
 
       {/* Display conversationIdIdentificationMapping if present */}
+      {/* Note: conversationIdIdentificationMapping is also not on SearchWebhookResultItem */}
+      {/* If needed, it must be fetched separately or added back to the search result */}
+      {/* Removing this section for now as the data isn't available on the current prop type */}
+      {/*
       {webhook.conversationIdIdentificationMapping && (
          <div className="mt-4">
           <h3 className="text-md font-medium mb-1 text-gray-300">Conversation ID Identification Mapping:</h3>
           <p className="bg-gray-800 p-3 rounded-md text-xs">{webhook.conversationIdIdentificationMapping}</p>
         </div>
       )}
+      */}
 
     </div>
   );

@@ -12,7 +12,7 @@ import {
   handleApiError
 } from '../../utils';
 import { PlatformUserApiServiceCredentials, Conversation } from '@agent-base/types';
-import { getOrCreateConversationsExternalApiService } from '@agent-base/api-client';
+import { getOrCreateConversationsPlatformUserApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
 
 export const GET = async (req: NextRequest) => {
@@ -47,7 +47,7 @@ export const GET = async (req: NextRequest) => {
 
     // --- Call API client function ---
     // Replace callApiService with the specific client function
-    const getResponse = await getOrCreateConversationsExternalApiService(
+    const getResponse = await getOrCreateConversationsPlatformUserApiService(
         { agentId }, // Pass agentId in the params object
         credentials // Pass the credentials object
     );
