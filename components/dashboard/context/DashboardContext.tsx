@@ -13,6 +13,8 @@ import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
 import { useWebhooks } from '../../../hooks/useWebhooks';
 
+import { SearchWebhookResultItem } from '@agent-base/types'; // Import the correct type
+
 type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail';
 
 interface DashboardContextType {
@@ -39,8 +41,8 @@ interface DashboardContextType {
   conversationError: string | null;
 
   // From useWebhooks
-  userWebhooks: Webhook[];
-  selectedWebhook: Webhook | null;
+  userWebhooks: SearchWebhookResultItem[];
+  selectedWebhook: SearchWebhookResultItem | null;
   isLoadingWebhooks: boolean;
   webhookError: string | null;
   fetchUserWebhooks: () => Promise<void>;
@@ -53,7 +55,7 @@ interface DashboardContextType {
   selectAgentAndSetView: (agentId: string | null) => void;
   selectConversationAndSetView: (conversationId: string | null) => void;
   createNewChatAndSetView: () => Promise<void>;
-  selectWebhookAndSetView: (webhook: Webhook | null) => void;
+  selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>;
 }
@@ -196,7 +198,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [handleCreateNewChat, setActiveAgentView]);
 
-  const selectWebhookAndSetView = useCallback((webhook: Webhook | null) => {
+  const selectWebhookAndSetView = useCallback((webhook: SearchWebhookResultItem | null) => {
     selectWebhook(webhook);
     if (webhook) {
       setActiveAgentView('webhookDetail');

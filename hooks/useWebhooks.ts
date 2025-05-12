@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Webhook, ServiceResponse } from '@agent-base/types';
+import { Webhook, ServiceResponse, SearchWebhookResultItem, SearchWebhookResult } from '@agent-base/types';
 
 interface UseWebhooksProps {
   handleLogout: () => void;
@@ -13,8 +13,8 @@ interface UseWebhooksProps {
  * @returns An object containing user webhooks, selected webhook, loading/error states, and related functions.
  */
 export function useWebhooks({ handleLogout }: UseWebhooksProps) {
-  const [userWebhooks, setUserWebhooks] = useState<Webhook[]>([]);
-  const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null);
+  const [userWebhooks, setUserWebhooks] = useState<SearchWebhookResultItem[]>([]);
+  const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
   const [webhookError, setWebhookError] = useState<string | null>(null);
 
@@ -37,9 +37,15 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
         throw new Error('Unauthorized fetching webhooks');
       }
 
-      const webhookData: Webhook[] = await response.json();
+      const webhookData: SearchWebhookResult = await response.json();
 
-      setUserWebhooks(webhookData);
+      if (webhookData && Array.isArray(webhookData.items)) {
+        setUserWebhooks(webhookData.items);
+      } else {
+        console.error('❌ useWebhooks - Invalid data structure received:', webhookData);
+        setUserWebhooks([]);
+        throw new Error('Invalid data structure received for webhooks.');
+      }
 
     } catch (error: any) {
       console.error('❌ useWebhooks - Error fetching user webhooks:', error);
@@ -74,7 +80,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
   // --- Select Webhook --- 
   // This hook only manages the state. The context provider will handle view changes.
-  const selectWebhook = useCallback((webhook: Webhook | null) => {
+  const selectWebhook = useCallback((webhook: SearchWebhookResultItem | null) => {
     console.log(`useWebhooks: Setting selected webhook to: ${webhook?.id ?? 'None'}`);
     setSelectedWebhook(webhook);
   }, []);
