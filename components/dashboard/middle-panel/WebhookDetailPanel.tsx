@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Terminal, Webhook } from "lucide-react"
 import { CrispIcon, StripeIcon } from '@/components/icons';
+import { useDashboard } from '@/components/dashboard/context/DashboardContext'; // Import useDashboard
 
 interface WebhookDetailPanelProps {
   webhook: SearchWebhookResultItem;
@@ -44,6 +45,8 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Get the function to change view from context
+  const { selectConversationAndSetView } = useDashboard(); 
 
   useEffect(() => {
     if (!webhook?.id) {
@@ -189,7 +192,17 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
               // Get icon for the provider
               const IconComponent = getProviderIcon(event.providerId);
               return (
-                <TableRow key={event.eventId} className="border-gray-700 hover:bg-gray-800/50">
+                <TableRow 
+                  key={event.eventId} 
+                  className="border-gray-700 hover:bg-gray-800/50 cursor-pointer"
+                  onClick={() => {
+                    if (event.conversationId) {
+                      selectConversationAndSetView(event.conversationId);
+                    } else {
+                      console.warn('No conversation ID associated with this event.');
+                    }
+                  }}
+                >
                   <TableCell className="py-1 px-2">
                     {event.createdAt 
                       ? formatDistanceToNow(new Date(event.createdAt), { addSuffix: true }) 
