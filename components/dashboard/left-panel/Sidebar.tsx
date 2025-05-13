@@ -138,7 +138,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-6">
+                <SidebarMenuSub className="pl-3">
                   <div className="p-1 text-xs text-muted-foreground">Dashboards coming soon...</div>
                 </SidebarMenuSub>
               </CollapsibleContent>
@@ -154,7 +154,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-6">
+                <SidebarMenuSub className="pl-3">
                   {renderSectionContent(
                     isLoadingAgents,
                     agentError,
@@ -187,7 +187,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <SidebarMenuSub className="pl-4">
+                            <SidebarMenuSub className="pl-2">
                               {agentSubMenuItems.map((item) => {
                                 const Icon = item.icon
                                 const isActive = activeAgentView === item.id && selectedAgentId === agent.id
@@ -230,7 +230,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-6">
+                <SidebarMenuSub className="pl-3">
                   <div className="p-1 text-xs text-muted-foreground">Tools coming soon...</div>
                 </SidebarMenuSub>
               </CollapsibleContent>
@@ -246,7 +246,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-6">
+                <SidebarMenuSub className="pl-3">
                   {renderSectionContent(
                     isLoadingWebhooks,
                     webhookError,
