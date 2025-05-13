@@ -45,8 +45,8 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  // Get the function to change view from context
-  const { selectConversationAndSetView } = useDashboard(); 
+  // Get the NEW function to navigate middle panel from context
+  const { displayConversationInMiddlePanel } = useDashboard(); 
 
   useEffect(() => {
     if (!webhook?.id) {
@@ -197,8 +197,10 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
                   className="border-gray-700 hover:bg-gray-800/50 cursor-pointer"
                   onClick={() => {
                     if (event.conversationId) {
-                      selectConversationAndSetView(event.conversationId);
+                      // Use the new function for middle panel only navigation
+                      displayConversationInMiddlePanel(event.conversationId); 
                     } else {
+                      // Optional: Add a toast or console log if no conversation ID exists
                       console.warn('No conversation ID associated with this event.');
                     }
                   }}
