@@ -139,124 +139,33 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
       <SidebarContent className="flex-1 overflow-y-auto p-2">
         <SidebarMenu>
-          <SidebarMenuItem className="mb-1">
+          <SidebarMenuItem>
             <Collapsible open={isDashboardsOpen} onOpenChange={setIsDashboardsOpen}>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton className="w-full justify-start text-xs h-8 px-2 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
-                  <ChevronRight className={cn("h-4 w-4 transition-transform", isDashboardsOpen && "rotate-90")} />
-                  <span className="flex-1 text-left ml-1">Dashboards</span>
+                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isDashboardsOpen && "rotate-90")} />
+                  <span className="flex-1 text-left">Dashboards</span>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-3">
+                <SidebarMenuSub className="pl-1">
                   <div className="p-1 text-xs text-muted-foreground">Dashboards coming soon...</div>
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
           </SidebarMenuItem>
 
-          <SidebarMenuItem className="mb-1">
-            <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton className="w-full justify-start text-xs h-8 px-2 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
-                  <ChevronRight className={cn("h-4 w-4 transition-transform", isAgentsOpen && "rotate-90")} />
-                  <span className="flex-1 text-left ml-1">Agents</span>
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub className="pl-3">
-                  {renderSectionContent(
-                    isLoadingAgents,
-                    agentError,
-                    agents,
-                    "No agents found.",
-                    (agent) => (
-                      <SidebarMenuItem key={agent.id}>
-                        <Collapsible
-                          open={expandedAgentId === agent.id}
-                          onOpenChange={(isOpen) => setExpandedAgentId(isOpen ? agent.id : null)}
-                        >
-                          <CollapsibleTrigger asChild>
-                            <SidebarMenuButton
-                              data-active={selectedAgentId === agent.id && activeAgentView === null}
-                              className={cn(
-                                "w-full justify-start text-xs h-7 pl-2 pr-2 gap-0",
-                                "data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground",
-                                "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
-                              )}
-                              onClick={(e) => {
-                                if (expandedAgentId === agent.id && e.target === e.currentTarget) {
-                                  selectAgentAndSetView(agent.id)
-                                } else if (expandedAgentId !== agent.id) {
-                                  selectAgentAndSetView(agent.id)
-                                }
-                              }}
-                            >
-                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expandedAgentId === agent.id && "rotate-90")} />
-                              <span className="truncate flex-1 text-left pl-1">{`${agent.firstName} ${agent.lastName}`}</span>
-                            </SidebarMenuButton>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <SidebarMenuSub className="pl-2">
-                              {agentSubMenuItems.map((item) => {
-                                const Icon = item.icon
-                                const isActive = activeAgentView === item.id && selectedAgentId === agent.id
-                                return (
-                                  <SidebarMenuItem key={item.id}>
-                                    <SidebarMenuButton
-                                      data-active={isActive}
-                                      className={cn(
-                                        "w-full justify-start text-xs h-7 pl-2",
-                                        "hover:text-accent-foreground",
-                                        isActive
-                                          ? "text-accent-foreground font-semibold"
-                                          : "font-normal text-muted-foreground"
-                                      )}
-                                      onClick={() => setActiveAgentView(item.id as any)}
-                                    >
-                                      <Icon className="mr-2 h-3.5 w-3.5 shrink-0" />
-                                      {item.label}
-                                    </SidebarMenuButton>
-                                  </SidebarMenuItem>
-                                )
-                              })}
-                            </SidebarMenuSub>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </SidebarMenuItem>
-                    )
-                  )}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem className="mb-1">
-            <Collapsible open={isToolsOpen} onOpenChange={setIsToolsOpen}>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton className="w-full justify-start text-xs h-8 px-2 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
-                  <ChevronRight className={cn("h-4 w-4 transition-transform", isToolsOpen && "rotate-90")} />
-                  <span className="flex-1 text-left ml-1">Tools</span>
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub className="pl-3">
-                  <div className="p-1 text-xs text-muted-foreground">Tools coming soon...</div>
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem className="mb-1">
+          {/* Webhooks Section (renamed to Inbound) */}
+          <SidebarMenuItem>
             <Collapsible open={isWebhooksOpen} onOpenChange={setIsWebhooksOpen}>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton className="w-full justify-start text-xs h-8 px-2 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
-                  <ChevronRight className={cn("h-4 w-4 transition-transform", isWebhooksOpen && "rotate-90")} />
-                  <span className="flex-1 text-left ml-1">Webhooks</span>
+                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isWebhooksOpen && "rotate-90")} />
+                  <span className="flex-1 text-left">Inbound</span> {/* Renamed from Webhooks */}
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub className="pl-3">
+                <SidebarMenuSub className="pl-1">
                   {isLoadingWebhooks ? (
                     <div className="p-1 flex flex-col gap-1">
                       <Skeleton className="h-6 w-full" />
@@ -278,6 +187,100 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                       )}
                     </>
                   )}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarMenuItem>
+
+          {/* Agents Section (moved below Inbound) */}
+          <SidebarMenuItem>
+            <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isAgentsOpen && "rotate-90")} />
+                  <span className="flex-1 text-left">Agents</span>
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub className="pl-1">
+                  {renderSectionContent(
+                    isLoadingAgents,
+                    agentError,
+                    agents,
+                    "No agents found.",
+                    (agent) => (
+                      <SidebarMenuItem key={agent.id}>
+                        <Collapsible
+                          open={expandedAgentId === agent.id}
+                          onOpenChange={(isOpen) => setExpandedAgentId(isOpen ? agent.id : null)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                              data-active={selectedAgentId === agent.id && activeAgentView === null}
+                              className={cn(
+                                "w-full justify-start text-xs h-6 px-1 gap-1",
+                                "data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground",
+                                "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
+                              )}
+                              onClick={(e) => {
+                                if (expandedAgentId === agent.id && e.target === e.currentTarget) {
+                                  selectAgentAndSetView(agent.id)
+                                } else if (expandedAgentId !== agent.id) {
+                                  selectAgentAndSetView(agent.id)
+                                }
+                              }}
+                            >
+                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expandedAgentId === agent.id && "rotate-90")} />
+                              <span className="truncate flex-1 text-left">{`${agent.firstName} ${agent.lastName}`}</span>
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="pl-1">
+                              {agentSubMenuItems.map((item) => {
+                                const Icon = item.icon
+                                const isActive = activeAgentView === item.id && selectedAgentId === agent.id
+                                return (
+                                  <SidebarMenuItem key={item.id}>
+                                    <SidebarMenuButton
+                                      data-active={isActive}
+                                      className={cn(
+                                        "w-full justify-start text-xs h-6 px-1 gap-1",
+                                        "hover:text-accent-foreground",
+                                        isActive
+                                          ? "text-accent-foreground font-semibold"
+                                          : "font-normal text-muted-foreground"
+                                      )}
+                                      onClick={() => setActiveAgentView(item.id as any)}
+                                    >
+                                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                                      {item.label}
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                )
+                              })}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </SidebarMenuItem>
+                    )
+                  )}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarMenuItem>
+
+          {/* Tools Section (now last) */}
+          <SidebarMenuItem>
+            <Collapsible open={isToolsOpen} onOpenChange={setIsToolsOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isToolsOpen && "rotate-90")} />
+                  <span className="flex-1 text-left">Tools</span>
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub className="pl-1">
+                  <div className="p-1 text-xs text-muted-foreground">Tools coming soon...</div>
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
@@ -354,17 +357,16 @@ function WebhookSubfolder({
   }
 
   return (
-    <SidebarMenuItem className="mb-1">
+    <SidebarMenuItem>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton className="w-full justify-start text-xs h-7 px-0 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
-             {/* Indentation handled by parent SidebarMenuSub, px-0 here */}
+          <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-90")} />
-            <span className="flex-1 text-left ml-1 font-medium">{title}</span>
+            <span className="flex-1 text-left font-medium">{title}</span>
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <SidebarMenuSub className="pl-2"> { /* Nested sub for items */ }
+          <SidebarMenuSub className="pl-1">
             {webhooks.map((webhook: SearchWebhookResultItem) => {
               // Get the appropriate icon for this webhook
               const IconComponent = getProviderIcon(webhook.webhookProviderId);
@@ -374,7 +376,7 @@ function WebhookSubfolder({
                     // Use the explicitly typed selected webhook
                     data-active={typedSelectedWebhook?.id === webhook.id}
                     className={cn(
-                      "w-full justify-start text-xs h-7 pl-1 pr-1 gap-1", // Reduced padding further, added gap-1
+                      "w-full justify-start text-xs h-6 px-1 gap-1",
                       "hover:text-accent-foreground",
                       "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
                     )}
