@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SearchWebhookResultItem, WebhookEvent } from '@agent-base/types'; // Import WebhookEvent
+import { SearchWebhookResultItem, WebhookEvent, UtilityProvider } from '@agent-base/types'; // Import WebhookEvent
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Use shadcn Card
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"; // Import Badge
+import { formatDistanceToNow } from 'date-fns'; // Import date-fns function
 // Import shadcn Table components
 import {
   Table,
@@ -13,11 +14,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Terminal } from "lucide-react"
+import { Terminal, Webhook } from "lucide-react"
+import { CrispIcon, StripeIcon } from '@/components/icons';
 
 interface WebhookDetailPanelProps {
   webhook: SearchWebhookResultItem;
 }
+
+// --- Helper Function to get Provider Icon (copied from WebhookSubfolder) ---
+const getProviderIcon = (providerId?: UtilityProvider) => {
+  switch (providerId) {
+    case UtilityProvider.CRISP:
+      return CrispIcon;
+    case UtilityProvider.STRIPE:
+      return StripeIcon;
+    // Add other cases as needed (e.g., SLACK)
+    case UtilityProvider.AGENT_BASE:
+    default:
+      return Webhook; // Default icon
+  }
+};
 
 /**
  * WebhookDetailPanel Component
@@ -30,31 +46,54 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!webhook?.id) return; // Don't fetch if no webhook is selected
+    if (!webhook?.id) {
+      setEvents([]); // Clear events if no webhook is selected
+      return; // Exit early
+    }
 
+    let isMounted = true; // Track mount status for async operations
     const fetchEvents = async () => {
-      setIsLoading(true);
-      setError(null);
-      setEvents([]); // Clear previous events
+      // Don't set loading true on interval refresh to avoid flashing
+      // setIsLoading(true); 
+      // setError(null); // Keep existing error until successful fetch
       try {
         const response = await fetch(`/api/webhooks/get-events?webhookId=${webhook.id}`);
         const result = await response.json();
 
+        if (!isMounted) return; // Don't update state if component unmounted
+
         if (!response.ok || !result.success) {
           throw new Error(result.error?.details || 'Failed to fetch webhook events');
         }
-
-        // Assuming the backend now correctly returns eventId
+        
+        setError(null); // Clear error on successful fetch
         setEvents(result.data || []); 
       } catch (err: any) {
+        if (!isMounted) return; // Don't update state if component unmounted
         console.error("Error fetching webhook events:", err);
-        setError(err.message || 'An unexpected error occurred');
+        // Only set error if it hasn't been set already or is different
+        // This prevents the error message from constantly reappearing on failed refreshes
+        setError(prevError => prevError === (err.message || 'An unexpected error occurred') ? prevError : (err.message || 'An unexpected error occurred'));
       } finally {
-        setIsLoading(false);
+        // Only set loading false on initial load, not interval
+        // setIsLoading(false); 
       }
     };
 
-    fetchEvents();
+    // Initial fetch
+    setIsLoading(true); // Set loading true only for the initial fetch
+    fetchEvents().finally(() => { 
+      if (isMounted) setIsLoading(false); // Set loading false after initial fetch completes
+    });
+
+    // Set up interval for refreshing every 5 seconds
+    const intervalId = setInterval(fetchEvents, 5000);
+
+    // Cleanup function
+    return () => {
+      isMounted = false; // Set mount status to false
+      clearInterval(intervalId); // Clear the interval
+    };
   }, [webhook?.id]); // Re-run effect if webhook ID changes
 
   return (
@@ -101,18 +140,18 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
         <Table className="text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Event ID</TableHead>
-              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Created At</TableHead>
+              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Date</TableHead>
               <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Source</TableHead>
-              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Conversation</TableHead>
+              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Channel</TableHead>
               <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Agent</TableHead>
+              <TableHead className="text-gray-400 border-gray-700 h-8 px-2">Conversation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...Array(3)].map((_, i) => (
               <TableRow key={i} className="border-gray-700">
                 <TableCell className="py-1 px-2"><Skeleton className="h-4 w-full bg-gray-700" /></TableCell>
-                <TableCell className="py-1 px-2"><Skeleton className="h-4 w-full bg-gray-700" /></TableCell>
+                <TableCell className="py-1 px-2"><Skeleton className="h-4 w-20 bg-gray-700" /></TableCell>
                 <TableCell className="py-1 px-2"><Skeleton className="h-4 w-full bg-gray-700" /></TableCell>
                 <TableCell className="py-1 px-2"><Skeleton className="h-4 w-full bg-gray-700" /></TableCell>
                 <TableCell className="py-1 px-2"><Skeleton className="h-4 w-full bg-gray-700" /></TableCell>
@@ -138,23 +177,36 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
         <Table className="text-xs text-gray-400">
           <TableHeader>
             <TableRow className="hover:bg-gray-800/50">
-              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Event ID</TableHead>
-              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Created At</TableHead>
+              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Date</TableHead>
               <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Source</TableHead>
-              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Conversation</TableHead>
+              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Channel</TableHead>
               <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Agent</TableHead>
+              <TableHead className="text-gray-300 border-gray-700 h-8 px-2">Conversation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.map((event) => (
-              <TableRow key={event.eventId} className="border-gray-700 hover:bg-gray-800/50">
-                <TableCell className="py-1 px-2 font-mono">{event.eventId}</TableCell>
-                <TableCell className="py-1 px-2">{event.createdAt ? new Date(event.createdAt).toLocaleString() : 'N/A'}</TableCell>
-                <TableCell className="py-1 px-2">{event.providerId} / {event.subscribedEventId}</TableCell>
-                <TableCell className="py-1 px-2 font-mono">{event.conversationId || 'N/A'}</TableCell>
-                <TableCell className="py-1 px-2 font-mono">{event.agentId || 'N/A'}</TableCell>
-              </TableRow>
-            ))}
+            {events.map((event) => {
+              // Get icon for the provider
+              const IconComponent = getProviderIcon(event.providerId);
+              return (
+                <TableRow key={event.eventId} className="border-gray-700 hover:bg-gray-800/50">
+                  <TableCell className="py-1 px-2">
+                    {event.createdAt 
+                      ? formatDistanceToNow(new Date(event.createdAt), { addSuffix: true }) 
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <div className="flex items-center gap-1.5">
+                      <IconComponent className="h-3.5 w-3.5 shrink-0" />
+                      <span>{event.providerId}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1 px-2">{event.subscribedEventId}</TableCell>
+                  <TableCell className="py-1 px-2 font-mono">{event.agentId || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 font-mono">{event.conversationId || 'N/A'}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
