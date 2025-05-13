@@ -3,7 +3,7 @@
 import { useContext, useEffect } from 'react'; // Import hooks
 import { DashboardProvider, useDashboard } from '@/components/dashboard/context/DashboardContext'; // Import useDashboard
 // Import the actual components we intend to use
-import Sidebar from '@/components/dashboard/left-panel/Sidebar'; 
+import SidebarComponent from '@/components/dashboard/left-panel/Sidebar'; 
 import MiddlePanel from '@/components/dashboard/middle-panel/MiddlePanel'; 
 // Removed ChatInterface import as it's likely used within MiddlePanel or RightPanel
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
@@ -12,6 +12,7 @@ import RightPanel from '@/components/dashboard/right-panel/RightPanel'; // IMPOR
 import { useRouter } from 'next/navigation';
 // Import Clerk hook if needed for user data
 import { useUser } from '@clerk/nextjs';
+import { SidebarProvider } from "@/components/ui/sidebar"; // <-- Import SidebarProvider
 
 /**
  * Main Dashboard Page
@@ -23,7 +24,9 @@ export default function DashboardPage() {
 
   return (
     <DashboardProvider>
-      <DashboardLayout /> 
+      <SidebarProvider> { /* <-- Wrap with SidebarProvider */ }
+        <DashboardLayout />
+      </SidebarProvider> { /* <-- Close SidebarProvider */ }
     </DashboardProvider>
   );
 }
@@ -63,15 +66,12 @@ function DashboardLayout() {
 
   // Render the layout once Clerk is loaded. Middleware ensures user is authenticated.
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
-      {/* Left Panel */}
-      <div className="w-64 flex-shrink-0 border-r border-border overflow-y-auto">
-        {/* Pass user info if Sidebar needs it directly, or let Sidebar use useUser() */}
-        <Sidebar />
-      </div>
+    <div className="flex h-screen w-full bg-gray-950 text-gray-50">
+      { /* Use the new SidebarComponent */ }
+      <SidebarComponent className="w-64 flex-shrink-0" /> { /* Adjust width/classes as needed */ }
 
-      {/* Middle Panel */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        { /* Header - Keep or adapt as needed */ }
         <MiddlePanel />
       </div>
 
