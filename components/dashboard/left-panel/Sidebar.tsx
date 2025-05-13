@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDashboard } from '../context/DashboardContext'
+import { SearchWebhookResultItem, WebhookStatus, UtilityProvider } from '@agent-base/types';
+import { CrispIcon, StripeIcon } from '@/components/icons';
 
 import {
   Collapsible,
@@ -92,6 +94,14 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const [isAgentsOpen, setIsAgentsOpen] = useState(true)
   const [isToolsOpen, setIsToolsOpen] = useState(false)
   const [isWebhooksOpen, setIsWebhooksOpen] = useState(true)
+
+  // --- Filter Webhooks by Status --- 
+  // Explicitly type userWebhooks from context to match imported type
+  const typedUserWebhooks = userWebhooks as SearchWebhookResultItem[];
+  // Use the correct property and enum values for filtering
+  const activeWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.ACTIVE);
+  const unsetWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.UNSET || !wh.currentUserWebhookStatus); // Include undefined/null as UNSET
+  const disabledWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.DISABLED);
 
   // Helper to render loading/error/empty states
   const renderSectionContent = (
@@ -247,26 +257,26 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub className="pl-3">
-                  {renderSectionContent(
-                    isLoadingWebhooks,
-                    webhookError,
-                    userWebhooks,
-                    "No webhooks found.",
-                    (webhook) => (
-                      <SidebarMenuItem key={webhook.id}>
-                        <SidebarMenuButton
-                          data-active={selectedWebhook?.id === webhook.id}
-                          className={cn(
-                            "w-full justify-start text-xs h-7 pl-2 pr-2",
-                            "hover:text-accent-foreground",
-                            "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
-                          )}
-                          onClick={() => selectWebhookAndSetView(webhook)}
-                        >
-                          <span className="truncate flex-1 text-left">{webhook.name}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
+                  {isLoadingWebhooks ? (
+                    <div className="p-1 flex flex-col gap-1">
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-full" />
+                    </div>
+                  ) : webhookError ? (
+                    <div className="p-1 text-xs text-red-400">Error: {webhookError}</div>
+                  ) : (
+                    <>
+                      { /* Active Webhooks Subfolder */ }
+                      <WebhookSubfolder title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                      { /* Unset Webhooks Subfolder */ }
+                      <WebhookSubfolder title="Unset" webhooks={unsetWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                      { /* Disabled Webhooks Subfolder */ }
+                      <WebhookSubfolder title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                      {/* Message if all lists are empty */}
+                      {typedUserWebhooks.length === 0 && (
+                        <div className="p-1 text-xs text-muted-foreground">No webhooks found.</div>
+                      )}
+                    </>
                   )}
                 </SidebarMenuSub>
               </CollapsibleContent>
@@ -304,4 +314,82 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
       </SidebarFooter>
     </Sidebar>
   )
+}
+
+// --- Helper Function to get Provider Icon --- 
+const getProviderIcon = (providerId?: UtilityProvider) => {
+  switch (providerId) {
+    case UtilityProvider.CRISP:
+      return CrispIcon;
+    case UtilityProvider.STRIPE:
+      return StripeIcon;
+    case UtilityProvider.SLACK:
+    case UtilityProvider.AGENT_BASE:
+    default:
+      return Webhook;
+  }
+};
+
+// --- Helper Component for Webhook Subfolders --- 
+interface WebhookSubfolderProps {
+  title: string;
+  webhooks: SearchWebhookResultItem[];
+  selectedWebhook: SearchWebhookResultItem | null;
+  selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
+}
+
+function WebhookSubfolder({
+  title,
+  webhooks,
+  selectedWebhook,
+  selectWebhookAndSetView
+}: WebhookSubfolderProps) {
+  // Type selectedWebhook explicitly here too for consistency
+  const typedSelectedWebhook = selectedWebhook as SearchWebhookResultItem | null;
+  const [isOpen, setIsOpen] = useState(title === 'Active'); // Default open 'Active'
+
+  // Don't render the subfolder if there are no webhooks in this category
+  if (webhooks.length === 0) {
+    return null;
+  }
+
+  return (
+    <SidebarMenuItem className="mb-1">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton className="w-full justify-start text-xs h-7 px-0 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-0">
+             {/* Indentation handled by parent SidebarMenuSub, px-0 here */}
+             <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-90")} />
+            <span className="flex-1 text-left ml-1 font-medium">{title}</span>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub className="pl-2"> { /* Nested sub for items */ }
+            {webhooks.map((webhook: SearchWebhookResultItem) => {
+              // Get the appropriate icon for this webhook
+              const IconComponent = getProviderIcon(webhook.webhookProviderId);
+              return (
+                <SidebarMenuItem key={webhook.id}>
+                  <SidebarMenuButton
+                    // Use the explicitly typed selected webhook
+                    data-active={typedSelectedWebhook?.id === webhook.id}
+                    className={cn(
+                      "w-full justify-start text-xs h-7 pl-1 pr-1 gap-1", // Reduced padding further, added gap-1
+                      "hover:text-accent-foreground",
+                      "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
+                    )}
+                    onClick={() => selectWebhookAndSetView(webhook)}
+                  >
+                    {/* Use the dynamic IconComponent */}
+                    <IconComponent className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> 
+                    <span className="truncate flex-1 text-left">{webhook.name}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
+  );
 }
