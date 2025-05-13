@@ -50,17 +50,18 @@ interface DashboardContextType {
   // Direct Context State/Functions
   activeAgentView: ActiveAgentView;
   setActiveAgentView: (view: ActiveAgentView) => void;
-  middlePanelTargetConversationId: string | null;
-  setMiddlePanelTargetConversationId: (id: string | null) => void;
 
   // Action Wrappers
   selectAgentAndSetView: (agentId: string | null) => void;
   selectConversationAndSetView: (conversationId: string | null) => void;
-  displayConversationInMiddlePanel: (conversationId: string) => void;
   createNewChatAndSetView: () => Promise<void>;
   selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>;
+
+  // --> NEW: State for right panel conversation view
+  selectedConversationIdForRightPanel: string | null;
+  setSelectedConversationIdForRightPanel: (conversationId: string | null) => void;
 }
 
 export const DashboardContext = createContext<DashboardContextType>({
@@ -92,16 +93,16 @@ export const DashboardContext = createContext<DashboardContextType>({
   // UI defaults
   activeAgentView: 'conversations',
   setActiveAgentView: () => {},
-  middlePanelTargetConversationId: null,
-  setMiddlePanelTargetConversationId: () => {},
   // Action Wrappers defaults
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
-  displayConversationInMiddlePanel: () => {},
   createNewChatAndSetView: async () => {},
   selectWebhookAndSetView: () => {},
   refreshAgents: async () => { console.warn("refreshAgents called on default context"); },
   refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
+  // --> NEW: Defaults for right panel state
+  selectedConversationIdForRightPanel: null,
+  setSelectedConversationIdForRightPanel: () => {},
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
@@ -178,7 +179,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // --- Direct Context State (UI related) --- 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
-  const [middlePanelTargetConversationId, setMiddlePanelTargetConversationId] = useState<string | null>(null);
+  // --> NEW: State for selected conversation in right panel
+  const [selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel] = useState<string | null>(null);
 
   // --- Action Wrapper Functions (to combine hook actions + UI changes) --- 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
@@ -197,11 +199,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setActiveAgentView('chat');
     }
   }, [selectConversationId, setActiveAgentView]);
-
-  const displayConversationInMiddlePanel = useCallback((conversationId: string) => {
-    setMiddlePanelTargetConversationId(conversationId);
-    setActiveAgentView('chat');
-  }, [setActiveAgentView]);
 
   const createNewChatAndSetView = useCallback(async () => {
     const newConvId = await handleCreateNewChat();
@@ -252,23 +249,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     // UI State
     activeAgentView,
     setActiveAgentView,
-    middlePanelTargetConversationId,
-    setMiddlePanelTargetConversationId,
     // Action Wrappers
     selectAgentAndSetView,
     selectConversationAndSetView,
-    displayConversationInMiddlePanel,
     createNewChatAndSetView,
     selectWebhookAndSetView,
     refreshAgents: fetchAgents,
     refreshConversations: refreshConversationList,
+    // Added new state and setter
+    selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     agents, selectedAgentId, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationId, currentMessages, isLoadingConversations, isLoadingMessages, isCreatingConversation, conversationError, handleCreateNewChat, refreshConversationList,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
-    activeAgentView, middlePanelTargetConversationId,
-    selectAgentAndSetView, selectConversationAndSetView, displayConversationInMiddlePanel, createNewChatAndSetView, selectWebhookAndSetView
+    activeAgentView, // setActiveAgentView is stable
+    selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel,
+    selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView
+    // fetchAgents and refreshConversationList are included via agents and conversationList dependencies in their respective hooks
   ]);
   
   // This useEffect handles redirection if the user is not signed in AND Clerk has finished loading.

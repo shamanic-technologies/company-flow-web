@@ -9,7 +9,6 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import * as React from 'react'; // Import React
 import { ChatInterface } from '@/components/dashboard';
 import { useDashboard } from '@/components/dashboard/context/DashboardContext';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,9 +74,6 @@ export default function MiddlePanel() {
   // State for the current conversation's messages (history fetched from API) - REMOVED (use currentMessages from context)
   // Loading state for fetching historical messages - REMOVED (use isLoadingMessages from context)
   // State to track if a new conversation creation is in progress - REMOVED (use isCreatingConversation from context)
-
-  // Get the target ID and setter from context
-  const { middlePanelTargetConversationId, setMiddlePanelTargetConversationId } = useDashboard(); 
 
   // Find the selected agent details for display
   const selectedAgent = agents && selectedAgentId
@@ -157,45 +153,14 @@ export default function MiddlePanel() {
         // Sub-case: Render the chat interface with data from context
         // Use a key to force re-mount when agent or conversation changes
         // Pass messages from context via initialMessages prop
-        
-        // Determine which conversation ID to use: the targeted one or the default selected one
-        const conversationIdToDisplay = middlePanelTargetConversationId ?? currentConversationId;
-
-        // If no conversation ID is available after checking both sources, show placeholder/prompt
-        if (!conversationIdToDisplay) {
-             return (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4 text-center text-xs">
-                   <p>No conversation selected.</p>
-                   <p className="text-xs text-gray-500">Select one from the list or create a new chat.</p>
-                    <button
-                        onClick={createNewChatAndSetView}
-                        disabled={isCreatingConversation}
-                        className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs disabled:opacity-50"
-                    >
-                        {isCreatingConversation ? 'Creating...' : 'New Chat'}
-                    </button>
-                </div>
-            );
-        }
-
-        // Effect to clear the target ID after rendering with it once
-        // Note: This might cause a quick double render, but ensures state is clean
-        // Alternatively, the clearing logic could be moved into displayConversationInMiddlePanel
-        // but this keeps the state update closer to its usage.
-        React.useEffect(() => {
-          if (middlePanelTargetConversationId) {
-            setMiddlePanelTargetConversationId(null); // Clear the target ID
-          }
-        }, [middlePanelTargetConversationId, setMiddlePanelTargetConversationId]);
-
         return (
           <ChatInterface
-            key={`${selectedAgentId}-${conversationIdToDisplay}`} // Use the ID we decided to display
+            key={`${selectedAgentId}-${currentConversationId}`} // Key ensures re-render on conversation change
             agentId={selectedAgentId}
-            agentFirstName={selectedAgent.firstName} 
-            agentLastName={selectedAgent.lastName}   
-            conversationId={conversationIdToDisplay} // Use the determined ID
-            initialMessages={currentMessages} 
+            agentFirstName={selectedAgent.firstName} // Pass agent first name
+            agentLastName={selectedAgent.lastName}   // Pass agent last name
+            conversationId={currentConversationId ?? ''} // Pass current ID, handle null case
+            initialMessages={currentMessages} // Pass messages fetched by context
             userInitials={getClerkUserInitials()}
             // Pass loading/error state from context if ChatInterface is updated to use them
             isLoading={isLoadingMessages} 
