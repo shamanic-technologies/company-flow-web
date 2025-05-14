@@ -13,7 +13,6 @@ import ChatInterface from './Chat/ChatInterface';
 import AgentHeader from './AgentHeader'; // Assuming AgentHeader is in the same directory
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircle, Loader2, AlertTriangle } from 'lucide-react';
-import { Agent } from '@agent-base/types'; // <-- Import Agent type
 
 /**
  * RightPanel Component
@@ -24,49 +23,30 @@ export default function RightPanel() {
     const {
         // Agent related
         agents,
-        selectedAgentId, // Still needed for fallback when no conv is selected
+        selectedAgentId,
         isLoadingAgents,
 
         // Conversation/Message related
-        conversationList, // Need the full list to find conv details
         currentConversationId,
+        // isLoadingConversations, // Context loads list+initial messages together now
         currentMessages,
         isLoadingMessages,
         conversationError,
-        isCreatingConversation,
+        isCreatingConversation, // For button state
 
         // Auth/User related
+        // authToken, // REMOVED
         getClerkUserInitials,
 
         // Actions
-        createNewChatAndSetView,
-        selectConversationAndSetView
+        // handleCreateNewChat, // Use createNewChatAndSetView instead
+        createNewChatAndSetView, // CORRECT WRAPPER
+        // selectConversationId // Use selectConversationAndSetView instead
+        selectConversationAndSetView // CORRECT WRAPPER
     } = useDashboard();
 
-    // --- Determine the agent and conversation to display --- 
-    let agentToDisplay: Agent | undefined = undefined;
-    let conversationToDisplayId: string | null = currentConversationId;
-
-    // If a conversation ID is set (could be from sidebar or webhook event click)
-    if (conversationToDisplayId) {
-        // Use conversationId for lookup
-        const currentConversation = conversationList.find(conv => conv.conversationId === conversationToDisplayId);
-        if (currentConversation?.agentId) {
-            agentToDisplay = agents.find(agent => agent.id === currentConversation.agentId);
-        }
-    }
-
-    // Fallback: If no conversation is selected OR the selected conversation's agent wasn't found,
-    // use the agent selected in the left sidebar (if any).
-    if (!agentToDisplay && selectedAgentId) {
-        agentToDisplay = agents.find(agent => agent.id === selectedAgentId);
-        // If we fallback to the selectedAgent, ensure we are not showing a conversation 
-        // that doesn't belong to this agent (edge case, context logic should prevent this)
-        // Use conversationId for lookup
-        if (conversationToDisplayId && agentToDisplay && conversationList.find(conv => conv.conversationId === conversationToDisplayId)?.agentId !== agentToDisplay.id) {
-            conversationToDisplayId = null; // Reset conversation if it doesn't match the fallback agent
-        }
-    }
+    // Find the full agent object based on the selected ID
+    const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
     /**
      * Renders the content of the right panel based on loading states and selections.
@@ -74,6 +54,7 @@ export default function RightPanel() {
      */
     const renderContent = () => {
         // State 1: Loading agents initially
+        // (isLoadingConversations is less relevant now as messages load separately)
         if (isLoadingAgents) {
             return (
                 <div className="flex flex-col flex-1 p-4 space-y-3 animate-pulse">
@@ -95,36 +76,36 @@ export default function RightPanel() {
             );
         }
 
-        // State 2: No agent available for display (neither selected nor derived from conversation)
-        if (!agentToDisplay) {
+        // State 2: No agent selected
+        if (!selectedAgent) {
             return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4 text-center">
                     <MessageCircle className="h-12 w-12 mb-4 text-gray-600" />
-                    <p className="text-xs">Select an agent or a conversation to view details.</p>
+                    <p className="text-xs">Select an agent from the list to view details and chat.</p>
                 </div>
             );
         }
 
-        // State 3: Agent available, render header. Chat content depends on conversation state.
+        // State 3: Agent selected, render header. Chat content depends on conversation state.
         return (
             <>
-                {/* Render header with the determined agent */}
+                {/* Always render header once agent is selected */}
                 <AgentHeader
-                    agent={agentToDisplay} // Use derived agent
-                    onCreateNewChat={createNewChatAndSetView}
-                    isCreatingChat={isCreatingConversation}
+                    agent={selectedAgent}
+                    onCreateNewChat={createNewChatAndSetView} // Use context's view setting create chat
+                    isCreatingChat={isCreatingConversation} // Use context's loading state
                  />
 
                  {/* --- Chat Area Content --- */}
                  {(() => {
-                    // Sub-state 3a: No conversation selected for the determined agent
-                    if (!conversationToDisplayId) {
+                    // Sub-state 3a: No conversation selected yet
+                    if (!currentConversationId) {
                          return (
                              <div className="flex flex-col flex-1 items-center justify-center text-gray-500 p-4 text-center">
                                 <MessageCircle className="h-10 w-10 mb-3 text-gray-600" />
-                                <p className="text-xs">No conversation selected for this agent.</p>
+                                <p className="text-xs">No conversation selected.</p>
                                 <button
-                                    onClick={createNewChatAndSetView}
+                                    onClick={createNewChatAndSetView} // Use context's view setting create chat
                                     disabled={isCreatingConversation}
                                     className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50 mt-1"
                                 >
@@ -156,16 +137,20 @@ export default function RightPanel() {
                          );
                     }
 
-                    // Sub-state 3d: Conversation selected, messages loaded - Render ChatInterface
+                    // Sub-state 3d: Conversation selected, messages loaded (or empty) - Render ChatInterface
                     return (
                         <ChatInterface
-                            key={`${agentToDisplay.id}-${conversationToDisplayId}`} // Use derived agent/conv ID
-                            userInitials={getClerkUserInitials()}
-                            agentId={agentToDisplay.id} 
-                            agentFirstName={agentToDisplay.firstName}
-                            agentLastName={agentToDisplay.lastName}
-                            conversationId={conversationToDisplayId} // Pass the determined ID
-                            initialMessages={currentMessages} // Pass messages from context (context hook loads for currentConversationId)
+                            key={`${selectedAgentId}-${currentConversationId}`} // Force re-mount on change
+                            // authToken={authToken} // REMOVED
+                            userInitials={getClerkUserInitials()} // CORRECT NAME
+                            agentId={selectedAgentId} // Already checked selectedAgent exists
+                            agentFirstName={selectedAgent.firstName} // Pass agent first name
+                            agentLastName={selectedAgent.lastName}   // Pass agent last name
+                            conversationId={currentConversationId} // Pass the selected ID
+                            initialMessages={currentMessages} // Pass messages from context
+                            // TODO: Update ChatInterface props if needed
+                            // isLoading={isLoadingMessages}
+                            // error={conversationError}
                         />
                     );
                  })()}

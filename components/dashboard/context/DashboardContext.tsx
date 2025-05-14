@@ -58,10 +58,6 @@ interface DashboardContextType {
   selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>;
-
-  // --> NEW: State for right panel conversation view
-  selectedConversationIdForRightPanel: string | null;
-  setSelectedConversationIdForRightPanel: (conversationId: string | null) => void;
 }
 
 export const DashboardContext = createContext<DashboardContextType>({
@@ -100,9 +96,6 @@ export const DashboardContext = createContext<DashboardContextType>({
   selectWebhookAndSetView: () => {},
   refreshAgents: async () => { console.warn("refreshAgents called on default context"); },
   refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
-  // --> NEW: Defaults for right panel state
-  selectedConversationIdForRightPanel: null,
-  setSelectedConversationIdForRightPanel: () => {},
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
@@ -179,8 +172,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // --- Direct Context State (UI related) --- 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
-  // --> NEW: State for selected conversation in right panel
-  const [selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel] = useState<string | null>(null);
 
   // --- Action Wrapper Functions (to combine hook actions + UI changes) --- 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
@@ -256,15 +247,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectWebhookAndSetView,
     refreshAgents: fetchAgents,
     refreshConversations: refreshConversationList,
-    // Added new state and setter
-    selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     agents, selectedAgentId, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationId, currentMessages, isLoadingConversations, isLoadingMessages, isCreatingConversation, conversationError, handleCreateNewChat, refreshConversationList,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
     activeAgentView, // setActiveAgentView is stable
-    selectedConversationIdForRightPanel, setSelectedConversationIdForRightPanel,
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView
     // fetchAgents and refreshConversationList are included via agents and conversationList dependencies in their respective hooks
   ]);
