@@ -19,6 +19,7 @@ import { CrispIcon, StripeIcon } from '@/components/icons';
 
 interface WebhookDetailPanelProps {
   webhook: SearchWebhookResultItem;
+  onEventClick?: (conversationId: string) => void; // Add onEventClick prop
 }
 
 // --- Helper Function to get Provider Icon (copied from WebhookSubfolder) ---
@@ -40,7 +41,7 @@ const getProviderIcon = (providerId?: UtilityProvider) => {
  * 
  * Displays the details of a selected webhook and fetches/displays its associated events.
  */
-const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
+const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook, onEventClick }) => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +190,15 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook }) => {
               // Get icon for the provider
               const IconComponent = getProviderIcon(event.providerId);
               return (
-                <TableRow key={event.eventId} className="border-gray-700 hover:bg-gray-800/50">
+                <TableRow 
+                  key={event.eventId} 
+                  className={`border-gray-700 hover:bg-gray-800/50 ${onEventClick && event.conversationId ? 'cursor-pointer' : ''}`}
+                  onClick={() => {
+                    if (onEventClick && event.conversationId) {
+                      onEventClick(event.conversationId);
+                    }
+                  }}
+                >
                   <TableCell className="py-1 px-2">
                     {event.createdAt 
                       ? formatDistanceToNow(new Date(event.createdAt), { addSuffix: true }) 

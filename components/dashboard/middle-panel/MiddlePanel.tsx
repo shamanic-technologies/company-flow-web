@@ -220,7 +220,7 @@ export default function MiddlePanel() {
             return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select a webhook from the sidebar to view its details.</div>;
         }
         // Render the webhook details panel
-        return <WebhookDetailPanel webhook={selectedWebhook} />; 
+        return <WebhookDetailPanel webhook={selectedWebhook} onEventClick={selectConversationAndSetView} />; 
 
       default:
         // Handle potential unknown view state
