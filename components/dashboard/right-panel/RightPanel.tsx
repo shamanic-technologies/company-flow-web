@@ -160,7 +160,7 @@ export default function RightPanel() {
 
     // Main container for the right panel
     return (
-        <div className="w-80 flex-shrink-0 border-l border-gray-700 overflow-hidden bg-gray-900 flex flex-col h-full">
+        <div className="w-full flex-shrink-0 border-l border-gray-700 overflow-hidden bg-gray-900 flex flex-col h-full">
             {renderContent()}
         </div>
     );
