@@ -75,20 +75,35 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
-      setConversationList(sortedConversations);
-
-      // --- Auto-select the latest conversation --- 
-      if (sortedConversations.length > 0) {
-        const latestConversationId = sortedConversations[0].conversationId;
-        // Setting the ID here will trigger the message fetching effect
-        setCurrentConversationId(latestConversationId);
+      // Only update state if the fetched data is different
+      if (JSON.stringify(sortedConversations) !== JSON.stringify(conversationList)) {
+        console.log("useConversations: Conversation list data changed, updating state.");
+        setConversationList(sortedConversations);
+        // If the list changes, re-evaluate auto-selection based on the new list
+        if (sortedConversations.length > 0) {
+          const latestConversationId = sortedConversations[0].conversationId;
+          if (currentConversationId !== latestConversationId) {
+            console.log(`useConversations: Auto-selecting latest conversation after list update: ${latestConversationId}`);
+            setCurrentConversationId(latestConversationId);
+          }
+        } else {
+          if (currentConversationId !== null) {
+            console.log("useConversations: Conversation list empty after update, clearing current conversation ID.");
+            setCurrentConversationId(null); 
+          }
+        }
       } else {
-        console.log(`useConversations: No conversations found for agent ${agentId}.`);
-        // Ensure ID is null if no conversations exist
-        setCurrentConversationId(null); 
+        console.log("useConversations: Conversation list data unchanged, skipping state update.");
+        // Even if list is same, ensure currentConversationId is valid if not already set from a previous list load
+        if (sortedConversations.length > 0 && currentConversationId === null) {
+            const latestConversationId = sortedConversations[0].conversationId;
+            console.log(`useConversations: Auto-selecting latest conversation (list unchanged, ID was null): ${latestConversationId}`);
+            setCurrentConversationId(latestConversationId);
+        } else if (sortedConversations.length === 0 && currentConversationId !== null) {
+            console.log("useConversations: Conversation list empty (list unchanged, ID was not null), clearing current conversation ID.");
+            setCurrentConversationId(null); 
+        }
       }
-      // --- End auto-select --- 
-
     } catch (error: any) {
       console.error(`useConversations: Error loading conversation list for agent ${agentId}:`, error);
       setConversationError(`Failed to load conversation list: ${error.message}`);
@@ -113,6 +128,19 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
     // Only trigger when agent ID changes or token appears/disappears
   }, [selectedAgentId, loadConversationListForAgent]);
 
+  // --- Define refreshConversationList with useCallback for stability ---
+  const refreshConversationList = useCallback(async () => {
+    if (selectedAgentId) {
+      // loadConversationListForAgent is already a useCallback
+      await loadConversationListForAgent(selectedAgentId);
+    } else {
+      // This matches the previous behavior for the "else" case of the ternary operator
+      console.warn("Cannot refresh conversation list without selected agent.");
+      // Optionally, you might want to clear the list here if that was the implicit behavior:
+      // setConversationList([]);
+      // setCurrentConversationId(null);
+    }
+  }, [selectedAgentId, loadConversationListForAgent]);
 
   // --- Function to Fetch Messages for a Specific Conversation ID --- 
   const fetchMessages = useCallback(async (convId: string) => {
@@ -145,10 +173,17 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
 
       if (!messagesData) {
         console.error('🚫 useConversations - Invalid message data received from API');
+        if (currentMessages.length > 0) setCurrentMessages([]); // Clear if previously had messages
         throw new Error('Invalid message data received from API');
       }
 
-      setCurrentMessages(messagesData);
+      // Only update state if the fetched data is different
+      if (JSON.stringify(messagesData) !== JSON.stringify(currentMessages)) {
+        console.log(`useConversations: Messages data changed for ${convId}, updating state.`);
+        setCurrentMessages(messagesData);
+      } else {
+        console.log(`useConversations: Messages data unchanged for ${convId}, skipping state update.`);
+      }
 
     } catch (error: any) {
       console.error(`useConversations: Error loading messages for ${convId}:`, error);
@@ -245,6 +280,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
     conversationError,
     handleCreateNewChat,
     // Expose main loading function if manual refresh is desired for conversation list
-    refreshConversationList: selectedAgentId ? () => loadConversationListForAgent(selectedAgentId) : async () => { console.warn("Cannot refresh conversation list without selected agent."); },
+    refreshConversationList, // Use the stable useCallback version
+    fetchMessages,
   };
 } 

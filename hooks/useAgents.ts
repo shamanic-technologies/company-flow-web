@@ -51,13 +51,21 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
 
       if (agentsData) {
         const fetchedAgents = agentsData;
-        console.log(`✅ useAgents - Agents retrieved successfully: ${fetchedAgents.length} agents found.`);
-        setAgents(fetchedAgents);
+        // Only update state if the fetched data is different from the current state
+        if (JSON.stringify(fetchedAgents) !== JSON.stringify(agents)) {
+          console.log(`✅ useAgents - Agents data changed, updating state.`);
+          setAgents(fetchedAgents);
+        } else {
+          console.log(`✅ useAgents - Agents data unchanged, skipping state update.`);
+        }
 
         // Auto-select logic is handled in the effect below
 
       } else {
-        setAgents([]); // Clear agents on failed API call (but successful response)
+        // if API returns null/undefined but ok response, treat as empty list if current is not already empty
+        if (agents.length > 0) {
+          setAgents([]); 
+        }
         throw new Error('Invalid data format from agents API');
       }
 
@@ -86,8 +94,11 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
     if (agents.length > 0 && !currentSelectionValid) {
       // Auto-select first agent if list is populated and current selection is invalid or null
       const firstAgentId = agents[0].id;
-      console.log(`useAgents (Effect): Auto-selecting first agent: ${firstAgentId}`);
-      setSelectedAgentId(firstAgentId);
+      // Only set if different to avoid potential loops if this effect is triggered by selectedAgentId itself
+      if (selectedAgentId !== firstAgentId) {
+        console.log(`useAgents (Effect): Auto-selecting first agent: ${firstAgentId}`);
+        setSelectedAgentId(firstAgentId);
+      }
     } else if (agents.length === 0 && selectedAgentId) {
       // If list becomes empty, clear selection
       console.log("useAgents (Effect): Agent list empty, clearing selection.");
@@ -95,7 +106,7 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
     }
     // If agents.length > 0 AND currentSelectionValid, do nothing - keep existing selection.
 
-  }, [agents, isLoadingAgents, agentError, selectedAgentId]);
+  }, [agents, isLoadingAgents, agentError, selectedAgentId]); // selectedAgentId added to dependencies for the setSelectedAgentId condition
 
   // --- Handler for Explicit Agent Selection --- 
   // This simple setter is enough for the hook.

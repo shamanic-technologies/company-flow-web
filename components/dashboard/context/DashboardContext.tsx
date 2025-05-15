@@ -13,6 +13,11 @@ import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
 import { useWebhooks } from '../../../hooks/useWebhooks';
 
+// Import polling hooks
+import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
+import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
+import { useMessagePolling } from '../../../hooks/polling/useMessagePolling';
+
 import { SearchWebhookResultItem } from '@agent-base/types'; // Import the correct type
 
 type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail';
@@ -158,7 +163,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isCreatingConversation, 
     conversationError, 
     handleCreateNewChat,
-    refreshConversationList
+    refreshConversationList,
+    fetchMessages, // Destructure fetchMessages
   } = useConversations({ selectedAgentId, user: clerkUser, handleLogout: handleClerkLogout }); // Pass Clerk token, user, and logout
 
   const { 
@@ -172,6 +178,30 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // --- Direct Context State (UI related) --- 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
+
+  // --- Polling Hooks --- 
+  const POLLING_INTERVAL = 5000; // 5 seconds, configurable here
+
+  useAgentPolling({
+    fetchAgents,
+    pollingInterval: POLLING_INTERVAL,
+    isSignedIn,
+  });
+
+  useConversationPolling({
+    refreshConversations: refreshConversationList, // Ensure correct prop name
+    pollingInterval: POLLING_INTERVAL,
+    isSignedIn,
+    selectedAgentId,
+  });
+
+  useMessagePolling({
+    fetchMessages, // Pass the fetchMessages function from useConversations
+    currentConversationId,
+    pollingInterval: POLLING_INTERVAL,
+    isSignedIn,
+    activeAgentView,
+  });
 
   // --- Action Wrapper Functions (to combine hook actions + UI changes) --- 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
