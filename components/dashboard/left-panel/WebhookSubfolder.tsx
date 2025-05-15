@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState } from 'react';
 import { ChevronRight, Webhook } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SearchWebhookResultItem, UtilityProvider, WebhookStatus } from '@agent-base/types';
+import { SearchWebhookResultItem, UtilityProvider, UtilityProviderEnum, WebhookStatus } from '@agent-base/types';
 import { CrispIcon, StripeIcon } from '@/components/icons';
 import {
   Collapsible,
@@ -19,14 +19,14 @@ import {
 
 // --- Helper Function to get Provider Icon ---
 // Moved here as it's only used by WebhookSubfolder
-const getProviderIcon = (providerId?: UtilityProvider) => {
+const getProviderIcon = (providerId?: UtilityProviderEnum) => {
   switch (providerId) {
-    case UtilityProvider.CRISP:
+    case UtilityProviderEnum.CRISP:
       return CrispIcon;
-    case UtilityProvider.STRIPE:
+    case UtilityProviderEnum.STRIPE:
       return StripeIcon;
-    case UtilityProvider.SLACK:
-    case UtilityProvider.AGENT_BASE:
+    case UtilityProviderEnum.SLACK:
+    case UtilityProviderEnum.AGENT_BASE:
     default:
       return Webhook;
   }
@@ -69,7 +69,7 @@ export default function WebhookSubfolder({
           <SidebarMenuSub className="pl-1">
             {webhooks.map((webhook: SearchWebhookResultItem) => {
               // Get the appropriate icon for this webhook
-              const IconComponent = getProviderIcon(webhook.webhookProviderId);
+              const IconComponent = getProviderIcon(webhook.webhookProviderId as UtilityProviderEnum);
               return (
                 <SidebarMenuItem key={webhook.id}>
                   <SidebarMenuButton

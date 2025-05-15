@@ -32,18 +32,27 @@ interface DashboardContextType {
 
   // From useAgents
   agents: Agent[];
-  selectedAgentId: string | null;
   isLoadingAgents: boolean;
   agentError: string | null;
+  /// Middle Panel
+  selectedAgentIdMiddlePanel: string | null;
+  /// Right Panel
+  selectedAgentIdRightPanel: string | null;
   
   // From useConversations
   conversationList: Conversation[];
-  currentConversationId: string | null;
-  currentMessages: VercelMessage[];
-  isLoadingConversations: boolean;
-  isLoadingMessages: boolean;
-  isCreatingConversation: boolean;
   conversationError: string | null;
+  /// Middle Panel
+  currentConversationIdMiddlePanel: string | null;
+  currentMessagesMiddlePanel: VercelMessage[];
+  isLoadingConversationsMiddlePanel: boolean;
+  isLoadingMessagesMiddlePanel: boolean;
+  /// Right Panel
+  currentConversationIdRightPanel: string | null;
+  currentMessagesRightPanel: VercelMessage[];
+  isLoadingConversationsRightPanel: boolean;
+  isLoadingMessagesRightPanel: boolean;
+  isCreatingConversationRightPanel: boolean;
 
   // From useWebhooks
   userWebhooks: SearchWebhookResultItem[];
@@ -74,16 +83,21 @@ export const DashboardContext = createContext<DashboardContextType>({
   getClerkUserInitials: () => '?',
   // Agents defaults
   agents: [],
-  selectedAgentId: null,
+  selectedAgentIdMiddlePanel: null,
+  selectedAgentIdRightPanel: null,
   isLoadingAgents: false,
   agentError: null,
   // Conversations defaults
   conversationList: [],
-  currentConversationId: null,
-  currentMessages: [],
-  isLoadingConversations: false,
-  isLoadingMessages: false,
-  isCreatingConversation: false,
+  currentConversationIdMiddlePanel: null,
+  currentMessagesMiddlePanel: [],
+  isLoadingConversationsMiddlePanel: false,
+  isLoadingMessagesMiddlePanel: false,
+  currentConversationIdRightPanel: null,
+  currentMessagesRightPanel: [],
+  isLoadingConversationsRightPanel: false,
+  isLoadingMessagesRightPanel: false,
+  isCreatingConversationRightPanel: false,
   conversationError: null,
   // Webhooks defaults
   userWebhooks: [],
@@ -109,6 +123,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
   const { getToken, isSignedIn } = useClerkAuth();
   const { signOut } = useClerk();
+
+  // --- New states for Right Panel ---
+  const [selectedAgentIdRightPanel, setSelectedAgentIdRightPanel] = useState<string | null>(null);
+  const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
+  const [currentMessagesRightPanel, setCurrentMessagesRightPanel] = useState<VercelMessage[]>([]);
+  const [isLoadingConversationsRightPanel, setIsLoadingConversationsRightPanel] = useState<boolean>(false);
+  const [isLoadingMessagesRightPanel, setIsLoadingMessagesRightPanel] = useState<boolean>(false);
 
   const handleClerkLogout = useCallback(async () => {
     console.log("DashboardContext: Signing out with Clerk...");
@@ -146,7 +167,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const { 
     agents, 
-    selectedAgentId, 
+    selectedAgentIdMiddlePanel, 
     selectAgent,
     isLoadingAgents, 
     agentError, 
@@ -155,17 +176,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const { 
     conversationList, 
-    currentConversationId, 
+    currentConversationId,
     selectConversationId,
-    currentMessages, 
-    isLoadingConversations, 
-    isLoadingMessages, 
-    isCreatingConversation, 
+    currentMessages,
+    isLoadingConversations,
+    isLoadingMessages,
+    isCreatingConversation,
     conversationError, 
     handleCreateNewChat,
     refreshConversationList,
     fetchMessages, // Destructure fetchMessages
-  } = useConversations({ selectedAgentId, user: clerkUser, handleLogout: handleClerkLogout }); // Pass Clerk token, user, and logout
+  } = useConversations({ selectedAgentIdMiddlePanel, user: clerkUser, handleLogout: handleClerkLogout }); // Pass selectedAgentIdMiddlePanel
+
+  // Map hook values to context values
+  const currentConversationIdMiddlePanel = currentConversationId;
+  const currentMessagesMiddlePanel = currentMessages;
+  const isLoadingConversationsMiddlePanel = isLoadingConversations;
+  const isLoadingMessagesMiddlePanel = isLoadingMessages;
+  const isCreatingConversationRightPanel = isCreatingConversation; // User wants this for RightPanel
 
   const { 
     userWebhooks, 
@@ -192,12 +220,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     refreshConversations: refreshConversationList, // Ensure correct prop name
     pollingInterval: POLLING_INTERVAL,
     isSignedIn,
-    selectedAgentId,
+    selectedAgentIdMiddlePanel,
   });
 
   useMessagePolling({
     fetchMessages, // Pass the fetchMessages function from useConversations
-    currentConversationId,
+    currentConversationId: currentConversationIdMiddlePanel,
     pollingInterval: POLLING_INTERVAL,
     isSignedIn,
     activeAgentView,
@@ -233,11 +261,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (webhook) {
       setActiveAgentView('webhookDetail');
     } else {
-      if (selectedAgentId) {
+      if (selectedAgentIdMiddlePanel) {
         setActiveAgentView('conversations');
       }
     }
-  }, [selectWebhook, setActiveAgentView, selectedAgentId]);
+  }, [selectWebhook, setActiveAgentView, selectedAgentIdMiddlePanel]);
 
   const isClerkLoading = !clerkIsLoaded;
 
@@ -250,16 +278,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     getClerkUserInitials,
     // Agents
     agents,
-    selectedAgentId,
+    selectedAgentIdMiddlePanel,
+    selectedAgentIdRightPanel,
     isLoadingAgents,
     agentError,
     // Conversations
     conversationList,
-    currentConversationId,
-    currentMessages,
-    isLoadingConversations,
-    isLoadingMessages,
-    isCreatingConversation,
+    currentConversationIdMiddlePanel,
+    currentMessagesMiddlePanel,
+    isLoadingConversationsMiddlePanel,
+    isLoadingMessagesMiddlePanel,
+    currentConversationIdRightPanel,
+    currentMessagesRightPanel,
+    isLoadingConversationsRightPanel,
+    isLoadingMessagesRightPanel,
+    isCreatingConversationRightPanel,
     conversationError,
     // Webhooks
     userWebhooks,
@@ -279,12 +312,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     refreshConversations: refreshConversationList,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
-    agents, selectedAgentId, isLoadingAgents, agentError, fetchAgents,
-    conversationList, currentConversationId, currentMessages, isLoadingConversations, isLoadingMessages, isCreatingConversation, conversationError, handleCreateNewChat, refreshConversationList,
+    agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, isLoadingAgents, agentError, fetchAgents,
+    conversationList, currentConversationIdMiddlePanel, currentMessagesMiddlePanel, isLoadingConversationsMiddlePanel, isLoadingMessagesMiddlePanel, currentConversationIdRightPanel, currentMessagesRightPanel, isLoadingConversationsRightPanel, isLoadingMessagesRightPanel, isCreatingConversationRightPanel, conversationError, handleCreateNewChat, refreshConversationList,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
-    activeAgentView, // setActiveAgentView is stable
+    activeAgentView,
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView
-    // fetchAgents and refreshConversationList are included via agents and conversationList dependencies in their respective hooks
   ]);
   
   // This useEffect handles redirection if the user is not signed in AND Clerk has finished loading.

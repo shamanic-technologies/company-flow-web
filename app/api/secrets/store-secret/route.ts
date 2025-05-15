@@ -13,7 +13,8 @@ import { ServiceResponse,
   UserType,
   UtilityProvider,
   UtilitySecretType,
-  PlatformUserApiServiceCredentials
+  PlatformUserApiServiceCredentials,
+  UtilityProviderEnum
 } from '@agent-base/types';
 import { PlatformUser } from '@agent-base/types';
 import { storeSecretExternalApiClient } from '@agent-base/api-client';
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Basic validation: Check if secretUtilityProvider is provided
-    if (!secretUtilityProvider || typeof secretUtilityProvider !== 'string' || !Object.values(UtilityProvider).includes(secretUtilityProvider as UtilityProvider)) {
+    if (!secretUtilityProvider || typeof secretUtilityProvider !== 'string' || !Object.values(UtilityProviderEnum).includes(secretUtilityProvider as UtilityProviderEnum)) {
       console.warn('[API /secrets/store-secret] Missing or invalid secretUtilityProvider');
       return createErrorResponse(400, 'BAD_REQUEST', 'Missing or invalid secretUtilityProvider');
     }

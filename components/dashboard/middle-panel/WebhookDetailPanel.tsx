@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SearchWebhookResultItem, WebhookEvent, UtilityProvider } from '@agent-base/types'; // Import WebhookEvent
+import { SearchWebhookResultItem, WebhookEvent, UtilityProvider, UtilityProviderEnum } from '@agent-base/types'; // Import WebhookEvent
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Use shadcn Card
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -23,14 +23,14 @@ interface WebhookDetailPanelProps {
 }
 
 // --- Helper Function to get Provider Icon (copied from WebhookSubfolder) ---
-const getProviderIcon = (providerId?: UtilityProvider) => {
+const getProviderIcon = (providerId?: UtilityProviderEnum) => {
   switch (providerId) {
-    case UtilityProvider.CRISP:
+    case UtilityProviderEnum.CRISP:
       return CrispIcon;
-    case UtilityProvider.STRIPE:
+    case UtilityProviderEnum.STRIPE:
       return StripeIcon;
     // Add other cases as needed (e.g., SLACK)
-    case UtilityProvider.AGENT_BASE:
+    case UtilityProviderEnum.AGENT_BASE:
     default:
       return Webhook; // Default icon
   }
@@ -188,7 +188,7 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook, onEven
           <TableBody>
             {events.map((event) => {
               // Get icon for the provider
-              const IconComponent = getProviderIcon(event.providerId);
+              const IconComponent = getProviderIcon(event.providerId as UtilityProviderEnum);
               return (
                 <TableRow 
                   key={event.eventId} 

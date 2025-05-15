@@ -14,7 +14,7 @@ interface UseAgentsProps {
  */
 export function useAgents({ handleLogout }: UseAgentsProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentIdMiddlePanel, setSelectedAgentIdMiddlePanel] = useState<string | null>(null);
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(false); // Initial loading false, true when fetching
   const [agentError, setAgentError] = useState<string | null>(null);
 
@@ -73,7 +73,7 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
       console.error('❌ useAgents - Error fetching agents:', error);
       setAgentError(error.message || 'Failed to fetch agents.');
       setAgents([]); // Clear agents on exception
-      setSelectedAgentId(null); // Clear selection on error
+      setSelectedAgentIdMiddlePanel(null); // Clear selection on error
     } finally {
       setIsLoadingAgents(false);
     }
@@ -89,37 +89,37 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
     // Don't run auto-selection while loading or if there was an error fetching
     if (isLoadingAgents || agentError) return;
 
-    const currentSelectionValid = selectedAgentId && agents.some(agent => agent.id === selectedAgentId);
+    const currentSelectionValid = selectedAgentIdMiddlePanel && agents.some(agent => agent.id === selectedAgentIdMiddlePanel);
 
     if (agents.length > 0 && !currentSelectionValid) {
       // Auto-select first agent if list is populated and current selection is invalid or null
       const firstAgentId = agents[0].id;
       // Only set if different to avoid potential loops if this effect is triggered by selectedAgentId itself
-      if (selectedAgentId !== firstAgentId) {
+      if (selectedAgentIdMiddlePanel !== firstAgentId) {
         console.log(`useAgents (Effect): Auto-selecting first agent: ${firstAgentId}`);
-        setSelectedAgentId(firstAgentId);
+        setSelectedAgentIdMiddlePanel(firstAgentId);
       }
-    } else if (agents.length === 0 && selectedAgentId) {
+    } else if (agents.length === 0 && selectedAgentIdMiddlePanel) {
       // If list becomes empty, clear selection
       console.log("useAgents (Effect): Agent list empty, clearing selection.");
-      setSelectedAgentId(null);
+      setSelectedAgentIdMiddlePanel(null);
     }
     // If agents.length > 0 AND currentSelectionValid, do nothing - keep existing selection.
 
-  }, [agents, isLoadingAgents, agentError, selectedAgentId]); // selectedAgentId added to dependencies for the setSelectedAgentId condition
+  }, [agents, isLoadingAgents, agentError, selectedAgentIdMiddlePanel]); // selectedAgentId added to dependencies for the setSelectedAgentId condition
 
   // --- Handler for Explicit Agent Selection --- 
   // This simple setter is enough for the hook.
   // The context provider will use this AND potentially trigger other actions (like loading conversations).
   const selectAgent = useCallback((agentId: string | null) => {
     console.log(`useAgents: Setting selected agent ID to: ${agentId}`);
-    setSelectedAgentId(agentId);
+    setSelectedAgentIdMiddlePanel(agentId);
   }, []);
 
 
   return {
     agents,
-    selectedAgentId,
+    selectedAgentIdMiddlePanel,
     selectAgent, // Expose the explicit selection function
     isLoadingAgents,
     agentError,

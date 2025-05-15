@@ -23,16 +23,16 @@ export default function RightPanel() {
     const {
         // Agent related
         agents,
-        selectedAgentId,
+        selectedAgentIdMiddlePanel: selectedAgentId,
         isLoadingAgents,
 
         // Conversation/Message related
-        currentConversationId,
+        currentConversationIdMiddlePanel: currentConversationId,
         // isLoadingConversations, // Context loads list+initial messages together now
-        currentMessages,
-        isLoadingMessages,
+        currentMessagesMiddlePanel: currentMessages,
+        isLoadingMessagesMiddlePanel: isLoadingMessages,
         conversationError,
-        isCreatingConversation, // For button state
+        isCreatingConversationRightPanel: isCreatingConversation, // For button state
 
         // Auth/User related
         // authToken, // REMOVED

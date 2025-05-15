@@ -6,7 +6,7 @@ import { Message as VercelMessage } from 'ai/react';
 import { UserResource } from '@clerk/types';
 
 interface UseConversationsProps {
-  selectedAgentId: string | null;
+  selectedAgentIdMiddlePanel: string | null;
   user: UserResource | null | undefined;
   handleLogout: () => void;
 }
@@ -16,13 +16,13 @@ interface UseConversationsProps {
  * @param {UseConversationsProps} props - Selected agent ID, Clerk user object, and logout handler.
  * @returns An object containing conversation and message state, loading/error states, and related functions.
  */
-export function useConversations({ selectedAgentId, user, handleLogout }: UseConversationsProps) {
+export function useConversations({ selectedAgentIdMiddlePanel, user, handleLogout }: UseConversationsProps) {
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [currentMessages, setCurrentMessages] = useState<VercelMessage[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = useState<boolean>(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
-  const [isCreatingConversation, setIsCreatingConversation] = useState<boolean>(false);
+  const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
+  const [currentMessagesMiddlePanel, setCurrentMessagesMiddlePanel] = useState<VercelMessage[]>([]);
+  const [isLoadingConversationsMiddlePanel, setIsLoadingConversationsMiddlePanel] = useState<boolean>(false);
+  const [isLoadingMessagesMiddlePanel, setIsLoadingMessagesMiddlePanel] = useState<boolean>(false);
+  const [isCreatingConversationRightPanel, setIsCreatingConversationRightPanel] = useState<boolean>(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
 
   // --- Function to load conversation LIST for the selected agent --- 
@@ -31,18 +31,18 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
         // This case should ideally be handled by the effect watching selectedAgentId
         console.log("useConversations: No agent ID provided to loadConversationListForAgent.");
         setConversationList([]);
-        setCurrentConversationId(null);
-        setIsLoadingConversations(false);
+        setCurrentConversationIdMiddlePanel(null);
+        setIsLoadingConversationsMiddlePanel(false);
         setConversationError(null);
         return;
     }
 
     console.log(`useConversations: Loading conversation list for agent ${agentId}...`);
-    setIsLoadingConversations(true);
+    setIsLoadingConversationsMiddlePanel(true);
     setConversationError(null);
     // Clear previous list and selected ID while loading new list
     setConversationList([]);
-    setCurrentConversationId(null); 
+    setCurrentConversationIdMiddlePanel(null); 
     // Messages will be cleared by the effect watching currentConversationId
 
     try {
@@ -82,57 +82,57 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
         // If the list changes, re-evaluate auto-selection based on the new list
         if (sortedConversations.length > 0) {
           const latestConversationId = sortedConversations[0].conversationId;
-          if (currentConversationId !== latestConversationId) {
+          if (currentConversationIdMiddlePanel !== latestConversationId) {
             console.log(`useConversations: Auto-selecting latest conversation after list update: ${latestConversationId}`);
-            setCurrentConversationId(latestConversationId);
+            setCurrentConversationIdMiddlePanel(latestConversationId);
           }
         } else {
-          if (currentConversationId !== null) {
+          if (currentConversationIdMiddlePanel !== null) {
             console.log("useConversations: Conversation list empty after update, clearing current conversation ID.");
-            setCurrentConversationId(null); 
+            setCurrentConversationIdMiddlePanel(null); 
           }
         }
       } else {
         console.log("useConversations: Conversation list data unchanged, skipping state update.");
         // Even if list is same, ensure currentConversationId is valid if not already set from a previous list load
-        if (sortedConversations.length > 0 && currentConversationId === null) {
+        if (sortedConversations.length > 0 && currentConversationIdMiddlePanel === null) {
             const latestConversationId = sortedConversations[0].conversationId;
             console.log(`useConversations: Auto-selecting latest conversation (list unchanged, ID was null): ${latestConversationId}`);
-            setCurrentConversationId(latestConversationId);
-        } else if (sortedConversations.length === 0 && currentConversationId !== null) {
+            setCurrentConversationIdMiddlePanel(latestConversationId);
+        } else if (sortedConversations.length === 0 && currentConversationIdMiddlePanel !== null) {
             console.log("useConversations: Conversation list empty (list unchanged, ID was not null), clearing current conversation ID.");
-            setCurrentConversationId(null); 
+            setCurrentConversationIdMiddlePanel(null); 
         }
       }
     } catch (error: any) {
       console.error(`useConversations: Error loading conversation list for agent ${agentId}:`, error);
       setConversationError(`Failed to load conversation list: ${error.message}`);
       setConversationList([]);
-      setCurrentConversationId(null); // Clear ID on error
+      setCurrentConversationIdMiddlePanel(null); // Clear ID on error
     } finally {
-      setIsLoadingConversations(false);
+      setIsLoadingConversationsMiddlePanel(false);
     }
   }, [handleLogout]);
 
   // --- Effect to Load Conversation List when Selected Agent Changes --- 
   useEffect(() => {
-    if (selectedAgentId) {
-      loadConversationListForAgent(selectedAgentId);
+    if (selectedAgentIdMiddlePanel) {
+      loadConversationListForAgent(selectedAgentIdMiddlePanel);
     } else {
       // If agent is deselected or token disappears, clear conversation state
       setConversationList([]);
-      setCurrentConversationId(null); // This will trigger message clearing via the other effect
-      setIsLoadingConversations(false);
+      setCurrentConversationIdMiddlePanel(null); // This will trigger message clearing via the other effect
+      setIsLoadingConversationsMiddlePanel(false);
       setConversationError(null);
     }
     // Only trigger when agent ID changes or token appears/disappears
-  }, [selectedAgentId, loadConversationListForAgent]);
+  }, [selectedAgentIdMiddlePanel, loadConversationListForAgent]);
 
   // --- Define refreshConversationList with useCallback for stability ---
   const refreshConversationList = useCallback(async () => {
-    if (selectedAgentId) {
+    if (selectedAgentIdMiddlePanel) {
       // loadConversationListForAgent is already a useCallback
-      await loadConversationListForAgent(selectedAgentId);
+      await loadConversationListForAgent(selectedAgentIdMiddlePanel);
     } else {
       // This matches the previous behavior for the "else" case of the ternary operator
       console.warn("Cannot refresh conversation list without selected agent.");
@@ -140,20 +140,20 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       // setConversationList([]);
       // setCurrentConversationId(null);
     }
-  }, [selectedAgentId, loadConversationListForAgent]);
+  }, [selectedAgentIdMiddlePanel, loadConversationListForAgent]);
 
   // --- Function to Fetch Messages for a Specific Conversation ID --- 
   const fetchMessages = useCallback(async (convId: string) => {
     if (!convId) {
       console.warn("useConversations: No conversation ID provided to fetch messages.");
       setConversationError("Cannot fetch messages: Missing conversation ID.");
-      setCurrentMessages([]);
-      setIsLoadingMessages(false);
+      setCurrentMessagesMiddlePanel([]);
+      setIsLoadingMessagesMiddlePanel(false);
       return;
     }
 
-    setIsLoadingMessages(true);
-    setCurrentMessages([]); // Clear previous messages
+    setIsLoadingMessagesMiddlePanel(true);
+    setCurrentMessagesMiddlePanel([]); // Clear previous messages
     setConversationError(null); // Clear previous errors
 
     try {
@@ -173,14 +173,14 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
 
       if (!messagesData) {
         console.error('🚫 useConversations - Invalid message data received from API');
-        if (currentMessages.length > 0) setCurrentMessages([]); // Clear if previously had messages
+        if (currentMessagesMiddlePanel.length > 0) setCurrentMessagesMiddlePanel([]); // Clear if previously had messages
         throw new Error('Invalid message data received from API');
       }
 
       // Only update state if the fetched data is different
-      if (JSON.stringify(messagesData) !== JSON.stringify(currentMessages)) {
+      if (JSON.stringify(messagesData) !== JSON.stringify(currentMessagesMiddlePanel)) {
         console.log(`useConversations: Messages data changed for ${convId}, updating state.`);
-        setCurrentMessages(messagesData);
+        setCurrentMessagesMiddlePanel(messagesData);
       } else {
         console.log(`useConversations: Messages data unchanged for ${convId}, skipping state update.`);
       }
@@ -188,33 +188,33 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
     } catch (error: any) {
       console.error(`useConversations: Error loading messages for ${convId}:`, error);
       setConversationError(`Error loading messages: ${error.message}`);
-      setCurrentMessages([]); // Ensure messages are empty on error
+      setCurrentMessagesMiddlePanel([]); // Ensure messages are empty on error
     } finally {
-      setIsLoadingMessages(false);
+      setIsLoadingMessagesMiddlePanel(false);
     }
   }, [handleLogout]);
 
   // --- Effect to Fetch Messages when Current Conversation ID changes --- 
   useEffect(() => {
-    if (currentConversationId) {
-       fetchMessages(currentConversationId);
+    if (currentConversationIdMiddlePanel) {
+       fetchMessages(currentConversationIdMiddlePanel);
     } else {
       // If conversationId becomes null (e.g., agent change, list empty), clear messages
-      setCurrentMessages([]);
-      setIsLoadingMessages(false);
+      setCurrentMessagesMiddlePanel([]);
+      setIsLoadingMessagesMiddlePanel(false);
       // Don't clear conversationError here, might be relevant from list loading
     }
-  }, [currentConversationId, fetchMessages]);
+  }, [currentConversationIdMiddlePanel, fetchMessages]);
 
   // --- Handler to Create New Chat --- 
   const handleCreateNewChat = useCallback(async (): Promise<string | null> => { // Return new ID or null
-    if (!selectedAgentId || !user) {
+    if (!selectedAgentIdMiddlePanel || !user) {
       console.warn("useConversations: Agent ID or user info missing for creating chat.");
       setConversationError("Cannot create chat: missing required information.");
       return null;
     }
 
-    setIsCreatingConversation(true);
+    setIsCreatingConversationRightPanel(true);
     setConversationError(null);
 
     try {
@@ -222,7 +222,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       const channelId = 'web';
 
       const requestBody: CreateConversationInput = {
-        agentId: selectedAgentId,
+        agentId: selectedAgentIdMiddlePanel,
         channelId: channelId,
         conversationId: newConversationId
       };
@@ -247,7 +247,7 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       // Add to list (most recent first)
       setConversationList(prevList => [responseData, ...prevList]);
       // Set as current (will trigger message fetch effect)
-      setCurrentConversationId(newConversationId);
+      setCurrentConversationIdMiddlePanel(newConversationId);
 
       return newConversationId; // Return the ID
 
@@ -256,27 +256,27 @@ export function useConversations({ selectedAgentId, user, handleLogout }: UseCon
       setConversationError(`Error creating chat: ${error.message}`);
       return null;
     } finally {
-      setIsCreatingConversation(false);
+      setIsCreatingConversationRightPanel(false);
     }
-  }, [selectedAgentId, user, handleLogout, loadConversationListForAgent]);
+  }, [selectedAgentIdMiddlePanel, user, handleLogout, loadConversationListForAgent]);
 
   // --- Simple setter for selecting a conversation ID --- 
   // This just updates the state; the message fetch effect handles the rest.
   const selectConversationId = useCallback((conversationId: string | null) => {
     console.log(`useConversations: Setting current conversation ID to: ${conversationId}`);
-    if (conversationId !== currentConversationId) {
-      setCurrentConversationId(conversationId);
+    if (conversationId !== currentConversationIdMiddlePanel) {
+      setCurrentConversationIdMiddlePanel(conversationId);
     }
-  }, [currentConversationId]);
+  }, [currentConversationIdMiddlePanel]);
 
   return {
     conversationList,
-    currentConversationId,
+    currentConversationId: currentConversationIdMiddlePanel,
     selectConversationId,
-    currentMessages,
-    isLoadingConversations,
-    isLoadingMessages,
-    isCreatingConversation,
+    currentMessages: currentMessagesMiddlePanel,
+    isLoadingConversations: isLoadingConversationsMiddlePanel,
+    isLoadingMessages: isLoadingMessagesMiddlePanel,
+    isCreatingConversation: isCreatingConversationRightPanel,
     conversationError,
     handleCreateNewChat,
     // Expose main loading function if manual refresh is desired for conversation list

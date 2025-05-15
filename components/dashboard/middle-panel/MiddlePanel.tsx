@@ -39,7 +39,7 @@ export default function MiddlePanel() {
 
     // Agent related
     agents,
-    selectedAgentId,
+    selectedAgentIdMiddlePanel: selectedAgentId,
     // isLoadingAgents, // Not directly used for rendering logic here
     agentError, // Might be used for general error display if needed
 
@@ -49,14 +49,14 @@ export default function MiddlePanel() {
 
     // Conversation List related (from context)
     conversationList,
-    isLoadingConversations,
+    isLoadingConversationsMiddlePanel: isLoadingConversations,
     selectConversationAndSetView,
 
     // Selected Conversation/Messages related (from context)
-    currentConversationId,
-    currentMessages,
-    isLoadingMessages,
-    isCreatingConversation, // Use context state
+    currentConversationIdMiddlePanel: currentConversationId,
+    currentMessagesMiddlePanel: currentMessages,
+    isLoadingMessagesMiddlePanel: isLoadingMessages,
+    isCreatingConversationRightPanel: isCreatingConversation, // Use context state
     conversationError, // Use context error state
 
     // Actions related (from context)

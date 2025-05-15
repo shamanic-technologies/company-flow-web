@@ -76,7 +76,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
     agents,
     isLoadingAgents,
     agentError,
-    selectedAgentId,
+    selectedAgentIdMiddlePanel: selectedAgentId,
     selectAgentAndSetView,
     activeAgentView,
     setActiveAgentView,
