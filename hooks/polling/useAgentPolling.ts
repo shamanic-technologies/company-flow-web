@@ -25,10 +25,8 @@ export function useAgentPolling({
   useEffect(() => {
     // Function to perform the fetch operation
     const performFetch = () => {
-      console.log('useAgentPolling: Polling for agents...');
       fetchAgents().catch(error => {
         console.error('useAgentPolling: Error during polling for agents:', error);
-        // Optionally, handle the error (e.g., update error state in a context)
       });
     };
 
@@ -44,9 +42,6 @@ export function useAgentPolling({
       performFetch(); 
       // Then set up the interval
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useAgentPolling: Started polling for agents every ${pollingInterval}ms.`);
-    } else {
-      console.log('useAgentPolling: User not signed in. Polling for agents stopped/not started.');
     }
 
     // Cleanup function to clear the interval when the component unmounts

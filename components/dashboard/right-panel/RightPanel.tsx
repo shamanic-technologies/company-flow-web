@@ -23,26 +23,24 @@ export default function RightPanel() {
     const {
         // Agent related
         agents,
-        selectedAgentIdMiddlePanel: selectedAgentId,
+        selectedAgentIdRightPanel: selectedAgentId,
         isLoadingAgents,
 
         // Conversation/Message related
-        currentConversationIdMiddlePanel: currentConversationId,
-        // isLoadingConversations, // Context loads list+initial messages together now
-        currentMessagesMiddlePanel: currentMessages,
-        isLoadingMessagesMiddlePanel: isLoadingMessages,
+        currentConversationIdRightPanel: currentConversationId,
+        currentMessagesRightPanel: currentMessages,
+        isLoadingMessagesRightPanel: isLoadingMessages,
         conversationError,
-        isCreatingConversationRightPanel: isCreatingConversation, // For button state
+        isCreatingConversationRightPanel: isCreatingConversation,
 
         // Auth/User related
-        // authToken, // REMOVED
         getClerkUserInitials,
 
         // Actions
-        // handleCreateNewChat, // Use createNewChatAndSetView instead
-        createNewChatAndSetView, // CORRECT WRAPPER
-        // selectConversationId // Use selectConversationAndSetView instead
-        selectConversationAndSetView // CORRECT WRAPPER
+        createNewChatAndSetView,
+        // selectConversationAndSetView, // This is for middle panel. Right panel might need its own or none.
+        // For now, assume selecting a conversation for the right panel is handled differently,
+        // e.g., only via "CreateNewChat" or if a separate "selectConversationRightPanelAndSetView" existed.
     } = useDashboard();
 
     // Find the full agent object based on the selected ID
@@ -140,17 +138,15 @@ export default function RightPanel() {
                     // Sub-state 3d: Conversation selected, messages loaded (or empty) - Render ChatInterface
                     return (
                         <ChatInterface
-                            key={`${selectedAgentId}-${currentConversationId}`} // Force re-mount on change
-                            // authToken={authToken} // REMOVED
-                            userInitials={getClerkUserInitials()} // CORRECT NAME
+                            key={`${selectedAgentId}-${currentConversationId || 'new'}`} // Force re-mount on change, handle null currentConversationId for new chats
+                            userInitials={getClerkUserInitials()}
                             agentId={selectedAgentId} // Already checked selectedAgent exists
-                            agentFirstName={selectedAgent.firstName} // Pass agent first name
-                            agentLastName={selectedAgent.lastName}   // Pass agent last name
-                            conversationId={currentConversationId} // Pass the selected ID
-                            initialMessages={currentMessages} // Pass messages from context
-                            // TODO: Update ChatInterface props if needed
-                            // isLoading={isLoadingMessages}
-                            // error={conversationError}
+                            agentFirstName={selectedAgent.firstName}
+                            agentLastName={selectedAgent.lastName}
+                            conversationId={currentConversationId} // Pass the selected ID for the right panel
+                            initialMessages={currentMessages} // Pass messages for the right panel
+                            // isLoading={isLoadingMessages} // Pass loading state for the right panel
+                            // error={conversationError} // Pass error state for the right panel
                         />
                     );
                  })()}

@@ -12,7 +12,7 @@ interface ConversationListPanelProps {
   conversationList: Conversation[];
   isLoadingConversations: boolean;
   historyError: string | null;
-  currentConversationId: string | null;
+  currentConversationIdMiddlePanel: string | null;
   onConversationSelect: (conversationId: string) => void;
 }
 
@@ -20,7 +20,7 @@ const ConversationListPanel: React.FC<ConversationListPanelProps> = ({
   conversationList, 
   isLoadingConversations, 
   historyError, 
-  currentConversationId, 
+  currentConversationIdMiddlePanel, 
   onConversationSelect 
 }) => {
   return (
@@ -36,7 +36,7 @@ const ConversationListPanel: React.FC<ConversationListPanelProps> = ({
           {conversationList.map((convo) => (
             <li 
               key={convo.conversationId}
-              className={`text-gray-300 hover:bg-gray-700 p-3 rounded cursor-pointer transition-colors duration-150 text-sm ${currentConversationId === convo.conversationId ? 'bg-blue-900/50 outline outline-2 outline-blue-500 outline-offset-[-2px]' : 'bg-gray-700/40'}`}
+              className={`text-gray-300 hover:bg-gray-700 p-3 rounded cursor-pointer transition-colors duration-150 text-sm ${currentConversationIdMiddlePanel === convo.conversationId ? 'bg-blue-900/50 outline outline-2 outline-blue-500 outline-offset-[-2px]' : 'bg-gray-700/40'}`}
               onClick={() => onConversationSelect(convo.conversationId)}
             >
               <p className="font-medium truncate">ID: {convo.conversationId}</p>

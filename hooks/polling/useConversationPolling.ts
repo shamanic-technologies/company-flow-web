@@ -6,28 +6,27 @@ interface UseConversationPollingProps {
   refreshConversations: () => Promise<void>;
   pollingInterval?: number; // in milliseconds
   isSignedIn: boolean | undefined;
-  selectedAgentIdMiddlePanel: string | null;
+  // selectedAgentIdMiddlePanel: string | null; // Removed as polling now fetches all user conversations
 }
 
 /**
- * @description Custom hook to periodically poll for conversation list data.
+ * @description Custom hook to periodically poll for all user conversation data.
  * @param {UseConversationPollingProps} props - Configuration for conversation polling.
- * @param {() => Promise<void>} props.refreshConversations - Function to refresh conversation list.
+ * @param {() => Promise<void>} props.refreshConversations - Function to refresh all user conversations.
  * @param {number} [props.pollingInterval=5000] - Interval in milliseconds to poll. Defaults to 5000ms.
- * @param {boolean | undefined} props.isSignedIn - Boolean indicating if the user is signed in.
- * @param {string | null} props.selectedAgentIdMiddlePanel - The ID of the currently selected agent. Polling only occurs if an agent is selected.
+ * @param {boolean | undefined} props.isSignedIn - Boolean indicating if the user is signed in. Polling occurs if signed in.
  */
 export function useConversationPolling({
   refreshConversations,
   pollingInterval = 5000,
   isSignedIn,
-  selectedAgentIdMiddlePanel, // Renamed from selectedAgentId
+  // selectedAgentIdMiddlePanel, // Removed
 }: UseConversationPollingProps): void {
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const performFetch = () => {
-      console.log('useConversationPolling: Polling for conversations...');
+      console.log('useConversationPolling: Polling for all user conversations...');
       refreshConversations().catch(error => {
         console.error('useConversationPolling: Error during polling for conversations:', error);
       });
@@ -38,22 +37,21 @@ export function useConversationPolling({
       intervalIdRef.current = null;
     }
 
-    // Start polling only if user is signed in AND an agent is selected
-    if (isSignedIn && selectedAgentIdMiddlePanel) { // Use selectedAgentIdMiddlePanel
+    // Start polling only if user is signed in
+    if (isSignedIn) { 
       performFetch(); // Initial fetch
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useConversationPolling: Started polling for conversations every ${pollingInterval}ms for agent ${selectedAgentIdMiddlePanel}.`); // Use selectedAgentIdMiddlePanel
+      console.log(`useConversationPolling: Started polling for all user conversations every ${pollingInterval}ms.`);
     } else {
-      let reason = !isSignedIn ? "user not signed in" : "no agent selected";
-      console.log(`useConversationPolling: Polling for conversations stopped/not started (${reason}).`);
+      console.log(`useConversationPolling: Polling for conversations stopped/not started (user not signed in).`);
     }
 
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log('useConversationPolling: Stopped polling for conversations.');
+        console.log('useConversationPolling: Stopped polling for all user conversations.');
       }
     };
-  }, [refreshConversations, pollingInterval, isSignedIn, selectedAgentIdMiddlePanel]); // Use selectedAgentIdMiddlePanel
+  }, [refreshConversations, pollingInterval, isSignedIn]); // Removed selectedAgentIdMiddlePanel from dependencies
 } 
