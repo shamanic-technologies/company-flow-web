@@ -5,10 +5,17 @@ import { Button } from "@/components/ui/button";
 import { BackgroundGradients } from "@/components/landing/BackgroundGradients";
 import { Hero } from "@/components/landing/Hero";
 import { ChatLanding } from "@/components/landing/ChatLanding";
-import { SuggestionButtons } from "@/components/landing/SuggestionButtons";
+// import { SuggestionButtons } from "@/components/landing/SuggestionButtons"; // Comment out direct import
 import { WordFlowContainer, LeftWordFlowContainer } from "@/components/landing/WordFlow";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import dynamic from 'next/dynamic'; // Import dynamic
+
+// Dynamically import SuggestionButtons with SSR turned off
+const SuggestionButtons = dynamic(
+  () => import('@/components/landing/SuggestionButtons').then(mod => mod.SuggestionButtons),
+  { ssr: false }
+);
 
 
 /**
