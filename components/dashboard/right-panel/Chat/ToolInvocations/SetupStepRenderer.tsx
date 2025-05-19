@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { SetupStep } from '@/hooks/useSetupSteps'; // Import the step type
-import { UtilityActionConfirmation, UtilityInputSecretEnum } from '@agent-base/types'; // Import enum for comparison
+import { UtilityActionConfirmation, UtilityInputSecret } from '@agent-base/types'; // Import enum for comparison
 import { OAuthCard } from './OAuthCard';
 import { SecretInputCard } from './SecretInputCard';
 import { ActionConfirmationCard } from './ActionConfirmationCard';
@@ -40,7 +40,7 @@ export const SetupStepRenderer: React.FC<SetupStepRendererProps> = ({ step, onSu
       return (
         <SecretInputCard
           utilityProvider={step.provider}
-          secretType={step.secretType as UtilityInputSecretEnum}
+          secretType={step.secretType as UtilityInputSecret}
           // Pass the onSubmit callback for secret submission
           onSubmit={async (value: string) => {
             await onSubmit({ secrets: { [step.secretType]: value } });

@@ -69,10 +69,10 @@ export async function POST(req: NextRequest) {
       return createErrorResponse(400, 'BAD_REQUEST', 'Invalid secrets payload format (must be an object)');
     }
 
-    // Basic validation: Check if secretUtilityProvider is provided
-    if (!secretUtilityProvider || typeof secretUtilityProvider !== 'string' || !Object.values(UtilityProviderEnum).includes(secretUtilityProvider as UtilityProviderEnum)) {
-      console.warn('[API /secrets/store-secret] Missing or invalid secretUtilityProvider');
-      return createErrorResponse(400, 'BAD_REQUEST', 'Missing or invalid secretUtilityProvider');
+    // Basic validation: Check if secretUtilityProvider is provided and is a non-empty string
+    if (!secretUtilityProvider || typeof secretUtilityProvider !== 'string' || secretUtilityProvider.trim() === '') {
+      console.warn('[API /secrets/store-secret] Missing or invalid secretUtilityProvider (must be a non-empty string)');
+      return createErrorResponse(400, 'BAD_REQUEST', 'Missing or invalid secretUtilityProvider (must be a non-empty string)');
     }
 
     // If secrets object is empty, consider it a success (nothing to store)

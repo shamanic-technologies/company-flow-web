@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UtilityInputSecret, UtilityInputSecretEnum, UtilityProvider } from '@agent-base/types';
+import { UtilityInputSecret, UtilityProvider } from '@agent-base/types';
 import { WrenchIcon, CheckCircleIcon, Loader2, AlertTriangleIcon } from 'lucide-react';
 
 interface SecretInputCardProps {
   utilityProvider: UtilityProvider;
-  secretType: UtilityInputSecretEnum;
+  secretType: UtilityInputSecret;
   onSubmit: (value: string) => Promise<void>; // Callback when submitted
   toolCallId: string; // For unique element IDs
 }
@@ -25,10 +25,12 @@ interface SecretInputCardProps {
 type SubmissionState = 'idle' | 'loading' | 'success' | 'error';
 
 // Map secret types to user-friendly labels and input types
-const secretMeta: Record<UtilityInputSecretEnum, { label: string; type: 'text' | 'password' }> = {
-  [UtilityInputSecretEnum.API_SECRET_KEY]: { label: 'API Secret Key', type: 'password' },
-  [UtilityInputSecretEnum.API_PUBLISHABLE_KEY]: { label: 'API Publishable Key', type: 'text' },
-  [UtilityInputSecretEnum.API_IDENTIFIER]: { label: 'API Identifier', type: 'text' },
+const secretMeta: Record<UtilityInputSecret, { label: string; type: 'text' | 'password' }> = {
+  [UtilityInputSecret.API_SECRET_KEY]: { label: 'API Secret Key', type: 'password' },
+  [UtilityInputSecret.API_PUBLISHABLE_KEY]: { label: 'API Publishable Key', type: 'text' },
+  [UtilityInputSecret.API_IDENTIFIER]: { label: 'API Identifier', type: 'text' },
+  [UtilityInputSecret.USERNAME]: { label: 'Username', type: 'text' },
+  [UtilityInputSecret.PASSWORD]: { label: 'Password', type: 'password' },
 };
 
 export const SecretInputCard = ({ 

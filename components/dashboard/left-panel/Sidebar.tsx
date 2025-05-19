@@ -27,6 +27,7 @@ import { useDashboard } from '../context/DashboardContext'
 import { SearchWebhookResultItem, WebhookStatus, UtilityProvider } from '@agent-base/types';
 import WebhookSubfolder from './WebhookSubfolder';
 import { renderSectionContent } from './SidebarSectionRenderer';
+import ToolSubfolder, { ToolItem as ImportedToolItem } from './ToolSubfolder';
 
 import {
   Collapsible,
@@ -85,7 +86,31 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
     webhookError,
     selectedWebhook,
     selectWebhookAndSetView,
-  } = useDashboard()
+    // --- Add placeholder tool data and handlers ---
+    // These would normally come from useDashboard() context
+  } = useDashboard();
+
+  // --- Placeholder Tool Data and State (to be moved to context) ---
+  const [userTools, setUserTools] = useState<ImportedToolItem[]>([
+    { id: 'tool1', name: 'Data Analyzer X', status: 'active' },
+    { id: 'tool2', name: 'Email Assistant', status: 'active' },
+    { id: 'tool3', name: 'Calendar Connector', status: 'available' },
+    { id: 'tool4', name: 'File Converter', status: 'beta' },
+    { id: 'tool5', name: 'Image Generator (New)', status: 'beta' },
+    { id: 'tool6', name: 'Sentiment Analysis Pro', status: 'active'},
+    { id: 'tool7', name: 'Quick Translator', status: 'available'}
+  ]);
+  const [isLoadingTools, setIsLoadingTools] = useState(false); // Mock loading state
+  const [toolError, setToolError] = useState<string | null>(null); // Mock error state
+  const [selectedTool, setSelectedTool] = useState<ImportedToolItem | null>(null);
+
+  const selectToolAndSetView = (tool: ImportedToolItem | null) => {
+    setSelectedTool(tool);
+    // Potentially also set a view, similar to selectWebhookAndSetView
+    // e.g., setActiveToolView('detail');
+    console.log("Selected tool:", tool);
+  };
+  // --- End of Placeholder Tool Data ---
 
   // State to track which agent's sub-menu is expanded (from old sidebar)
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(selectedAgentId)
@@ -103,6 +128,11 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const activeWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.ACTIVE);
   const unsetWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.UNSET || !wh.currentUserWebhookStatus); // Include undefined/null as UNSET
   const disabledWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.DISABLED);
+
+  // --- Filter Tools by Status (using placeholder data) ---
+  const activeTools = userTools.filter((t: ImportedToolItem) => t.status === 'active');
+  const availableTools = userTools.filter((t: ImportedToolItem) => t.status === 'available');
+  const betaTools = userTools.filter((t: ImportedToolItem) => t.status === 'beta');
 
   return (
     <Sidebar {...props} className="border-r border-border/40">
@@ -251,12 +281,30 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
                   <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isToolsOpen && "rotate-90")} />
+                  {/* Using Package icon for the Tools section header */}
+                  <Package className="h-3.5 w-3.5 shrink-0 mr-0.5" />
                   <span className="flex-1 text-left">Tools</span>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub className="pl-1">
-                  <div className="p-1 text-xs text-muted-foreground">Tools coming soon...</div>
+                  {isLoadingTools ? (
+                    <div className="p-1 flex flex-col gap-1">
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-full" />
+                    </div>
+                  ) : toolError ? (
+                    <div className="p-1 text-xs text-red-400">Error: {toolError}</div>
+                  ) : (
+                    <>
+                      <ToolSubfolder title="Active Tools" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                      <ToolSubfolder title="Available Tools" tools={availableTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                      <ToolSubfolder title="Beta Tools" tools={betaTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                      {userTools.length === 0 && (
+                        <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
+                      )}
+                    </>
+                  )}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>

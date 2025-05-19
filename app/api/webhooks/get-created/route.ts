@@ -16,13 +16,13 @@ export async function GET(request: NextRequest) {
         
         // Check if the user is authenticated
         if (!userId) {
-          console.error('[API /agents/get-or-create] User not authenticated via Clerk');
+          console.error('[API /webhooks/get-created] User not authenticated via Clerk');
           return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
         }
     
         // Check if the API key is configured
         if (!agentBaseApiKey) {
-          console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
+          console.error('[API /webhooks/get-created] AGENT_BASE_API_KEY environment variable not set');
           return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
         }
     
