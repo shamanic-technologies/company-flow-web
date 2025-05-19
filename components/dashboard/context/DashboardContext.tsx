@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Agent, Conversation, Webhook } from '@agent-base/types';
+import { Agent, Conversation, Webhook, ApiTool } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
 import { UserResource } from '@clerk/types';
@@ -10,6 +10,7 @@ import { UserResource } from '@clerk/types';
 import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
 import { useWebhooks } from '../../../hooks/useWebhooks';
+import { useApiTools } from '../../../hooks/useApiTools';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
@@ -18,7 +19,14 @@ import { useConversationPolling } from '../../../hooks/polling/useConversationPo
 import { SearchWebhookResultItem } from '@agent-base/types';
 import { useMessages } from '../../../hooks/useMessages';
 
-type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail';
+// --- BEGIN MODIFICATION ---
+// Import the ToolItem type, assuming it might be defined in Sidebar or a shared types file
+// For now, let's define a placeholder here or import if available.
+// We'll use the one from Sidebar for now, which should be moved to a central location.
+// import { ToolItem as ImportedToolItem } from '../left-panel/ToolSubfolder'; // No longer needed, will use ApiTool
+// --- END MODIFICATION ---
+
+type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail';
 
 interface DashboardContextType {
   clerkUser: UserResource | null | undefined;
@@ -67,11 +75,22 @@ interface DashboardContextType {
   activeAgentView: ActiveAgentView;
   setActiveAgentView: (view: ActiveAgentView) => void;
 
+  // API Tools state
+  apiTools: ApiTool[];
+  isLoadingApiTools: boolean;
+  apiToolsError: string | null;
+  fetchApiTools: () => Promise<void>; // Function to manually refresh API tools
+
+  selectedTool: ApiTool | null; // Changed from ImportedToolItem to ApiTool
+  // isLoadingToolDetail: boolean;
+  // toolDetailError: string | null;
+
   // Action wrappers combining state updates and view changes
   selectAgentAndSetView: (agentId: string | null) => void;
   selectConversationAndSetView: (conversationId: string | null) => void; // Assumed for Middle Panel
   createNewChatAndSetView: () => Promise<void>; // Assumed for Right Panel
   selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
+  selectToolAndSetView: (tool: ApiTool | null) => void; // Changed from ImportedToolItem to ApiTool
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>; // Refreshes the master list of conversations
 }
@@ -111,10 +130,16 @@ export const DashboardContext = createContext<DashboardContextType>({
   fetchUserWebhooks: async () => { console.warn("fetchUserWebhooks called on default context"); },
   activeAgentView: 'conversations',
   setActiveAgentView: () => {},
+  apiTools: [],
+  isLoadingApiTools: false,
+  apiToolsError: null,
+  fetchApiTools: async () => { console.warn("fetchApiTools called on default context"); },
+  selectedTool: null,
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
   createNewChatAndSetView: async () => {},
   selectWebhookAndSetView: () => {},
+  selectToolAndSetView: () => { console.warn("selectToolAndSetView called on default context"); },
   refreshAgents: async () => { console.warn("refreshAgents called on default context"); },
   refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
 });
@@ -192,7 +217,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchUserWebhooks 
   } = useWebhooks({ handleLogout: handleClerkLogout });
 
+  // --- API Tools Hook ---
+  const {
+    apiTools,
+    isLoadingApiTools,
+    apiToolsError,
+    fetchApiTools,
+  } = useApiTools({ handleLogout: handleClerkLogout });
+
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
+  const [selectedTool, setSelectedTool] = useState<ApiTool | null>(null); // Changed from ImportedToolItem to ApiTool
   const POLLING_INTERVAL = 5000;
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn });
@@ -239,12 +273,29 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectWebhook(webhook);
     if (webhook) {
       setActiveAgentView('webhookDetail');
+      setSelectedTool(null);
     } else {
       if (selectedAgentIdMiddlePanel) { // Revert to conversations if an agent is selected
         setActiveAgentView('conversations');
       }
     }
-  }, [selectWebhook, setActiveAgentView, selectedAgentIdMiddlePanel]);
+  }, [selectWebhook, setActiveAgentView, selectedAgentIdMiddlePanel, selectedWebhook]);
+
+  const selectToolAndSetView = useCallback((tool: ApiTool | null) => {
+    setSelectedTool(tool);
+    if (tool) {
+      setActiveAgentView('toolDetail');
+      selectWebhook(null);
+    } else {
+      if (selectedAgentIdMiddlePanel) {
+        setActiveAgentView('conversations');
+      } else if (selectedWebhook) {
+        setActiveAgentView('webhookDetail');
+      } else {
+        // For now, let MiddlePanel handle a null tool. If activeView is still 'toolDetail', it shows "select a tool".
+      }
+    }
+  }, [setActiveAgentView, selectWebhook, selectedAgentIdMiddlePanel, selectedWebhook]);
 
   const isClerkLoading = !clerkIsLoaded;
 
@@ -303,16 +354,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     activeAgentView,
     setActiveAgentView,
     
+    apiTools,
+    isLoadingApiTools,
+    apiToolsError,
+    fetchApiTools,
+    
+    selectedTool,
+    
     selectAgentAndSetView,
     selectConversationAndSetView,
     createNewChatAndSetView,
     selectWebhookAndSetView,
+    selectToolAndSetView,
     
     refreshAgents: fetchAgents,
     refreshConversations: refreshConversationList,
-    // Expose fetch functions for messages if manual refresh is needed by consumers
-    fetchMessagesMiddlePanel: fetchMessages, // from useConversations -> useMessages
-    fetchMessagesRightPanel,                 // from the new useMessages for right panel
+    refreshApiTools: fetchApiTools,
+    fetchMessagesMiddlePanel: fetchMessages,
+    fetchMessagesRightPanel,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, selectAgentMiddlePanel, selectAgentRightPanel, isLoadingAgents, agentError, fetchAgents,
@@ -323,7 +382,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
     activeAgentView, 
+    apiTools, isLoadingApiTools, apiToolsError, fetchApiTools,
+    selectedTool,
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
+    selectToolAndSetView,
     refreshConversationList, fetchMessages, fetchMessagesRightPanel,
   ]);
   

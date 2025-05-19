@@ -23,7 +23,7 @@ export function createErrorResponse(
     JSON.stringify({
       error: message,
       errorCode: errorCode,
-      details: details || message
+      details: details
     }),
     { 
       status: status, 
@@ -71,7 +71,7 @@ export function handleApiError(error: any, defaultMessage = 'An unexpected error
       error.status,
       error.code,
       error.message || 'Unknown error',
-      error.details || 'An error occurred'
+      error.details
     );
   }
   

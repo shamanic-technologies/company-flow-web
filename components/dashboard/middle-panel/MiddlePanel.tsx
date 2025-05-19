@@ -22,6 +22,9 @@ import MemoryPanel from './MemoryPanel';
 import ActionsPanel from './ActionsPanel';
 // Import a new component for displaying webhook details
 import WebhookDetailPanel from './WebhookDetailPanel'; 
+// Import the ToolDetailPanel and the ToolItem type (using the alias from context)
+import ToolDetailPanel from './ToolDetailPanel';
+import { ToolItem as ImportedToolItem } from '../left-panel/ToolSubfolder'; // Path to where ToolItem is defined
 
 // Import shared types (Use monorepo package)
 // import { Agent, Conversation, CreateConversationInput } from '@agent-base/types'; // Types used via context
@@ -64,7 +67,10 @@ export default function MiddlePanel() {
     // Webhook related (from context)
     selectedWebhook,
     webhookError,
-    isLoadingWebhooks
+    isLoadingWebhooks,
+    // Tool related (from context)
+    selectedTool, // Consuming selectedTool from context
+
   } = useDashboard();
 
   const selectedAgent = agents && selectedAgentId
@@ -179,7 +185,14 @@ export default function MiddlePanel() {
         if (!selectedWebhook) {
             return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select a webhook from the sidebar to view its details.</div>;
         }
-        return <WebhookDetailPanel webhook={selectedWebhook} onEventClick={selectConversationAndSetView} />; 
+        return <WebhookDetailPanel webhook={selectedWebhook} onEventClick={selectConversationAndSetView} />;
+
+      case 'toolDetail':
+        if (!selectedTool) {
+          return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select a tool from the sidebar to view its details.</div>;
+        }
+        // Ensure selectedTool is of the correct type if it comes from context
+        return <ToolDetailPanel tool={selectedTool as ImportedToolItem} />;
 
       default:
         const exhaustiveCheck: never = activeAgentView;

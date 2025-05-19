@@ -4,7 +4,7 @@
  */
 import { NextRequest } from 'next/server';
 import { getUserApiTools } from '@agent-base/api-client';
-import { ServiceResponse, ApiTool, PlatformUserApiServiceCredentials } from '@agent-base/types';
+import { ServiceResponse, ApiTool, PlatformUserApiServiceCredentials, SearchApiToolResult } from '@agent-base/types';
 import { createErrorResponse, createSuccessResponse } from '../utils/types';
 import { auth } from '@clerk/nextjs/server';
 
@@ -31,30 +31,39 @@ export async function GET(request: NextRequest) {
         };
 
         // Call the SDK function to get user-specific API tools
-        const apiToolsResponse: ServiceResponse<ApiTool[]> = await getUserApiTools(credentials);
+        const apiToolsResponse: ServiceResponse<SearchApiToolResult> = await getUserApiTools(credentials);
 
         if (!apiToolsResponse.success) {
             const errorVal = apiToolsResponse.error;
             console.error('[API /api-tools] Failed to fetch API tools: ', errorVal);
             
-            let errorMessage = 'Failed to fetch API tools';
-            let errorDetails = 'Error fetching tools from the backend service.';
-            let statusCode = 500;
-            let errorCode = 'SERVICE_ERROR';
+            // Initialize with undefined or values directly from errorVal if they exist
+            let errorMessage: string | undefined;
+            let errorDetails: string | undefined;
+            let statusCode: number = 500; // Default status code if not specified by errorVal
+            let errorCode: string = 'SERVICE_ERROR'; // Default error code if not specified
 
             if (typeof errorVal === 'string') {
                 errorMessage = errorVal;
             } else if (errorVal && typeof errorVal === 'object') {
-                errorMessage = (errorVal as any).message || errorMessage;
-                const details = (errorVal as any).details;
-                if (details) {
-                    errorDetails = typeof details === 'string' ? details : JSON.stringify(details);
-                } else {
-                    errorDetails = 'No additional details provided.';
+                // Attempt to extract specific fields, without fallbacks to generic strings for these fields
+                errorMessage = (errorVal as any).message; 
+                errorDetails = (errorVal as any).details;
+                // Only override defaults if statusCode and code are present and valid types
+                if (typeof (errorVal as any).statusCode === 'number') {
+                    statusCode = (errorVal as any).statusCode;
                 }
-                statusCode = (errorVal as any).statusCode || statusCode;
-                errorCode = (errorVal as any).code || errorCode;
+                if (typeof (errorVal as any).code === 'string') {
+                    errorCode = (errorVal as any).code;
+                }
             }
+
+            // If errorMessage is still undefined, set a generic one, as it's required by createErrorResponse
+            if (errorMessage === undefined) {
+                errorMessage = 'Failed to fetch API tools due to an unspecified error from the backend service.';
+            }
+            // errorDetails can remain undefined
+
             return createErrorResponse(statusCode, errorCode, errorMessage, errorDetails);
         }
 
@@ -64,11 +73,14 @@ export async function GET(request: NextRequest) {
     } catch (error: any) {
         console.error('❌ API /api-tools - Error:', error);
         const status = typeof error.status === 'number' ? error.status : 500;
+        // Ensure message is a string. If error.message is not available or not a string, provide a clear indication.
+        const message = typeof error.message === 'string' && error.message ? error.message : 'An unexpected error occurred without a specific message.';
         return createErrorResponse(
             status,
-            'SERVICE_ERROR',
-            error.message || 'An unexpected error occurred.',
-            'Internal service error while processing the request for API tools.'
+            error.code || 'SERVICE_ERROR', // Fallback for error.code
+            message,
+            // Pass error.details if available, otherwise it will be undefined
+            typeof error.details === 'string' ? error.details : undefined 
         );
     }
 }

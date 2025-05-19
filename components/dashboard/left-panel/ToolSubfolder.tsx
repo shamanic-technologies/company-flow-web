@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { useState } from 'react';
-import { ChevronRight, Package } from "lucide-react"; // Using Package icon for tools
+import { ChevronRight, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ApiTool } from '@agent-base/types'; // Import ApiTool
+import { CrispIcon, StripeIcon } from '@/components/icons'; // Import provider icons
 // import { SomeToolProviderEnum } from '@agent-base/types'; // Placeholder if specific tool icons are needed later
 
 import {
@@ -17,28 +19,32 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar";
 
-// --- Placeholder ToolItem Interface ---
-// This would ideally be in a shared types package like @agent-base/types
-export interface ToolItem {
-  id: string;
-  name: string;
-  // providerId?: SomeToolProviderEnum; // Example for future dynamic icons
-  status?: 'active' | 'available' | 'beta'; // Example for categorization
-}
+// --- ToolItem Interface Removed ---
+// No longer needed, using ApiTool from @agent-base/types
 
 // --- Helper Function to get Tool Icon ---
-// Simplified for now, returns a generic Package icon.
-// Could be expanded later to return different icons based on tool properties.
-const getToolIcon = (_tool?: ToolItem) => {
-  return Package;
+const getToolIcon = (tool?: ApiTool) => {
+  // Access utilityProvider safely, defaulting to lowercase for case-insensitive matching
+  const provider = (tool as any)?.utilityProvider?.toLowerCase();
+
+  switch (provider) {
+    case 'crisp':
+      return CrispIcon;
+    case 'stripe':
+      return StripeIcon;
+    // Add more cases here for other utility providers and their icons
+    // e.g. case 'slack': return SlackIcon;
+    default:
+      return Package; // Default icon if provider is not matched or not specified
+  }
 };
 
 // --- Props Interface for ToolSubfolder ---
 export interface ToolSubfolderProps {
   title: string;
-  tools: ToolItem[];
-  selectedTool: ToolItem | null;
-  selectToolAndSetView: (tool: ToolItem | null) => void;
+  tools: ApiTool[]; // Changed to ApiTool[]
+  selectedTool: ApiTool | null; // Changed to ApiTool | null
+  selectToolAndSetView: (tool: ApiTool | null) => void; // Changed to ApiTool | null
 }
 
 // --- Tool Subfolder Component ---
@@ -48,7 +54,7 @@ export default function ToolSubfolder({
   selectedTool,
   selectToolAndSetView
 }: ToolSubfolderProps) {
-  const [isOpen, setIsOpen] = useState(title === 'Active Tools'); // Default open for a common category e.g. 'Active Tools'
+  const [isOpen, setIsOpen] = useState(title === 'Active'); // Default open for 'Active' category
 
   // Don't render the subfolder if there are no tools in this category
   if (tools.length === 0) {
@@ -66,7 +72,7 @@ export default function ToolSubfolder({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub className="pl-1">
-            {tools.map((tool: ToolItem) => {
+            {tools.map((tool: ApiTool) => { // Changed to ApiTool
               // Get the appropriate icon for this tool
               const IconComponent = getToolIcon(tool);
               return (
@@ -81,7 +87,7 @@ export default function ToolSubfolder({
                     onClick={() => selectToolAndSetView(tool)}
                   >
                     <IconComponent className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate flex-1 text-left">{tool.name}</span>
+                    <span className="truncate flex-1 text-left">{tool.id}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
