@@ -1,5 +1,4 @@
 import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,11 +26,9 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning className="scroll-smooth">
+      <html lang="en" suppressHydrationWarning className="dark scroll-smooth">
         <body className={`${inter.className} antialiased`}>
-          <ThemeProvider>
             {children}
-          </ThemeProvider>
           <Toaster />
         </body>
       </html>
