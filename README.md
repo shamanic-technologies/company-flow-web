@@ -7,20 +7,20 @@ Frontend web application for the Agent Base platform.
 - **Framework**: Next.js 15
 - **UI**: Tailwind CSS + Radix UI components
 - **Language**: TypeScript
-- **Package Manager**: npm
+- **Package Manager**: pnpm
 
 ## Getting Started
 
 First, install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Then, run the development server:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:3020](http://localhost:3020) with your browser to see the result.
@@ -30,15 +30,20 @@ Open [http://localhost:3020](http://localhost:3020) with your browser to see the
 Create a `.env.local` file with the following variables:
 
 ```
-NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:3002
-NEXT_PUBLIC_WEB_GATEWAY_URL=http://localhost:3030
-WEB_GATEWAY_API_KEY=YOURKEY
+
+AGENT_BASE_API_URL=YOUR_AGENT_BASE_API_URL
+AGENT_BASE_API_KEY=YOUR_AGENT_BASE_API_KEY
+
+RESEND_API_KEY=YOUR_RESEND_API_KEY
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=YOUR_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY=YOUR_CLERK_SECRET_KEY
 ```
 
 ## Building for Production
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## Deployment
