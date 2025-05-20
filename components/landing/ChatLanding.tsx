@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
  */
 function ChatLandingInterface() {
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   
   /**
@@ -23,6 +24,7 @@ function ChatLandingInterface() {
     e.preventDefault();
     // Check if message has at least 1 character (excluding whitespace)
     if (message.trim().length >= 1) {
+      setIsLoading(true);
       // Store the message in localStorage before redirecting
       localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
       
@@ -38,6 +40,7 @@ function ChatLandingInterface() {
   const handleButtonClick = () => {
     console.log("Button clicked!");
     if (message.trim().length >= 1) {
+      setIsLoading(true);
       // Store the message in localStorage before redirecting
       localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
       
@@ -62,11 +65,15 @@ function ChatLandingInterface() {
             <Button 
               type="button" 
               size="icon" 
-              disabled={message.trim().length < 1}
+              disabled={message.trim().length < 1 || isLoading}
               className="rounded-full h-11 w-11 bg-gradient-to-r from-blue-500 to-emerald-500 hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
               onClick={handleButtonClick}
             >
-              <Send className="h-4 w-4" suppressHydrationWarning={true} />
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" suppressHydrationWarning={true} />
+              )}
             </Button>
           </div>
         </div>
