@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Agent, Conversation, Webhook, ApiTool } from '@agent-base/types';
+import { Agent, Conversation, Webhook, ApiTool, SearchApiToolResultItem } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
 import { UserResource } from '@clerk/types';
@@ -76,12 +76,12 @@ interface DashboardContextType {
   setActiveAgentView: (view: ActiveAgentView) => void;
 
   // API Tools state
-  apiTools: ApiTool[];
+  apiTools: SearchApiToolResultItem[];
   isLoadingApiTools: boolean;
   apiToolsError: string | null;
   fetchApiTools: () => Promise<void>; // Function to manually refresh API tools
 
-  selectedTool: ApiTool | null; // Changed from ImportedToolItem to ApiTool
+  selectedTool: SearchApiToolResultItem | null;
   // isLoadingToolDetail: boolean;
   // toolDetailError: string | null;
 
@@ -90,7 +90,7 @@ interface DashboardContextType {
   selectConversationAndSetView: (conversationId: string | null) => void; // Assumed for Middle Panel
   createNewChatAndSetView: () => Promise<void>; // Assumed for Right Panel
   selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
-  selectToolAndSetView: (tool: ApiTool | null) => void; // Changed from ImportedToolItem to ApiTool
+  selectToolAndSetView: (tool: SearchApiToolResultItem | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>; // Refreshes the master list of conversations
 }
@@ -226,7 +226,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   } = useApiTools({ handleLogout: handleClerkLogout });
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
-  const [selectedTool, setSelectedTool] = useState<ApiTool | null>(null); // Changed from ImportedToolItem to ApiTool
+  const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const POLLING_INTERVAL = 5000;
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn });
@@ -281,7 +281,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [selectWebhook, setActiveAgentView, selectedAgentIdMiddlePanel, selectedWebhook]);
 
-  const selectToolAndSetView = useCallback((tool: ApiTool | null) => {
+  const selectToolAndSetView = useCallback((tool: SearchApiToolResultItem | null) => {
     setSelectedTool(tool);
     if (tool) {
       setActiveAgentView('toolDetail');

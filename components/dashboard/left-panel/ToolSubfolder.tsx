@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState } from 'react';
 import { ChevronRight, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ApiTool } from '@agent-base/types'; // Import ApiTool
+import { SearchApiToolResultItem, ApiToolStatus } from '@agent-base/types'; // Import SearchApiToolResultItem
 import { CrispIcon, StripeIcon } from '@/components/icons'; // Import provider icons
 // import { SomeToolProviderEnum } from '@agent-base/types'; // Placeholder if specific tool icons are needed later
 
@@ -23,9 +23,9 @@ import {
 // No longer needed, using ApiTool from @agent-base/types
 
 // --- Helper Function to get Tool Icon ---
-const getToolIcon = (tool?: ApiTool) => {
+const getToolIcon = (tool?: SearchApiToolResultItem) => {
   // Access utilityProvider safely, defaulting to lowercase for case-insensitive matching
-  const provider = (tool as any)?.utilityProvider?.toLowerCase();
+  const provider = tool?.utilityProvider?.toLowerCase();
 
   switch (provider) {
     case 'crisp':
@@ -42,9 +42,9 @@ const getToolIcon = (tool?: ApiTool) => {
 // --- Props Interface for ToolSubfolder ---
 export interface ToolSubfolderProps {
   title: string;
-  tools: ApiTool[]; // Changed to ApiTool[]
-  selectedTool: ApiTool | null; // Changed to ApiTool | null
-  selectToolAndSetView: (tool: ApiTool | null) => void; // Changed to ApiTool | null
+  tools: SearchApiToolResultItem[];
+  selectedTool: SearchApiToolResultItem | null;
+  selectToolAndSetView: (tool: SearchApiToolResultItem | null) => void;
 }
 
 // --- Tool Subfolder Component ---
@@ -72,13 +72,13 @@ export default function ToolSubfolder({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub className="pl-1">
-            {tools.map((tool: ApiTool) => { // Changed to ApiTool
+            {tools.map((tool: SearchApiToolResultItem) => {
               // Get the appropriate icon for this tool
               const IconComponent = getToolIcon(tool);
               return (
-                <SidebarMenuItem key={tool.id}>
+                <SidebarMenuItem key={tool.apiToolId}>
                   <SidebarMenuButton
-                    data-active={selectedTool?.id === tool.id}
+                    data-active={selectedTool?.apiToolId === tool.apiToolId}
                     className={cn(
                       "w-full justify-start text-xs h-6 px-1 gap-1",
                       "hover:text-accent-foreground",
@@ -87,7 +87,7 @@ export default function ToolSubfolder({
                     onClick={() => selectToolAndSetView(tool)}
                   >
                     <IconComponent className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate flex-1 text-left">{tool.id}</span>
+                    <span className="truncate flex-1 text-left">{tool.name}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );

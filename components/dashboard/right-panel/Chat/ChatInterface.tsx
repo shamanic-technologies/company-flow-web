@@ -102,6 +102,20 @@ export const ChatInterface = ({
     }
   });
   
+  // --- START: Log messages for debugging stream content ---
+  useEffect(() => {
+    // console.log("[ChatInterface Debug] Messages updated:", JSON.stringify(messages, null, 2));
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.role === 'assistant') {
+      // console.log("[ChatInterface Debug] Last assistant message object:", JSON.stringify(lastMessage, null, 2));
+      console.log("[ChatInterface Debug] Last assistant message parts:", JSON.stringify(lastMessage.parts, null, 2));
+      if (lastMessage.content) {
+        console.log("[ChatInterface Debug] Last assistant message content:", lastMessage.content);
+      }
+    }
+  }, [messages]);
+  // --- END: Log messages for debugging stream content ---
+
   // --- START: Sync useChat messages with initialMessages prop ---
   useEffect(() => {
       console.log("ChatInterface Effect: initialMessages prop changed, calling setMessages.");

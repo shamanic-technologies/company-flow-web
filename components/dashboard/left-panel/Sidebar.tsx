@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDashboard } from '../context/DashboardContext'
-import { SearchWebhookResultItem, WebhookStatus, ApiTool } from '@agent-base/types';
+import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToolStatus } from '@agent-base/types';
 import WebhookSubfolder from './WebhookSubfolder';
 import { renderSectionContent } from './SidebarSectionRenderer';
 import ToolSubfolder from './ToolSubfolder';
@@ -111,9 +111,8 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const disabledWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.DISABLED);
 
   // --- Filter Tools by Status (using live data from context) ---
-  const activeTools = apiTools.filter((t: ApiTool) => (t as any).status === 'active');
-  const availableTools = apiTools.filter((t: ApiTool) => (t as any).status === 'available');
-  const betaTools = apiTools.filter((t: ApiTool) => (t as any).status === 'beta');
+  const activeTools = apiTools.filter((t: SearchApiToolResultItem) => t.status === ApiToolStatus.ACTIVE);
+  const unsetTools = apiTools.filter((t: SearchApiToolResultItem) => t.status === ApiToolStatus.UNSET);
 
   return (
     <Sidebar {...props} className="border-r border-border/40">
@@ -277,9 +276,8 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                   ) : (
                     <>
                       <ToolSubfolder title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                      <ToolSubfolder title="Available Tools" tools={availableTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                      <ToolSubfolder title="Beta Tools" tools={betaTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                      {apiTools.length === 0 && activeTools.length === 0 && availableTools.length === 0 && betaTools.length === 0 && (
+                      <ToolSubfolder title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                      {apiTools.length === 0 && activeTools.length === 0 && unsetTools.length === 0 && (
                         <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
                       )}
                     </>

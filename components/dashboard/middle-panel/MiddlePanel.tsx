@@ -14,7 +14,7 @@ import { useDashboard } from '@/components/dashboard/context/DashboardContext';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 // Import Webhook type
-import { Webhook } from '@agent-base/types'; 
+import { Webhook, SearchApiToolResultItem } from '@agent-base/types'; 
 
 // Import panel components
 import ConversationListPanel from './ConversationListPanel';
@@ -22,9 +22,8 @@ import MemoryPanel from './MemoryPanel';
 import ActionsPanel from './ActionsPanel';
 // Import a new component for displaying webhook details
 import WebhookDetailPanel from './WebhookDetailPanel'; 
-// Import the ToolDetailPanel and the ToolItem type (using the alias from context)
+// Import the ToolDetailPanel
 import ToolDetailPanel from './ToolDetailPanel';
-import { ToolItem as ImportedToolItem } from '../left-panel/ToolSubfolder'; // Path to where ToolItem is defined
 
 // Import shared types (Use monorepo package)
 // import { Agent, Conversation, CreateConversationInput } from '@agent-base/types'; // Types used via context
@@ -191,8 +190,7 @@ export default function MiddlePanel() {
         if (!selectedTool) {
           return <div className="flex items-center justify-center h-full text-gray-500 p-4 text-xs">Select a tool from the sidebar to view its details.</div>;
         }
-        // Ensure selectedTool is of the correct type if it comes from context
-        return <ToolDetailPanel tool={selectedTool as ImportedToolItem} />;
+        return <ToolDetailPanel searchApiTool={selectedTool} />;
 
       default:
         const exhaustiveCheck: never = activeAgentView;

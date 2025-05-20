@@ -32,7 +32,7 @@ Create a `.env.local` file with the following variables:
 ```
 NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:3002
 NEXT_PUBLIC_WEB_GATEWAY_URL=http://localhost:3030
-WEB_GATEWAY_API_KEY=g4t3way-k3y-e5e821f89a2d4c3b
+WEB_GATEWAY_API_KEY=YOURKEY
 ```
 
 ## Building for Production

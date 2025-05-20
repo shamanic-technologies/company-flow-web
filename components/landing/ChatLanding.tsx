@@ -67,7 +67,7 @@ function ChatLandingInterface() {
               className="rounded-full h-11 w-11 bg-gradient-to-r from-blue-500 to-emerald-500 hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
               onClick={handleButtonClick}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4" suppressHydrationWarning={true} />
             </Button>
           </div>
         </div>

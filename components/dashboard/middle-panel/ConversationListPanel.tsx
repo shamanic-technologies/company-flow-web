@@ -33,7 +33,9 @@ const ConversationListPanel: React.FC<ConversationListPanelProps> = ({
         <div className="text-center text-gray-500 py-4">No conversation history found for this agent.</div>
       ) : (
         <ul className="space-y-2 py-2">
-          {conversationList.map((convo) => (
+          {[...conversationList]
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            .map((convo) => (
             <li 
               key={convo.conversationId}
               className={`text-gray-300 hover:bg-gray-700 p-3 rounded cursor-pointer transition-colors duration-150 text-sm ${currentConversationIdMiddlePanel === convo.conversationId ? 'bg-blue-900/50 outline outline-2 outline-blue-500 outline-offset-[-2px]' : 'bg-gray-700/40'}`}

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package } from 'lucide-react';
-import { ApiTool } from '@agent-base/types'; // Import ApiTool
+import { ApiTool, SearchApiToolResultItem } from '@agent-base/types'; // Import ApiTool
 
 // ToolItem interface removed, using ApiTool from @agent-base/types
 
 interface ToolDetailPanelProps {
-  tool: ApiTool; // Changed to ApiTool
+  searchApiTool: SearchApiToolResultItem; // Changed to ApiTool
 }
 
 /**
@@ -14,8 +14,8 @@ interface ToolDetailPanelProps {
  * 
  * Displays the details of a selected tool.
  */
-const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ tool }) => {
-  if (!tool) {
+const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ searchApiTool }) => {
+  if (!searchApiTool) {
     return (
       <div className="p-4 h-full flex items-center justify-center text-sm text-gray-500">
         No tool selected or tool data is unavailable.
@@ -24,26 +24,32 @@ const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ tool }) => {
   }
 
   // Attempt to get a display name. Fallback to ID.
-  const displayName = (tool as any).name || tool.id;
-  const description = (tool as any).description;
-  const status = (tool as any).status;
-  const utilityProvider = (tool as any).utilityProvider;
-  const securityOption = (tool as any).securityOption;
-  const isVerified = (tool as any).isVerified;
-  const creatorUserId = (tool as any).creatorUserId;
-  const userId = (tool as any).userId; // This might be the same as creatorUserId or different
-  const totalExecutions = (tool as any).totalExecutions;
-  const succeededExecutions = (tool as any).succeededExecutions;
-  const failedExecutions = (tool as any).failedExecutions;
-  const createdAt = (tool as any).createdAt;
-  const updatedAt = (tool as any).updatedAt;
+  const displayName = searchApiTool.name;
+  const description = searchApiTool.description;
+  const status = searchApiTool.status;
+  const utilityProvider = searchApiTool.utilityProvider;
+  const securityOption = searchApiTool.securityOption;
+  const isVerified = searchApiTool.isVerified;
+  const creatorUserId = searchApiTool.creatorUserId;
+  const userId = searchApiTool.userId; // This might be the same as creatorUserId or different
+  const totalExecutions = searchApiTool.totalExecutions;
+  const succeededExecutions = searchApiTool.succeededExecutions;
+  const failedExecutions = searchApiTool.failedExecutions;
+  const createdAt = searchApiTool.createdAt; // This should now be a Date object
+  const updatedAt = searchApiTool.updatedAt; // This should now be a Date object
 
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'N/A';
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return 'N/A';
+    // Check if the date is valid before calling toLocaleString()
+    if (isNaN(date.getTime())) {
+      console.warn("ToolDetailPanel: Received invalid date object for formatting:", date);
+      return 'Invalid Date'; 
+    }
     try {
-      return new Date(dateString).toLocaleString();
+      return date.toLocaleString();
     } catch (e) {
-      return dateString; // Return original if parsing fails
+      console.error("ToolDetailPanel: Error formatting date:", e, "Original date:", date);
+      return 'Error formatting date';
     }
   };
 
@@ -58,12 +64,12 @@ const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ tool }) => {
         <CardContent className="text-xs p-3 space-y-1.5">
           <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 items-center">
             <span className="font-semibold text-gray-400">ID:</span>
-            <span className="font-mono break-all">{tool.id}</span>
+            <span className="font-mono break-all">{searchApiTool.apiToolId}</span>
 
-            {(tool as any).name && (
+            {searchApiTool.name && (
               <>
                 <span className="font-semibold text-gray-400">Name:</span>
-                <span>{(tool as any).name}</span>
+                <span>{searchApiTool.name}</span>
               </>
             )}
 

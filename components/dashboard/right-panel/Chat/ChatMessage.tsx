@@ -100,11 +100,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
                       <div className="text-xs text-blue-400 font-medium">AI Reasoning</div>
                     </div>
                     <div className="text-xs text-gray-300 bg-gray-850 p-2 rounded font-mono whitespace-pre-wrap">
-                      {part.details?.map((detail, idx) => (
-                        <span key={`${message.id}-reasoning-${index}-detail-${idx}`} className={detail.type === 'redacted' ? 'text-gray-500' : ''}>
-                          {detail.type === 'text' ? detail.text : '<redacted>'}
-                        </span>
-                      ))}
+                      {typeof part.reasoning === 'string' ? part.reasoning : 'No reasoning text available.'}
                     </div>
                   </div>
                 );
