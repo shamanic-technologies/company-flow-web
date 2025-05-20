@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm build",
-  "installCommand": "pnpm install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "outputDirectory": ".next",
   "regions": ["iad1"],
   "headers": [
@@ -33,7 +33,6 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_SITE_URL": "https://$VERCEL_URL",
-    "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    "NEXT_PUBLIC_SITE_URL": "https://$VERCEL_URL"
   }
 } 
