@@ -33,6 +33,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_SITE_URL": "https://$VERCEL_URL"
+    "NEXT_PUBLIC_SITE_URL": "https://$VERCEL_URL",
+    "ENABLE_EXPERIMENTAL_COREPACK": "1"
   }
 } 
