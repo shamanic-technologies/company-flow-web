@@ -3,6 +3,7 @@ import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useAuth, useClerk } from '@clerk/nextjs';
 
 // Define the specific storage key needed for this component
 const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
@@ -15,6 +16,8 @@ function ChatLandingInterface() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { isLoaded, userId } = useAuth();
+  const { openSignIn } = useClerk();
   
   /**
    * Handles form submission and redirects to home/chat
@@ -22,14 +25,16 @@ function ChatLandingInterface() {
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Check if message has at least 1 character (excluding whitespace)
-    if (message.trim().length >= 1) {
+    if (message.trim().length >= 1 && isLoaded) {
       setIsLoading(true);
-      // Store the message in localStorage before redirecting
       localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
       
-      // Redirect to dashboard (assuming /dashboard is the target)
-      router.push('/dashboard');
+      if (userId) { 
+        router.push('/dashboard');
+      } else { 
+        openSignIn();
+        setIsLoading(false);
+      }
     }
   };
 
@@ -39,13 +44,16 @@ function ChatLandingInterface() {
    */
   const handleButtonClick = () => {
     console.log("Button clicked!");
-    if (message.trim().length >= 1) {
+    if (message.trim().length >= 1 && isLoaded) {
       setIsLoading(true);
-      // Store the message in localStorage before redirecting
       localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
-      
-      // Redirect to dashboard (assuming /dashboard is the target)
-      router.push('/dashboard');
+
+      if (userId) { 
+        router.push('/dashboard');
+      } else { 
+        openSignIn();
+        setIsLoading(false);
+      }
     }
   };
 
