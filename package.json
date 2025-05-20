@@ -85,8 +85,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@agent-base/api-client": "workspace:*",
-      "@agent-base/types": "workspace:*"
+      "@agent-base/api-client": "link:../agent-base-backend/packages/api-client",
+      "@agent-base/types": "link:../agent-base-backend/packages/types"
     }
   }
 }
