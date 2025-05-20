@@ -4,9 +4,6 @@
   "installCommand": "pnpm install",
   "outputDirectory": ".next",
   "regions": ["iad1"],
-  "engines": {
-    "node": "20.x"
-  },
   "headers": [
     {
       "source": "/(.*)",
