@@ -49,14 +49,13 @@ function ChatLandingInterface() {
   return (
     <form onSubmit={handleSubmit} className="w-full">
       {/* Glow container with gradient */}
-      <div className="relative p-[2px] rounded-lg overflow-hidden bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 shadow-[0_0_30px_rgba(59,130,246,0.5)]">
-        <div className="relative rounded-lg border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md transition-all">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-emerald-500/5"></div>
+      <div className="relative p-[2px] rounded-lg overflow-hidden bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500">
+        <div className="relative rounded-lg overflow-hidden bg-black/50 backdrop-blur-md transition-all">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="What business do you automate today?"
-            className="w-full h-40 sm:h-48 md:h-56 lg:h-64 py-8 px-6 sm:px-8 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none relative z-10 resize-none"
+            className="w-full h-40 sm:h-48 md:h-56 lg:h-64 py-8 px-6 sm:px-8 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:shadow-none focus:ring-0 border-none relative z-10 resize-none"
             autoFocus
           />
           <div className="absolute right-5 bottom-5 z-20 pointer-events-auto">
