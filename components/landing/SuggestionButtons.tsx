@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileCheck, Mail, CalendarClock, LineChart, Utensils } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Define the specific storage key needed for this component
 const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
@@ -26,6 +27,28 @@ const handleSuggestionClick = (text: string, router: any) => {
  */
 export function SuggestionButtons() {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    // Render Skeletons on the server and initial client render to avoid hydration mismatch
+    return (
+      <>
+        <div className="flex flex-wrap justify-center gap-2 mt-6">
+          <Skeleton className="h-9 w-72 rounded-full" />
+          <Skeleton className="h-9 w-48 rounded-full" />
+          <Skeleton className="h-9 w-80 rounded-full" />
+        </div>
+        <div className="flex flex-wrap justify-center gap-2 mt-2">
+          <Skeleton className="h-9 w-60 rounded-full" />
+          <Skeleton className="h-9 w-64 rounded-full" />
+        </div>
+      </>
+    );
+  }
   
   return (
     <>

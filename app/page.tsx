@@ -6,28 +6,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BackgroundGradients } from "@/components/landing/BackgroundGradients";
 import { Hero } from "@/components/landing/Hero";
 import { ChatLanding } from "@/components/landing/ChatLanding";
-import { SuggestionButtons } from "@/components/landing/SuggestionButtons"; // Re-enable direct import
+import { SuggestionButtons } from "@/components/landing/SuggestionButtons"; // Static import
 import { WordFlowContainer, LeftWordFlowContainer } from "@/components/landing/WordFlow";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-// import dynamic from 'next/dynamic'; // Comment out dynamic import
-
-// Dynamically import SuggestionButtons with SSR turned off - REMOVED
-// const SuggestionButtons = dynamic(
-//   () => import('@/components/landing/SuggestionButtons').then(mod => mod.SuggestionButtons),
-//   {
-//     ssr: false,
-//     loading: () => <div className="h-[96px] w-full"></div>
-//   }
-// );
-
+// import dynamic from 'next/dynamic'; // Remove dynamic import
 
 /**
  * Landing page component
  * Main landing page for Company Flow
  */
 export default function LandingPage() {
-  const { isLoaded } = useAuth(); // Get Clerk's loading state
+  const { isLoaded } = useAuth();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background via-background/95 to-blue-950/20">
@@ -35,7 +25,7 @@ export default function LandingPage() {
       
       <div className="fixed top-4 right-4 z-50 h-10 flex items-center">
         {!isLoaded && (
-          <Skeleton className="h-8 w-20 rounded-md" />
+          <Skeleton className="h-8 w-20 rounded-md" /> 
         )}
         {isLoaded && (
           <>
@@ -65,7 +55,7 @@ export default function LandingPage() {
         <div className="w-full max-w-3xl mx-auto relative">
           <ChatLanding />
           
-          {/* Render SuggestionButtons directly, remove min-height wrapper */}
+          {/* Render SuggestionButtons directly, remove wrappers */}
           <SuggestionButtons />
         </div>
       </div>
