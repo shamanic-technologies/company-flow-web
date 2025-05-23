@@ -21,6 +21,7 @@ import {
   Webhook as WebhookIcon,
   FolderKanban,
   Package,
+  CreditCard,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDashboard } from '../context/DashboardContext'
@@ -59,6 +60,7 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SidebarCreditBalance } from "./SidebarCreditBalance"
 
 // Agent sub-menu configuration (moved from old sidebar)
 const agentSubMenuItems = [
@@ -291,6 +293,13 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
       </SidebarContent>
 
       <SidebarFooter className="p-2 border-t border-border/40">
+        {/* Credit Balance Display */}
+        <div className="mb-2">
+          <SidebarCreditBalance 
+            className="border-border/30" 
+          />
+        </div>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex h-9 w-full items-center justify-between rounded-md px-3 text-xs">
@@ -308,6 +317,13 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings/billing" className="flex items-center w-full">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleClerkLogout} className="text-red-500 focus:text-red-600">
               <LogOut className="h-4 w-4 mr-2" />
