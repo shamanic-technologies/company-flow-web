@@ -10,13 +10,9 @@ import { NextRequest } from 'next/server';
 // Removed imports for appendClientMessage, CoreMessage
 import { 
   createErrorResponse, 
-  getAuthToken, 
   callAgentServiceStream,
   handleApiError
 } from '../../utils';
-import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
-import { PlatformUser } from '@agent-base/types';
-import { ServiceResponse } from '@agent-base/types';
 import { auth } from '@clerk/nextjs/server';
 
 /**

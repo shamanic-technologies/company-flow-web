@@ -5,9 +5,9 @@
   "private": true,
   "packageManager": "pnpm@8.15.8",
   "scripts": {
-    "dev": "next dev -p 3020",
+    "dev": "next dev -p 3021",
     "build": "next build",
-    "start": "next start -p 3020",
+    "start": "next start -p 3021",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
