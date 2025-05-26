@@ -40,8 +40,17 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
   const { plan, credits, hasActiveSubscription } = planInfo;
   const isLowCredits = credits.balance < 10;
   const planName = plan?.name || 'Free Plan';
-  const usagePercentage = credits.monthlyAllocation 
-    ? Math.round(((credits.used || 0) / credits.monthlyAllocation) * 100)
+
+  // Calculate used amount and usage percentage
+  // Assumes 'balance' reflects what's left of 'monthlyAllocation' plus any top-ups.
+  // 'usedInPeriod' would be a better field from the API.
+  // For the progress bar, we want to show how much of the allocation is consumed.
+  const usedAmount = credits.monthlyAllocation 
+    ? Math.max(0, credits.monthlyAllocation - Math.max(0, credits.balance)) // Ensure balance isn't negative impacting 'used'
+    : 0;
+
+  const usagePercentage = credits.monthlyAllocation && credits.monthlyAllocation > 0
+    ? Math.min(100, Math.round((usedAmount / credits.monthlyAllocation) * 100)) // Cap at 100%
     : 0;
 
   return (
@@ -80,13 +89,16 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
           )}
         </div>
         
-        {(isLowCredits || !hasActiveSubscription) && (
-          <Link href="/settings/billing">
-            <Button size="sm" variant={isLowCredits ? "default" : "outline"} className="h-5 px-2 text-[10px]">
-              {isLowCredits ? 'Add' : 'Upgrade'}
-            </Button>
-          </Link>
-        )}
+        <Link href="/dashboard/settings/billing">
+          <Button 
+            asChild
+            size="sm" 
+            variant={"outline"}
+            className="h-5 px-2 text-[10px]"
+          >
+            Upgrade
+          </Button>
+        </Link>
       </div>
       
       {/* Third row: Usage progress bar (if monthly allocation exists) */}

@@ -363,7 +363,30 @@ export async function grantMonthlyStripeCredits(
 
     return balanceTransaction;
   } catch (error: any) {
-    console.error(`[grantMonthlyStripeCredits] Error granting monthly credits to customer ${customerId} for subscription ${subscriptionId}:`, error);
+    console.error(`[grantMonthlyStripeCredits] Error granting monthly credits to customer ${stripeCustomer.id} for subscription ${subscriptionId}:`, error);
     throw new Error('Failed to grant monthly credits to customer balance.');
+  }
+}
+
+/**
+ * Creates a Stripe Billing Portal session for a customer.
+ * @param stripeCustomerId - The Stripe Customer ID.
+ * @param returnUrl - The URL to redirect the user to after they manage their billing.
+ * @returns The Stripe Billing Portal Session object, specifically its URL.
+ * @throws Error if creating the portal session fails.
+ */
+export async function createStripePortalSessionForUser(
+  stripeCustomerId: string,
+  returnUrl: string
+): Promise<string> { // Returns string (URL)
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: stripeCustomerId,
+      return_url: returnUrl,
+    });
+    return portalSession.url;
+  } catch (error: any) {
+    console.error(`[createStripePortalSessionForUser] Error creating Stripe Billing Portal session for customer ${stripeCustomerId}:`, error);
+    throw new Error('Failed to create Stripe Billing Portal session.');
   }
 }
