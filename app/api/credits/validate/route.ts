@@ -9,22 +9,14 @@ import { auth } from '@clerk/nextjs/server';
 import { createErrorResponse } from '../../utils';
 import {
   getOrCreateStripeCustomer,
-  getCustomerCreditBalance,
+  getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents,
   getActiveSubscription,
 } from '../../../../lib/stripe'; // Adjusted path
+import { CreditBalance } from '@/types/credit';
+import Stripe from 'stripe';
+import { ServiceResponse } from '@agent-base/types';
 
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // No longer needed here
-
-interface CreditValidationResponse {
-  hasCredits: boolean;
-  balance: number; // Balance in cents
-  customerId: string;
-  subscription?: {
-    id: string;
-    status: string;
-    currentPeriodEnd: number;
-  } | null;
-}
 
 /**
  * POST handler for credit validation
@@ -39,30 +31,26 @@ export async function POST(req: NextRequest) {
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
 
-    // 2. Get request body (optional - for future cost estimation)
-    // estimatedCredits should be in cents. Defaults to 1 cent if not provided.
-    const { estimatedCredits = 1 } = await req.json().catch(() => ({ estimatedCredits: 1 })); 
+    // 2. Get or create Stripe customer
+    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
 
-    // 3. Get or create Stripe customer
-    const customerId = await getOrCreateStripeCustomer(userId);
+    // 3. Check credit balance (in cents)
+    const creditBalanceInUSDCents = await getCustomerCreditBalanceInUSDCents(stripeCustomer);
 
-    // 4. Check credit balance (in cents)
-    const creditBalance = await getCustomerCreditBalance(customerId);
+    // 4. Get subscription info
+    const subscriptionInfo = await getActiveSubscription(stripeCustomer);
 
-    // 5. Get subscription info
-    const subscriptionInfo = await getActiveSubscription(customerId);
+    // 5. Validate if user has enough credits (comparison in cents)
+    const hasCredits = creditBalanceInUSDCents > 0;
 
-    // 6. Validate if user has enough credits (comparison in cents)
-    const hasCredits = creditBalance >= estimatedCredits;
-
-    const response: CreditValidationResponse = {
+    const creditValidationResponse: CreditBalance = {
       hasCredits,
-      balance: creditBalance, // Balance in cents
-      customerId,
+      balance: creditBalanceInUSDCents, // Balance in cents
+      stripeCustomerId: stripeCustomer.id,
       subscription: subscriptionInfo
     };
 
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify(creditValidationResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

@@ -78,9 +78,14 @@ export async function POST(req: NextRequest) {
     headers.set('x-vercel-ai-data-stream', 'v1');
 
     try {
+      // Ensure response.body is a ReadableStream
+      if (!response.body) {
+        console.error('[API /agents/run] Error: Response body from callAgentServiceStream is null or undefined.');
+        return createErrorResponse(500, 'STREAM_ERROR', 'Upstream response body is missing');
+      }
       return new Response(response.body, { headers });
     } catch (streamError) {
-      console.error('[API /agents/run] Stream creation error:', streamError);
+      console.error('[API /agents/run] Error: Failed to create streaming response:', streamError);
       return createErrorResponse(500, 'STREAM_ERROR', 'Failed to create streaming response');
     }
 

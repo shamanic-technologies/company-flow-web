@@ -2,29 +2,15 @@
  * Custom hook for fetching detailed plan and credit information
  * Uses the optimized /api/credits/plan-info endpoint
  */
+import { PlanInfo } from '@/types/credit';
 import { useState, useEffect, useCallback } from 'react';
 
-interface PlanInfo {
-  plan: {
-    name: string;
-    status: string;
-    price: string;
-    billingPeriod: string;
-    nextBilling?: string;
-  } | null;
-  credits: {
-    balance: number;
-    monthlyAllocation?: number;
-    used?: number;
-  };
-  hasActiveSubscription: boolean;
-}
 
 interface UsePlanInfoReturn {
   planInfo: PlanInfo | null;
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  fetch: () => Promise<void>;
 }
 
 export function usePlanInfo(): UsePlanInfoReturn {
@@ -33,9 +19,6 @@ export function usePlanInfo(): UsePlanInfoReturn {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPlanInfo = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
     try {
       const response = await fetch('/api/credits/plan-info', {
         method: 'GET',
@@ -49,8 +32,8 @@ export function usePlanInfo(): UsePlanInfoReturn {
         throw new Error(errorData.message || 'Failed to fetch plan information');
       }
 
-      const data: PlanInfo = await response.json();
-      setPlanInfo(data);
+      const planInfo: PlanInfo = await response.json();
+      setPlanInfo(planInfo);
     } catch (err: any) {
       console.error('[usePlanInfo] Error:', err);
       setError(err.message || 'Failed to fetch plan information');
@@ -61,6 +44,8 @@ export function usePlanInfo(): UsePlanInfoReturn {
 
   // Fetch on mount
   useEffect(() => {
+    setIsLoading(true);
+    setError(null);
     fetchPlanInfo();
   }, [fetchPlanInfo]);
 
@@ -68,6 +53,6 @@ export function usePlanInfo(): UsePlanInfoReturn {
     planInfo,
     isLoading,
     error,
-    refetch: fetchPlanInfo,
+    fetch: fetchPlanInfo,
   };
 } 

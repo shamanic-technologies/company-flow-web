@@ -52,10 +52,7 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
         const fetchedAgents = agentsData;
         // Only update state if the fetched data is different from the current state
         if (JSON.stringify(fetchedAgents) !== JSON.stringify(agents)) {
-          console.log(`✅ useAgents - Agents data changed, updating state.`);
           setAgents(fetchedAgents);
-        } else {
-          console.log(`✅ useAgents - Agents data unchanged, skipping state update.`);
         }
 
         // Auto-select logic is handled in the effect below
@@ -65,6 +62,7 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
         if (agents.length > 0) {
           setAgents([]); 
         }
+        console.log('useAgents: Invalid data format from agents API');
         throw new Error('Invalid data format from agents API');
       }
 
@@ -102,13 +100,11 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
       const firstAgentId = agents[0].id;
       // Only set if different to avoid potential loops if this effect is triggered by selectedAgentId itself
       if (selectedAgentIdMiddlePanel !== firstAgentId && selectedAgentIdRightPanel !== firstAgentId) {
-        console.log(`useAgents (Effect): Auto-selecting first agent: ${firstAgentId}`);
         setSelectedAgentIdMiddlePanel(firstAgentId);
         setSelectedAgentIdRightPanel(firstAgentId);
       }
     } else if (agents.length === 0 && (selectedAgentIdMiddlePanel || selectedAgentIdRightPanel)) {
       // If list becomes empty, clear selection
-      console.log("useAgents (Effect): Agent list empty, clearing selection.");
       setSelectedAgentIdMiddlePanel(null);
       setSelectedAgentIdRightPanel(null);
     }
@@ -120,11 +116,9 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
   // This simple setter is enough for the hook.
   // The context provider will use this AND potentially trigger other actions (like loading conversations).
   const selectAgentMiddlePanel = useCallback((agentId: string | null) => {
-    console.log(`useAgents: Setting selected agent ID to: ${agentId}`);
     setSelectedAgentIdMiddlePanel(agentId);
   }, []);
   const selectAgentRightPanel = useCallback((agentId: string | null) => {
-    console.log(`useAgents: Setting selected agent ID to: ${agentId}`);
     setSelectedAgentIdRightPanel(agentId);
   }, []);
 

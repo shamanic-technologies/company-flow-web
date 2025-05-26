@@ -6,30 +6,19 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createErrorResponse } from '../../utils';
-import {
-  getOrCreateStripeCustomer, 
-  getCustomerCreditBalance,
-  getDetailedSubscriptionInfo,
-  // grantInitialCreditsIfNeeded, // This is handled within getOrCreateStripeCustomer
-} from '../../../../lib/stripe'; // Adjusted path
+// import {
+//   getCustomerCreditBalance,
+//   getDetailedSubscriptionInfo,
+//   // grantInitialCreditsIfNeeded, // This is handled within getOrCreateStripeCustomer
+// } from '../../../../lib/stripe'; // Adjusted path
+import { Plan, PlanInfo, Pricing } from '@/types/credit';
+import { getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents, getOrCreateStripeCustomer } from '@/lib/stripe';
+import { getDetailedSubscriptionInfo } from '@/lib/stripe';
+import Stripe from 'stripe';
+import { ServiceResponse } from '@agent-base/types';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Still needed for stripe.customers.retrieve for free plan metadata
+// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Still needed for stripe.customers.retrieve for free plan metadata
 
-interface PlanInfoResponse {
-  plan: {
-    name: string;
-    status: string;
-    price: string;
-    billingPeriod: string;
-    nextBilling?: string;
-  } | null;
-  credits: {
-    balance: number;
-    monthlyAllocation?: number;
-    used?: number;
-  };
-  hasActiveSubscription: boolean;
-}
 
 /**
  * GET handler for plan information
@@ -45,18 +34,17 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Get Stripe customer (this will also create if not exists and grant initial credits)
-    const customerId = await getOrCreateStripeCustomer(userId);
+    const customer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
 
     // 3. Get subscription details with product information from centralized function
-    const subscriptionInfo = await getDetailedSubscriptionInfo(customerId);
+    const subscriptionInfo = await getDetailedSubscriptionInfo(customer);
 
     // 4. Get credit balance from centralized function
-    const creditBalance = await getCustomerCreditBalance(customerId);
+    const creditBalanceInUSDCents : number = await getCustomerCreditBalanceInUSDCents(customer);
 
     // 5. Handle free plan vs paid subscription
-    let planInfo = null;
+    let planInfo: Plan | null = null;
     let monthlyAllocation = 0;
-    let creditsUsed = 0;
     let hasActiveSubscription = false;
     let planType = 'paid'; // Default to paid, will be overridden if free plan
 
@@ -64,8 +52,6 @@ export async function GET(req: NextRequest) {
       // User has a paid subscription
       hasActiveSubscription = subscriptionInfo.status === 'active';
       monthlyAllocation = getMonthlyAllocationFromSubscription(subscriptionInfo);
-      // Ensure creditsUsed is not negative if balance exceeds monthly allocation (e.g. from top-ups)
-      creditsUsed = Math.max(0, monthlyAllocation - creditBalance);
       
       planInfo = {
         name: subscriptionInfo.productName,
@@ -76,48 +62,36 @@ export async function GET(req: NextRequest) {
       };
       // planType remains 'paid' implicitly
     } else {
-      // User is on free plan (no active subscription)
-      // We might still have customer metadata for plan_type if set elsewhere
-      const customer = await stripe.customers.retrieve(customerId) as any; // Using 'any' due to dynamic metadata
-      planType = customer.metadata?.plan_type || 'free'; // Set planType for free plan
-      
+    
       planInfo = {
         name: 'Free Plan', // TODO: Potentially make this dynamic based on planType if more free tiers exist
-        status: 'active',
-        price: '$0.00',
-        billingPeriod: 'monthly', // Or as defined for free plans
-        nextBilling: undefined // No next billing for a typical free plan
+        status: 'active'
       };
       
       // Free plan allocation (example: 200 initial credits, then 0 monthly unless topped up)
       // The initial 200 credits are handled by grantInitialCreditsIfNeeded via getOrCreateStripeCustomer.
       // Monthly allocation for free plan is typically 0 unless specific promotions are active.
-      monthlyAllocation = 0; // Default to 0 for ongoing free plan, initial grant separate.
+      monthlyAllocation = Pricing.COMPANY_FLOW_FREE_SIGNUP_CREDIT_AMOUNT_IN_USD_CENTS; // Default to 0 for ongoing free plan, initial grant separate.
       // If they have a balance, it implies they are using their initial grant or topped up.
       // Used credits calculation for free plan might be less relevant than just showing balance.
       // Let's show balance as allocation if it's from initial grant, and 0 used, or refine this.
-      if (creditBalance > 0 && planType === 'free') {
+      if (creditBalanceInUSDCents > 0 && planType === 'free') {
         // For simplicity, if they have a balance on free plan, consider it their current "allocation"
-        monthlyAllocation = creditBalance; 
-        creditsUsed = 0; // They haven't "used" against a recurring monthly amount
-      } else {
-        creditsUsed = 0; // No recurring monthly allocation to be used against.
+        monthlyAllocation = creditBalanceInUSDCents; 
       }
       hasActiveSubscription = false;
     }
 
-    const response: PlanInfoResponse = {
+    const planInfoResponse: PlanInfo = {
       plan: planInfo,
       credits: {
-        balance: creditBalance,
-        // Only show monthlyAllocation if it's meaningful (e.g., paid plan or specific free allocation)
-        monthlyAllocation: (hasActiveSubscription || (planType === 'free' && monthlyAllocation > 0) ) ? monthlyAllocation : undefined,
-        used: (hasActiveSubscription && creditsUsed > 0) ? creditsUsed : undefined
+        balance: creditBalanceInUSDCents,
+        monthlyAllocation,
       },
       hasActiveSubscription
     };
 
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify(planInfoResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

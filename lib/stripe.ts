@@ -4,6 +4,8 @@
  * credit balance, subscriptions, and credit consumption.
  */
 import Stripe from 'stripe';
+import { ConsumeCreditsResponse } from '@agent-base/types';
+import { Pricing } from '@/types/credit';
 
 // Initialize Stripe with the secret key from environment variables.
 // Throw an error if the Stripe secret key is not set, as it's crucial for operations.
@@ -19,7 +21,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
  * @returns The Stripe customer ID.
  * @throws Error if fetching or creating the customer fails.
  */
-export async function getOrCreateStripeCustomer(userId: string): Promise<string> {
+export async function getOrCreateStripeCustomer(userId: string): Promise<Stripe.Customer> {
   try {
     // Search for existing customers by metadata.
     const existingCustomers = await stripe.customers.list({
@@ -35,7 +37,7 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
       // If customer exists, check if initial credits were already granted.
       if (!customer.metadata?.initial_credits_granted) {
         console.log('[getOrCreateStripeCustomer] Granting initial credits to existing customer:', customer.id);
-        await grantInitialCreditsIfNeeded(customer.id);
+        await grantInitialCreditsIfNeeded(customer);
         // Update customer metadata to mark initial credits as granted.
         await stripe.customers.update(customer.id, {
           metadata: {
@@ -44,7 +46,7 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
           },
         });
       }
-      return customer.id;
+      return customer;
     }
 
     // If customer does not exist, create a new one.
@@ -58,7 +60,7 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
     });
 
     // Grant initial credits to the newly created customer.
-    await grantInitialCreditsIfNeeded(newCustomer.id);
+    await grantInitialCreditsIfNeeded(newCustomer);
     
     // Update customer metadata to mark initial credits as granted.
      await stripe.customers.update(newCustomer.id, {
@@ -68,7 +70,7 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
         },
       });
 
-    return newCustomer.id;
+    return newCustomer;
   } catch (error) {
     console.error('[getOrCreateStripeCustomer] Error:', error);
     throw new Error('Failed to get or create Stripe customer.');
@@ -81,26 +83,26 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
  * @param customerId - The Stripe customer ID.
  * @throws Error if granting credits fails.
  */
-export async function grantInitialCreditsIfNeeded(customerId: string): Promise<void> {
+export async function grantInitialCreditsIfNeeded(stripeCustomer: Stripe.Customer): Promise<void> {
   try {
     // Retrieve the customer to check their current cash balance.
-    const customer = await stripe.customers.retrieve(customerId);
+    const customer = stripeCustomer;
     if (customer.deleted) {
-      console.warn('[grantInitialCreditsIfNeeded] Customer is deleted:', customerId);
+      console.warn('[grantInitialCreditsIfNeeded] Customer is deleted:', stripeCustomer.id);
       throw new Error('Cannot grant credits to a deleted customer.');
     }
 
     // Stripe's customer.balance is in cents.
     // If balance is positive, they already have funds.
     if (customer.balance > 0) {
-      console.log(`[grantInitialCreditsIfNeeded] Customer ${customerId} already has a positive cash balance: ${customer.balance} cents. No initial credits granted.`);
+      console.log(`[grantInitialCreditsIfNeeded] Customer ${stripeCustomer.id} already has a positive cash balance: ${customer.balance} cents. No initial credits granted.`);
       return;
     }
 
-    const initialCreditsAmount = 200; // 200 cents = $2.00
-    console.log(`[grantInitialCreditsIfNeeded] Granting ${initialCreditsAmount} cents to customer: ${customerId}`);
+    const initialCreditsAmount = Pricing.COMPANY_FLOW_FREE_SIGNUP_CREDIT_AMOUNT_IN_USD_CENTS; 
+    console.log(`[grantInitialCreditsIfNeeded] Granting ${initialCreditsAmount} cents to customer: ${stripeCustomer.id}`);
 
-    await stripe.customers.createBalanceTransaction(customerId, {
+    await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
       amount: initialCreditsAmount, // Positive amount to credit the customer
       currency: 'usd',
       description: 'Initial credits grant (welcome bonus)',
@@ -111,9 +113,9 @@ export async function grantInitialCreditsIfNeeded(customerId: string): Promise<v
       },
     });
 
-    console.log(`[grantInitialCreditsIfNeeded] Successfully granted ${initialCreditsAmount} cents to customer: ${customerId}`);
+    console.log(`[grantInitialCreditsIfNeeded] Successfully granted ${initialCreditsAmount} cents to customer: ${stripeCustomer.id}`);
   } catch (error: any) {
-    console.error(`[grantInitialCreditsIfNeeded] Failed to grant initial credits to customer ${customerId}:`, error);
+    console.error(`[grantInitialCreditsIfNeeded] Failed to grant initial credits to customer ${stripeCustomer.id}:`, error);
     throw new Error('Failed to grant initial credits using customer balance.');
   }
 }
@@ -125,20 +127,16 @@ export async function grantInitialCreditsIfNeeded(customerId: string): Promise<v
  * @returns The spendable credit balance in cents.
  * @throws Error if fetching the customer fails (propagated from Stripe API).
  */
-export async function getCustomerCreditBalance(customerId: string): Promise<number> {
+export async function getCustomerCreditBalance(stripeCustomer: Stripe.Customer): Promise<number> {
   try {
-    const customer = await stripe.customers.retrieve(customerId);
-    if (customer.deleted) {
-      console.warn('[getCustomerCreditBalance] Customer is deleted:', customerId);
+    if (stripeCustomer.deleted) {
+      console.warn('[getCustomerCreditBalance] Customer is deleted:', stripeCustomer.id);
       return 0; // No balance for a deleted customer.
     }
-    // customer.balance is in cents and can be negative if they owe money.
-    // Return Math.max(0, balance) to reflect spendable credits.
-    const spendableBalance = Math.max(0, customer.balance);
-    console.log(`[getCustomerCreditBalance] Customer ${customerId} raw balance: ${customer.balance} cents, spendable balance: ${spendableBalance} cents.`);
-    return spendableBalance;
+    const customerCreditBalance = stripeCustomer.balance;
+    return customerCreditBalance;
   } catch (error) {
-    console.error(`[getCustomerCreditBalance] Error fetching customer balance for ${customerId}:`, error);
+    console.error(`[getCustomerCreditBalance] Error fetching customer balance for ${stripeCustomer.id}:`, error);
     // To prevent breaking flows that expect a balance, return 0 on error.
     // This matches the previous behavior of the credit grants summary if it failed.
     return 0;
@@ -150,11 +148,11 @@ export async function getCustomerCreditBalance(customerId: string): Promise<numb
  * @param customerId - The Stripe customer ID.
  * @returns An object with subscription details, or null if no active subscription is found.
  */
-export async function getDetailedSubscriptionInfo(customerId: string): Promise<any | null> {
+export async function getDetailedSubscriptionInfo(stripeCustomer: Stripe.Customer): Promise<any | null> {
   try {
     // List active subscriptions for the customer, expanding price and item data.
     const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
+      customer: stripeCustomer.id,
       status: 'active',
       limit: 1,
       // Ensure items and their period information are expanded if not default
@@ -210,12 +208,12 @@ export async function getDetailedSubscriptionInfo(customerId: string): Promise<a
  * @param customerId - The Stripe customer ID.
  * @returns An object with active subscription details, or null if none is found.
  */
-export async function getActiveSubscription(customerId: string): Promise<any | null> {
+export async function getActiveSubscription(stripeCustomer: Stripe.Customer): Promise<any | null> {
   try {
     // List active subscriptions for the customer.
     // The default retrieve/list for a subscription should include its items.
     const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
+      customer: stripeCustomer.id,
       status: 'active',
       limit: 1,
       // No specific expand needed here for items if included by default, 
@@ -252,64 +250,47 @@ export async function getActiveSubscription(customerId: string): Promise<any | n
 
 /**
  * Consumes a specified amount of credits (in cents) from a customer's cash balance.
- * @param customerId - The Stripe customer ID.
- * @param creditsToConsume - The number of credits (cents) to consume.
+ * @param stripeCustomerId - The Stripe customer ID.
+ * @param creditsToConsumeInUSDCents - The number of credits (cents) to consume.
  * @param metadata - Additional metadata to store with the balance transaction.
  * @returns An object containing the transaction ID and remaining spendable balance after consumption.
  * @throws Error if there are insufficient credits or if consumption fails.
  */
 export async function consumeStripeCredits(
-  customerId: string,
-  creditsToConsume: number, // Assumed to be in cents
-  metadata: any
-): Promise<{ transactionId: string; remainingBalance: number }> {
+  stripeCustomer: Stripe.Customer,
+  creditsToConsumeInUSDCents: number, // Assumed to be in cents
+  conversationId: string,
+): Promise<ConsumeCreditsResponse> {
   try {
+    const currentBalance = await getCustomerCreditBalance(stripeCustomer);
     // Ensure creditsToConsume is a positive integer.
-    if (creditsToConsume <= 0) {
-      console.log(`[consumeStripeCredits] Invalid amount: ${creditsToConsume} cents. No credits consumed for customer ${customerId}.`);
-      const currentBalance = await getCustomerCreditBalance(customerId);
+    if (creditsToConsumeInUSDCents <= 0) {
+      console.log(`[consumeStripeCredits] Invalid amount: ${creditsToConsumeInUSDCents} cents. No credits consumed for customer ${stripeCustomer.id}.`);
       return {
-        transactionId: 'N/A_INVALID_AMOUNT',
-        remainingBalance: currentBalance
+        AgentBasConsumeCreditsRequest: 'N/A_INVALID_AMOUNT',
+        remainingBalanceInUSDCents: currentBalance
       };
     }
     
-    const currentSpendableBalance = await getCustomerCreditBalance(customerId); // Uses the new version
-
-    if (currentSpendableBalance < creditsToConsume) {
-      console.warn(`[consumeStripeCredits] Insufficient balance for customer ${customerId}. Has: ${currentSpendableBalance} cents, Needs: ${creditsToConsume} cents`);
-      throw new Error('INSUFFICIENT_CREDITS');
-    }
-
-    console.log(`[consumeStripeCredits] Consuming ${creditsToConsume} cents from customer ${customerId}. Current balance: ${currentSpendableBalance} cents.`);
-
     // Amount for createBalanceTransaction should be negative for a debit.
-    const balanceTransaction = await stripe.customers.createBalanceTransaction(customerId, {
-      amount: -creditsToConsume, // Negative to decrease (debit) balance
+    const balanceTransaction = await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
+      amount: -creditsToConsumeInUSDCents, // Negative to decrease (debit) balance
       currency: 'usd',
-      description: metadata.operationType ? `Consumption for ${metadata.operationType}` : 'Credit consumption',
+      description: `Consumption for ${conversationId}`,
       metadata: { // Pass relevant metadata, ensure it's flat key-value strings
-        conversation_id: metadata.conversationId?.toString(),
-        operation_type: metadata.operationType?.toString(),
-        input_tokens: metadata.inputTokens?.toString(),
-        output_tokens: metadata.outputTokens?.toString(),
+        conversation_id: conversationId?.toString(),
         timestamp: new Date().toISOString(),
       },
     });
 
-    const newRemainingBalance = await getCustomerCreditBalance(customerId);
-    console.log(`[consumeStripeCredits] Successfully consumed ${creditsToConsume} cents from customer ${customerId}. New balance: ${newRemainingBalance} cents. Transaction: ${balanceTransaction.id}`);
+    const newRemainingBalance = await getCustomerCreditBalance(stripeCustomer);
 
     return {
-      transactionId: balanceTransaction.id,
-      remainingBalance: newRemainingBalance,
-    };
+      AgentBasConsumeCreditsRequest: balanceTransaction.id,
+      remainingBalanceInUSDCents: newRemainingBalance,
+    } as ConsumeCreditsResponse;
   } catch (error: any) {
-    console.error(`[consumeStripeCredits] Error consuming credits for customer ${customerId}:`, error);
-    if (error.message === 'INSUFFICIENT_CREDITS') {
-      throw error;
-    }
-    // Generic error for other failures
+    console.error(`[consumeStripeCredits] Error consuming credits for customer ${stripeCustomer.id}:`, error);
     throw new Error('Failed to consume credits from customer balance.');
   }
 }
@@ -343,7 +324,7 @@ function formatPrice(unitAmount: number | null, currency: string): string {
  * @throws Error if granting credits fails.
  */
 export async function grantMonthlyStripeCredits(
-  customerId: string,
+  stripeCustomer: Stripe.Customer,
   credits: number, // Assumed to be in cents
   subscriptionId: string,
   invoiceId: string,
@@ -352,15 +333,15 @@ export async function grantMonthlyStripeCredits(
   try {
     // Ensure credits is a positive integer.
     if (credits <= 0) {
-      console.warn(`[grantMonthlyStripeCredits] Invalid amount: ${credits} cents. No credits granted for customer ${customerId}, subscription ${subscriptionId}.`);
+      console.warn(`[grantMonthlyStripeCredits] Invalid amount: ${credits} cents. No credits granted for customer ${stripeCustomer.id}, subscription ${subscriptionId}.`);
       // Consider if throwing an error or returning a specific object is better here.
       // For now, throwing an error as granting 0 or negative credits is unusual.
       throw new Error('Monthly credits to grant must be a positive amount.');
     }
     
-    console.log(`[grantMonthlyStripeCredits] Granting ${credits} cents to customer ${customerId} for subscription ${subscriptionId}.`);
+    console.log(`[grantMonthlyStripeCredits] Granting ${credits} cents to customer ${stripeCustomer.id} for subscription ${subscriptionId}.`);
 
-    const balanceTransaction = await stripe.customers.createBalanceTransaction(customerId, {
+    const balanceTransaction = await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
       amount: credits, // Positive amount to credit the customer
       currency: 'usd',
       description: `Monthly credit allocation for subscription ${subscriptionId}`,
@@ -374,7 +355,7 @@ export async function grantMonthlyStripeCredits(
     });
 
     console.log('[grantMonthlyStripeCredits] Successfully granted monthly credits to customer balance:', {
-      customerId,
+      stripeCustomerId: stripeCustomer.id,
       credits,
       transactionId: balanceTransaction.id,
       subscriptionId,

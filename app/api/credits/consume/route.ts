@@ -10,27 +10,11 @@ import { createErrorResponse } from '../../utils';
 import {
   getOrCreateStripeCustomer,
   consumeStripeCredits,
-  getCustomerCreditBalance,
+  getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents,
 } from '../../../../lib/stripe'; // Adjusted path to lib/stripe.ts
-
-// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // No longer needed here
-
-interface ConsumeCreditsRequest {
-  creditInfo: {
-    inputTokens?: number;
-    outputTokens?: number;
-    totalCredits?: number;
-    operationType?: string;
-  };
-  conversationId?: string;
-}
-
-interface ConsumeCreditsResponse {
-  success: boolean;
-  creditsConsumed: number;
-  remainingBalance: number;
-  transactionId?: string;
-}
+import { ServiceResponse } from '@agent-base/types';
+import Stripe from 'stripe';
+import { ConsumeCreditsRequest, ConsumeCreditsResponse } from '@/types/credit';
 
 /**
  * POST handler for credit consumption
@@ -46,49 +30,36 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Parse request body
-    const { creditInfo, conversationId }: ConsumeCreditsRequest = await req.json();
+    const { totalAmountInUSDCents, conversationId }: ConsumeCreditsRequest = await req.json();
 
-    if (!creditInfo) {
-      return createErrorResponse(400, 'INVALID_REQUEST', 'Missing creditInfo');
+    if (!totalAmountInUSDCents) {
+      return createErrorResponse(400, 'INVALID_REQUEST', 'Missing totalAmountInUSDCents');
     }
 
-    // 3. Calculate credits to consume (result should be in cents)
-    const creditsToConsume = calculateCreditsFromUsage(creditInfo);
+    if (!conversationId) {
+      return createErrorResponse(400, 'INVALID_REQUEST', 'Missing conversationId');
+    }
+
+    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
 
     // If no credits to consume (e.g. 0 tokens, or free operation), return success with current balance.
-    if (creditsToConsume <= 0) {
-      console.log('[API /credits/consume] No credits to consume for operation:', creditInfo.operationType);
-      const customerId = await getOrCreateStripeCustomer(userId);
-      const remainingBalance = await getCustomerCreditBalance(customerId); // Fetch fresh balance (in cents)
-      return new Response(JSON.stringify({
-        success: true,
-        creditsConsumed: 0, // In cents
-        remainingBalance: remainingBalance, // In cents
-      }), {
+    if (totalAmountInUSDCents <= 0) {
+      console.log('[API /credits/consume] No credits to consume for operation:', totalAmountInUSDCents);
+      const remainingBalanceInUSDCents = await getCustomerCreditBalanceInUSDCents(stripeCustomer); // Fetch fresh balance (in cents)
+      const response: ConsumeCreditsResponse = {
+          creditsConsumedInUSDCents: 0,
+          remainingBalanceInUSDCents: remainingBalanceInUSDCents,
+      };
+      return new Response(JSON.stringify(response), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // 4. Get Stripe customer ID
-    const customerId = await getOrCreateStripeCustomer(userId);
+    // 4. Consume credits from Stripe (creditsToConsume is in cents)
+    const consumeResult : ConsumeCreditsResponse = await consumeStripeCredits(stripeCustomer, totalAmountInUSDCents, conversationId);
 
-    // 5. Consume credits from Stripe (creditsToConsume is in cents)
-    const consumeResult = await consumeStripeCredits(customerId, creditsToConsume, {
-      conversationId,
-      operationType: creditInfo.operationType,
-      inputTokens: creditInfo.inputTokens,
-      outputTokens: creditInfo.outputTokens
-    });
-
-    const response: ConsumeCreditsResponse = {
-      success: true,
-      creditsConsumed: creditsToConsume, // In cents
-      remainingBalance: consumeResult.remainingBalance, // In cents
-      transactionId: consumeResult.transactionId
-    };
-
-    return new Response(JSON.stringify(response), {
+    return new Response(JSON.stringify(consumeResult), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -106,38 +77,32 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Calculate credits to consume based on usage info.
- * The returned value should be in cents.
- * Example: 1 credit unit = 1 cent ($0.01).
- */
-function calculateCreditsFromUsage(creditInfo: ConsumeCreditsRequest['creditInfo']): number {
-  // If totalCredits is provided (assumed to be in cents), use it directly.
-  if (creditInfo.totalCredits && creditInfo.totalCredits > 0) {
-    return creditInfo.totalCredits;
-  }
+// /**
+//  * Calculate credits to consume based on usage info.
+//  * The returned value should be in cents.
+//  * Example: 1 credit unit = 1 cent ($0.01).
+//  */
+// function calculateCreditsFromUsage(creditInfo: ConsumeCreditsRequest['creditInfo']): number {
+//   // If totalCredits is provided (assumed to be in cents), use it directly.
+//   if (creditInfo.totalCredits && creditInfo.totalCredits > 0) {
+//     return creditInfo.totalCredits;
+//   }
 
-  // Calculate based on tokens (example pricing in cents)
-  let credits = 0;
-  // Example: 1 cent per 1000 input tokens (0.001 cents per token, result rounded up)
-  const INPUT_TOKEN_COST_PER_TOKEN = 0.001; // 1 cent / 1000 tokens
-  // Example: 2 cents per 1000 output tokens (0.002 cents per token, result rounded up)
-  const OUTPUT_TOKEN_COST_PER_TOKEN = 0.002; // 2 cents / 1000 tokens
+//   // Calculate based on tokens (example pricing in cents)
+//   let credits = 0;
+//   // Example: 1 cent per 1000 input tokens (0.001 cents per token, result rounded up)
+//   const INPUT_TOKEN_COST_PER_TOKEN = 0.001; // 1 cent / 1000 tokens
+//   // Example: 2 cents per 1000 output tokens (0.002 cents per token, result rounded up)
+//   const OUTPUT_TOKEN_COST_PER_TOKEN = 0.002; // 2 cents / 1000 tokens
 
-  if (creditInfo.inputTokens) {
-    credits += Math.ceil(creditInfo.inputTokens * INPUT_TOKEN_COST_PER_TOKEN);
-  }
+//   if (creditInfo.inputTokens) {
+//     credits += Math.ceil(creditInfo.inputTokens * INPUT_TOKEN_COST_PER_TOKEN);
+//   }
   
-  if (creditInfo.outputTokens) {
-    credits += Math.ceil(creditInfo.outputTokens * OUTPUT_TOKEN_COST_PER_TOKEN);
-  }
+//   if (creditInfo.outputTokens) {
+//     credits += Math.ceil(creditInfo.outputTokens * OUTPUT_TOKEN_COST_PER_TOKEN);
+//   }
 
-  // Ensure a minimum of 0 credits (cents).
-  return Math.max(credits, 0);
-}
-
-// Removed getStripeCustomerId and consumeStripeCredits as they are now in lib/stripe.ts
-// Kept calculateCreditsFromUsage as it's specific to this endpoint's definition of credit cost.
-
-// Removed getStripeCustomerId and consumeStripeCredits as they are now in lib/stripe.ts
-// Kept calculateCreditsFromUsage as it's specific to this endpoint's definition of credit cost. 
+//   // Ensure a minimum of 0 credits (cents).
+//   return Math.max(credits, 0);
+// }

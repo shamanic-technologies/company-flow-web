@@ -2,25 +2,10 @@
  * Custom hook for managing credits in the frontend
  * Handles validation before operations and consumption after operations
  */
+import { ConsumeCreditsResponse, CreditBalance } from '@/types/credit';
+import { ServiceResponse } from '@agent-base/types';
 import { useState, useCallback } from 'react';
 
-interface CreditInfo {
-  inputTokens?: number;
-  outputTokens?: number;
-  totalCredits?: number;
-  operationType?: string;
-}
-
-interface CreditBalance {
-  hasCredits: boolean;
-  balance: number;
-  customerId: string;
-  subscription?: {
-    id: string;
-    status: string;
-    currentPeriodEnd: number;
-  } | null;
-}
 
 interface UseCreditsReturn {
   // State
@@ -31,7 +16,7 @@ interface UseCreditsReturn {
   
   // Methods
   validateCredits: (estimatedCredits?: number) => Promise<boolean>;
-  consumeCredits: (creditInfo: CreditInfo, conversationId?: string) => Promise<boolean>;
+  consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -62,14 +47,14 @@ export function useCredits(): UseCreditsReturn {
         throw new Error(errorData.message || 'Failed to validate credits');
       }
 
-      const data: CreditBalance = await response.json();
-      setCreditBalance(data);
+      const creditBalance: CreditBalance = await response.json();
 
-      if (!data.hasCredits) {
+      setCreditBalance(creditBalance);
+
+      if (!creditBalance.hasCredits) {
         setError('Insufficient credits. Please upgrade your plan.');
         return false;
       }
-
       return true;
     } catch (err: any) {
       console.error('[useCredits] Validation error:', err);
@@ -84,7 +69,7 @@ export function useCredits(): UseCreditsReturn {
    * Consume credits after operation completion
    */
   const consumeCredits = useCallback(async (
-    creditInfo: CreditInfo, 
+    totalAmountInUSDCents: number, 
     conversationId?: string
   ): Promise<boolean> => {
     setIsConsuming(true);
@@ -96,30 +81,30 @@ export function useCredits(): UseCreditsReturn {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ creditInfo, conversationId }),
+        body: JSON.stringify({ totalAmountInUSDCents, conversationId }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 402) {
+          console.error('[useCredits] Insufficient credits. Operation could not be completed.');
           setError('Insufficient credits. Operation could not be completed.');
           return false;
         }
         throw new Error(errorData.message || 'Failed to consume credits');
       }
 
-      const data = await response.json();
+      const { remainingBalanceInUSDCents }: ConsumeCreditsResponse = await response.json();
       
       // Update credit balance with remaining balance
       if (creditBalance) {
         setCreditBalance({
           ...creditBalance,
-          balance: data.remainingBalance,
-          hasCredits: data.remainingBalance > 0
+          balance: remainingBalanceInUSDCents,
+          hasCredits: remainingBalanceInUSDCents > 0
         });
       }
 
-      console.log(`[useCredits] Consumed ${data.creditsConsumed} credits. Remaining: ${data.remainingBalance}`);
       return true;
     } catch (err: any) {
       console.error('[useCredits] Consumption error:', err);

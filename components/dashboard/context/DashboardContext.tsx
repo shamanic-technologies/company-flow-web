@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Agent, Conversation, Webhook, ApiTool, SearchApiToolResultItem } from '@agent-base/types';
+import { Agent, Conversation, SearchApiToolResultItem } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
 import { UserResource } from '@clerk/types';
@@ -11,6 +11,8 @@ import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
 import { useWebhooks } from '../../../hooks/useWebhooks';
 import { useApiTools } from '../../../hooks/useApiTools';
+import { usePlanInfo } from '../../../hooks/usePlanInfo';
+import { PlanInfo } from '@/types/credit';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
@@ -29,12 +31,14 @@ import { useMessages } from '../../../hooks/useMessages';
 type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail';
 
 interface DashboardContextType {
+  // Clerk user
   clerkUser: UserResource | null | undefined;
   isClerkLoading: boolean;
   isSignedIn: boolean | undefined;
   handleClerkLogout: () => Promise<void>;
   getClerkUserInitials: () => string;
 
+  // Agents
   agents: Agent[];
   isLoadingAgents: boolean;
   agentError: string | null;
@@ -43,11 +47,13 @@ interface DashboardContextType {
   selectAgentMiddlePanel: (agentId: string | null) => void;
   selectAgentRightPanel: (agentId: string | null) => void;
   
+  // Conversations
   conversationList: Conversation[]; 
   currentConversationIdMiddlePanel: string | null;
   isLoadingConversationsMiddlePanel: boolean; // Loading state for the conversation list itself
   conversationError: string | null; // Errors related to fetching/creating conversations
 
+  // Middle Panel Messages
   currentMessagesMiddlePanel: VercelMessage[]; // Messages for the middle panel's active conversation
   isLoadingMessagesMiddlePanel: boolean; // Loading state for these messages
   messageError: string | null; // Errors related to fetching these messages
@@ -66,6 +72,7 @@ interface DashboardContextType {
   selectConversationIdRightPanel: (conversationId: string | null) => void;
   handleCreateNewChatRightPanel: () => Promise<string | null>; // Function to create chat for right panel
 
+  // Webhooks
   userWebhooks: SearchWebhookResultItem[];
   selectedWebhook: SearchWebhookResultItem | null;
   isLoadingWebhooks: boolean;
@@ -81,9 +88,17 @@ interface DashboardContextType {
   apiToolsError: string | null;
   fetchApiTools: () => Promise<void>; // Function to manually refresh API tools
 
+  // Tools
   selectedTool: SearchApiToolResultItem | null;
   // isLoadingToolDetail: boolean;
   // toolDetailError: string | null;
+
+  // Plan Info state from usePlanInfo
+  planInfo: PlanInfo | null;
+  isLoadingPlanInfo: boolean;
+  planInfoError: string | null;
+  fetchPlanInfo: () => Promise<void>;
+  // updateCreditBalanceLocally: (newBalanceInUSDCents: number) => void;
 
   // Action wrappers combining state updates and view changes
   selectAgentAndSetView: (agentId: string | null) => void;
@@ -135,6 +150,12 @@ export const DashboardContext = createContext<DashboardContextType>({
   apiToolsError: null,
   fetchApiTools: async () => { console.warn("fetchApiTools called on default context"); },
   selectedTool: null,
+  // Default plan info values
+  planInfo: null,
+  isLoadingPlanInfo: true, // Default to true as it will likely load on init
+  planInfoError: null,
+  fetchPlanInfo: async () => { console.warn("refetchPlanInfo called on default context"); },
+  // updateCreditBalanceLocally: () => { console.warn("updateCreditBalanceLocally called on default context"); },
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
   createNewChatAndSetView: async () => {},
@@ -225,9 +246,49 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchApiTools,
   } = useApiTools({ handleLogout: handleClerkLogout });
 
+  // --- Plan Info Hook ---
+  const {
+    planInfo: planInfo,
+    isLoading: isLoadingPlanInfo,
+    error: planInfoError,
+    fetch: fetchPlanInfoFromHook
+  } = usePlanInfo();
+
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const POLLING_INTERVAL = 5000;
+
+  // State for the plan info that will be displayed and can be locally updated
+  const [displayPlanInfo, setDisplayPlanInfo] = useState<PlanInfo | null>(null);
+
+  // Effect to initialize and update displayPlanInfo when fetchedPlanInfo changes
+  useEffect(() => {
+    if (planInfo) {
+      setDisplayPlanInfo(planInfo);
+    }
+  }, [planInfo]);
+
+  // // Function to update only the credit balance locally
+  // const updateCreditBalanceLocally = useCallback((newBalanceInUSDCents: number) => {
+  //   setDisplayPlanInfo(prevInfo => {
+  //     if (prevInfo) {
+  //       return { ...prevInfo, creditBalanceInUSDCents: newBalanceInUSDCents };
+  //     }
+  //     // If prevInfo is null, we might initialize a partial PlanInfo object.
+  //     // This depends on how PlanInfo is structured and what's acceptable.
+  //     // For now, assuming PlanInfo might have other mandatory fields,
+  //     // it's safer to only update if prevInfo exists.
+  //     // Or, ensure PlanInfo type allows partial initialization for this case.
+  //     console.warn("[DashboardContext] updateCreditBalanceLocally called when displayPlanInfo is null. Balance not updated.");
+  //     return prevInfo; // Or return a new minimal PlanInfo object if appropriate
+  //   });
+  // }, []);
+
+  // The refetchPlanInfo exposed by context will now use refetchFetchedPlanInfo
+  // and rely on the useEffect above to update displayPlanInfo.
+  const fetchPlanInfo = useCallback(async () => {
+    await fetchPlanInfoFromHook();
+  }, [fetchPlanInfoFromHook]);
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn });
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn });
@@ -360,6 +421,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchApiTools,
     
     selectedTool,
+
+    // Plan Info from context
+    planInfo: displayPlanInfo,
+    isLoadingPlanInfo,
+    planInfoError,
+    fetchPlanInfo,
+    // updateCreditBalanceLocally,
     
     selectAgentAndSetView,
     selectConversationAndSetView,
@@ -384,6 +452,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     activeAgentView, 
     apiTools, isLoadingApiTools, apiToolsError, fetchApiTools,
     selectedTool,
+    // Add plan info dependencies
+    displayPlanInfo, isLoadingPlanInfo, planInfoError, fetchPlanInfo,
+    // updateCreditBalanceLocally,
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
     selectToolAndSetView,
     refreshConversationList, fetchMessages, fetchMessagesRightPanel,
