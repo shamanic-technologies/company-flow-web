@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Wand2, Link2, Bot } from 'lucide-react';
+import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
 
 /**
  * Navigation Bar component for the landing page.
@@ -11,6 +12,7 @@ import { Wand2, Link2, Bot } from 'lucide-react';
  */
 export const NavigationBar = () => {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
 
   const handleOpenContactDialog = () => {
     if (typeof window !== 'undefined') {
@@ -44,7 +46,7 @@ export const NavigationBar = () => {
                 {/* Center Circle */}
                 <circle cx="50" cy="50" r="12" fill="#60A5FA" />
               </svg>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">Agent Base</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">Company Flow</span>
             </Link>
           </div>
           <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -67,14 +69,19 @@ export const NavigationBar = () => {
             >
               API Reference
             </button>
-            <Link href="/#pricing" className="text-gray-300 hover:text-blue-400 text-sm font-medium transition-colors">Pricing</Link>
-            <Button
-              onClick={handleOpenContactDialog}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              size="sm"
-            >
-              Sign In
-            </Button>
+            <Link href="/dashboard/settings/billing" className="text-gray-300 hover:text-blue-400 text-sm font-medium transition-colors">Pricing</Link>
+            {isSignedIn ? (
+              <UserButton afterSignOutUrl="/" />
+            ) : (
+              <SignInButton mode="modal">
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  size="sm"
+                >
+                  Sign In
+                </Button>
+              </SignInButton>
+            )}
           </div>
           <div className="md:hidden">
             <button className="text-gray-400 hover:text-white focus:outline-none">

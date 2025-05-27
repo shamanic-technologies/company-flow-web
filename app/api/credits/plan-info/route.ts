@@ -15,7 +15,6 @@ import { Plan, PlanInfo, Pricing } from '@/types/credit';
 import { getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents, getOrCreateStripeCustomer } from '@/lib/stripe';
 import { getDetailedSubscriptionInfo } from '@/lib/stripe';
 import Stripe from 'stripe';
-import { ServiceResponse } from '@agent-base/types';
 
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Still needed for stripe.customers.retrieve for free plan metadata
 
@@ -68,17 +67,8 @@ export async function GET(req: NextRequest) {
         status: 'active'
       };
       
-      // Free plan allocation (example: 200 initial credits, then 0 monthly unless topped up)
-      // The initial 200 credits are handled by grantInitialCreditsIfNeeded via getOrCreateStripeCustomer.
-      // Monthly allocation for free plan is typically 0 unless specific promotions are active.
       monthlyAllocation = Pricing.COMPANY_FLOW_FREE_SIGNUP_CREDIT_AMOUNT_IN_USD_CENTS; // Default to 0 for ongoing free plan, initial grant separate.
-      // If they have a balance, it implies they are using their initial grant or topped up.
-      // Used credits calculation for free plan might be less relevant than just showing balance.
-      // Let's show balance as allocation if it's from initial grant, and 0 used, or refine this.
-      if (creditBalanceInUSDCents > 0 && planType === 'free') {
-        // For simplicity, if they have a balance on free plan, consider it their current "allocation"
-        monthlyAllocation = creditBalanceInUSDCents; 
-      }
+
       hasActiveSubscription = false;
     }
 

@@ -38,15 +38,15 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
   }
 
   const { plan, credits, hasActiveSubscription } = planInfo;
-  const isLowCredits = credits.balance < 10;
-  const planName = plan?.name || 'Free Plan';
+  const isLowCredits = credits.balance > -10;
+  const planName = plan?.name;
 
   // Calculate used amount and usage percentage
   // Assumes 'balance' reflects what's left of 'monthlyAllocation' plus any top-ups.
   // 'usedInPeriod' would be a better field from the API.
   // For the progress bar, we want to show how much of the allocation is consumed.
   const usedAmount = credits.monthlyAllocation 
-    ? Math.max(0, credits.monthlyAllocation - Math.max(0, credits.balance)) // Ensure balance isn't negative impacting 'used'
+    ? Math.max(0, credits.monthlyAllocation - Math.max(0, -credits.balance)) // Ensure balance isn't negative impacting 'used'
     : 0;
 
   const usagePercentage = credits.monthlyAllocation && credits.monthlyAllocation > 0
@@ -54,7 +54,9 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
     : 0;
 
   return (
+    
     <div className={`p-2 bg-muted/30 border border-border/30 rounded-md ${className}`}>
+
       {/* First row: Plan name and status */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1">
@@ -67,13 +69,13 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
           </Badge>
         )}
       </div>
-      
+
       {/* Second row: Credits and action button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <CreditCard className={`h-3 w-3 ${isLowCredits ? 'text-yellow-500' : 'text-green-500'}`} />
           <span className="text-xs font-medium">
-            {credits.balance.toLocaleString()}
+            {(-credits.balance).toLocaleString()}
           </span>
           {credits.monthlyAllocation ? (
             <span className="text-xs text-muted-foreground">
@@ -89,16 +91,7 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
           )}
         </div>
         
-        <Link href="/dashboard/settings/billing">
-          <Button 
-            asChild
-            size="sm" 
-            variant={"outline"}
-            className="h-5 px-2 text-[10px]"
-          >
-            Upgrade
-          </Button>
-        </Link>
+
       </div>
       
       {/* Third row: Usage progress bar (if monthly allocation exists) */}
@@ -130,6 +123,16 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
             {hasActiveSubscription ? plan?.price : 'No active plan'}
           </div>
         )}
+                    <Link href="/dashboard/settings/billing">
+          <Button 
+            asChild
+            size="sm" 
+            variant={"outline"}
+            className="h-5 px-2 text-[10px]"
+          >
+            Upgrade
+          </Button>
+        </Link>
       </div>
     </div>
   );

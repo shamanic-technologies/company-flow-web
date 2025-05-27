@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const subscriptionInfo = await getActiveSubscription(stripeCustomer);
 
     // 5. Validate if user has enough credits (comparison in cents)
-    const hasCredits = creditBalanceInUSDCents > 0;
+    const hasCredits = creditBalanceInUSDCents < 0;
 
     const creditValidationResponse: CreditBalance = {
       hasCredits,

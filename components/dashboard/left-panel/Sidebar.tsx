@@ -319,7 +319,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings/billing" className="flex items-center w-full">
+              <Link href="/dashboard/settings/billing" className="flex items-center w-full">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Billing
               </Link>

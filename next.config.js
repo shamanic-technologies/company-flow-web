@@ -32,15 +32,7 @@ const nextConfig = {
         '**/.next/**',        // Ignore all .next folders and their contents
         '**/.turbo/**',       // Ignore all .turbo folders and their contents
         '**/dist/**',         // Ignore all dist folders and their contents
-
-        // Removed broad workspace project ignores to allow hot-reloading
-        // '../agent-base-backend/**',
-        // '../webhook-tool-backend/**',
-        // '../api-tool-backend/**',
-        // '../agent-base-web/**',
       ],
-      // poll: 1000, // Removed as system limits are increased
-      // aggregateTimeout: 500, // Removed as system limits are increased
     };
     
     return config;

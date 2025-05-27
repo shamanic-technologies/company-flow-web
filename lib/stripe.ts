@@ -4,8 +4,7 @@
  * credit balance, subscriptions, and credit consumption.
  */
 import Stripe from 'stripe';
-import { ConsumeCreditsResponse } from '@agent-base/types';
-import { Pricing } from '@/types/credit';
+import { ConsumeCreditsResponse, Pricing } from '@/types/credit';
 
 // Initialize Stripe with the secret key from environment variables.
 // Throw an error if the Stripe secret key is not set, as it's crucial for operations.
@@ -93,8 +92,8 @@ export async function grantInitialCreditsIfNeeded(stripeCustomer: Stripe.Custome
     }
 
     // Stripe's customer.balance is in cents.
-    // If balance is positive, they already have funds.
-    if (customer.balance > 0) {
+    // If balance is negative, they already have funds.
+    if (customer.balance < 0) {
       console.log(`[grantInitialCreditsIfNeeded] Customer ${stripeCustomer.id} already has a positive cash balance: ${customer.balance} cents. No initial credits granted.`);
       return;
     }
@@ -103,7 +102,7 @@ export async function grantInitialCreditsIfNeeded(stripeCustomer: Stripe.Custome
     console.log(`[grantInitialCreditsIfNeeded] Granting ${initialCreditsAmount} cents to customer: ${stripeCustomer.id}`);
 
     await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
-      amount: initialCreditsAmount, // Positive amount to credit the customer
+      amount: initialCreditsAmount * -1, // negative amount to credit the customer
       currency: 'usd',
       description: 'Initial credits grant (welcome bonus)',
       metadata: {
@@ -267,14 +266,14 @@ export async function consumeStripeCredits(
     if (creditsToConsumeInUSDCents <= 0) {
       console.log(`[consumeStripeCredits] Invalid amount: ${creditsToConsumeInUSDCents} cents. No credits consumed for customer ${stripeCustomer.id}.`);
       return {
-        AgentBasConsumeCreditsRequest: 'N/A_INVALID_AMOUNT',
+        creditsConsumedInUSDCents: 0,
         remainingBalanceInUSDCents: currentBalance
       };
     }
     
-    // Amount for createBalanceTransaction should be negative for a debit.
+    // Amount for createBalanceTransaction should be positive for a debit.
     const balanceTransaction = await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
-      amount: -creditsToConsumeInUSDCents, // Negative to decrease (debit) balance
+      amount: creditsToConsumeInUSDCents, // Positive to decrease (debit) balance
       currency: 'usd',
       description: `Consumption for ${conversationId}`,
       metadata: { // Pass relevant metadata, ensure it's flat key-value strings
@@ -286,7 +285,7 @@ export async function consumeStripeCredits(
     const newRemainingBalance = await getCustomerCreditBalance(stripeCustomer);
 
     return {
-      AgentBasConsumeCreditsRequest: balanceTransaction.id,
+      creditsConsumedInUSDCents: creditsToConsumeInUSDCents,
       remainingBalanceInUSDCents: newRemainingBalance,
     } as ConsumeCreditsResponse;
   } catch (error: any) {
@@ -342,7 +341,7 @@ export async function grantMonthlyStripeCredits(
     console.log(`[grantMonthlyStripeCredits] Granting ${credits} cents to customer ${stripeCustomer.id} for subscription ${subscriptionId}.`);
 
     const balanceTransaction = await stripe.customers.createBalanceTransaction(stripeCustomer.id, {
-      amount: credits, // Positive amount to credit the customer
+      amount: -credits, // Negative amount to credit the customer
       currency: 'usd',
       description: `Monthly credit allocation for subscription ${subscriptionId}`,
       metadata: {
