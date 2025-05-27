@@ -12,8 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agent-base/api-client": "workspace:*",
-    "@agent-base/types": "workspace:*",
+    "@agent-base/api-client": "^0.33.0",
+    "@agent-base/types": "^0.38.0",
     "@ai-sdk/anthropic": "^1.2.11",
     "@ai-sdk/openai": "^1.3.3",
     "@ai-sdk/react": "^1.2.12",
