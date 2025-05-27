@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, Crown, Zap, Loader2, Star } from 'lucide-react';
 import { usePlanInfo } from '@/hooks/usePlanInfo';
-import { PlansList, PlanDetails } from '@/types/credit';
+import { PlansList } from '@/types/credit'; // PlanDetails might not be directly used here anymore if uiPlanDetails handles all display aspects
 
 /**
- * Billing Settings Page
- * 
- * This page displays custom subscription plans with checkout functionality,
- * current subscription status, and customer portal access for managing subscriptions.
+ * Client-side content for the Billing Settings Page.
+ * This component handles all client-side logic, including hooks like useSearchParams.
  */
-export default function BillingSettingsPage() {
+function BillingPageClientContent() {
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
   const { planInfo, isLoading: planInfoLoading, fetch: fetchPlanInfo } = usePlanInfo();
@@ -42,25 +40,21 @@ export default function BillingSettingsPage() {
           const data = await response.json();
 
           if (response.ok && data.paymentStatus === 'paid') {
-            // Check the message to confirm credits were handled (either granted or idempotently skipped)
             const message = data.message?.toLowerCase() || '';
-            if (message.includes('granted') || message.includes('processed') || message.includes('re-applied')) { // Check for keywords
+            if (message.includes('granted') || message.includes('processed') || message.includes('re-applied')) {
               console.log(`[BillingPage] Session ${sessionId} verified successfully. API Message: ${data.message}. Refreshing plan info.`);
-              await fetchPlanInfo(); // Re-fetch plan info to show updated credits
-              setProcessedSessionId(sessionId); 
+              await fetchPlanInfo();
+              setProcessedSessionId(sessionId);
             } else {
                console.warn(`[BillingPage] Session ${sessionId} paid, but API message indicates credits might not have been processed as expected:`, data.message);
-               await fetchPlanInfo(); // Still refresh to get the latest confirmed state
+               await fetchPlanInfo();
                setProcessedSessionId(sessionId);
             }
           } else if (response.ok && data.paymentStatus !== 'paid') {
             console.log(`[BillingPage] Session ${sessionId} payment status: ${data.paymentStatus}. Not refreshing credits yet as payment is not complete.`);
-            setProcessedSessionId(sessionId); 
+            setProcessedSessionId(sessionId);
           } else {
-            // Handle cases where response is not ok (e.g., API error)
             console.warn(`[BillingPage] Failed to verify session ${sessionId} or an API error occurred:`, data.message || response.statusText);
-            // Optionally, still mark as processed to avoid loops if it's a non-recoverable API error for this session verification
-            // setProcessedSessionId(sessionId);
           }
         } catch (error) {
           console.error(`[BillingPage] Error calling verify-checkout-session API for session ${sessionId}:`, error);
@@ -69,8 +63,6 @@ export default function BillingSettingsPage() {
 
       verifySessionAndRefreshData();
     }
-    // Ensure router is only included if it's actually used for navigation that should re-trigger this effect.
-    // For just cleaning URL, it might not be needed here if handled differently.
   }, [searchParams, fetchPlanInfo, router, processedSessionId]);
 
   /**
@@ -192,6 +184,7 @@ export default function BillingSettingsPage() {
    */
   const hasActiveSubscription = planInfo?.hasActiveSubscription || false;
 
+  // Actual JSX for the page content
   return (
     <div className="h-full w-full overflow-y-auto">
       <div className="container mx-auto py-8 px-4 md:px-6 min-h-full">
@@ -392,5 +385,25 @@ export default function BillingSettingsPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Main Billing Settings Page component.
+ * This component acts as a wrapper and uses Suspense to handle client-side dependencies.
+ */
+export default function BillingSettingsPage() {
+  // The 'use client' directive is in BillingPageClientContent.
+  // This parent component can be a Server Component or a Client Component that doesn't directly use client-only hooks.
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col justify-center items-center h-screen w-full">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" /> 
+        <p className='text-lg text-gray-700 dark:text-gray-300'>Loading billing information...</p>
+        <p className='text-sm text-gray-500 dark:text-gray-400'>Please wait a moment.</p>
+      </div>
+    }>
+      <BillingPageClientContent />
+    </Suspense>
   );
 } 
