@@ -4,16 +4,16 @@
  * Returns detailed plan information including product name, pricing, and usage
  */
 import { NextRequest } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { createErrorResponse } from '../../utils';
 // import {
 //   getCustomerCreditBalance,
 //   getDetailedSubscriptionInfo,
 //   // grantInitialCreditsIfNeeded, // This is handled within getOrCreateStripeCustomer
 // } from '../../../../lib/stripe'; // Adjusted path
-import { Plan, PlanInfo, Pricing } from '@/types/credit';
-import { getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents, getOrCreateStripeCustomer } from '@/lib/stripe';
-import { getDetailedSubscriptionInfo } from '@/lib/stripe';
+import { PlanStatus, PlanInfo, Pricing } from '@/types/credit';
+import { getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents, getOrCreateStripeCustomer } from '@/lib/stripe/stripe';
+import { getDetailedSubscriptionInfo } from '@/lib/stripe/stripe';
 import Stripe from 'stripe';
 
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Still needed for stripe.customers.retrieve for free plan metadata
@@ -25,15 +25,15 @@ import Stripe from 'stripe';
 export async function GET(req: NextRequest) {
   try {
     // 1. Authentication check
-    const { userId } = await auth();
+    const user = await currentUser();
     
-    if (!userId) {
+    if (!user) {
       console.error('[API /credits/plan-info] User not authenticated');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
 
     // 2. Get Stripe customer (this will also create if not exists and grant initial credits)
-    const customer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
+    const customer: Stripe.Customer = await getOrCreateStripeCustomer(user);
 
     // 3. Get subscription details with product information from centralized function
     const subscriptionInfo = await getDetailedSubscriptionInfo(customer);
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const creditBalanceInUSDCents : number = await getCustomerCreditBalanceInUSDCents(customer);
 
     // 5. Handle free plan vs paid subscription
-    let planInfo: Plan | null = null;
+    let planInfo: PlanStatus | null = null;
     let monthlyAllocation = 0;
     let hasActiveSubscription = false;
     let planType = 'paid'; // Default to paid, will be overridden if free plan
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     }
 
     const planInfoResponse: PlanInfo = {
-      plan: planInfo,
+      planStatus: planInfo,
       credits: {
         balance: creditBalanceInUSDCents,
         monthlyAllocation,

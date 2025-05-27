@@ -58,7 +58,7 @@ const WebhookDetailPanel: React.FC<WebhookDetailPanelProps> = ({ webhook, onEven
       // setIsLoading(true); 
       // setError(null); // Keep existing error until successful fetch
       try {
-        const response = await fetch(`/api/webhooks/get-events?webhookId=${webhook.id}`);
+        const response = await fetch(`/api/webhook-tools/get-events?webhookId=${webhook.id}`);
         const result = await response.json();
 
         if (!isMounted) return; // Don't update state if component unmounted

@@ -111,16 +111,18 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   console.log(`[Stripe Webhook] checkout.session.completed: Granting ${planDetails.creditsInUSDCents} credits for session ${session.id}, user ${userId}, plan ${planType}.`);
   const grantResult = await grantInitialSubscriptionCredits({
-    userId: userId,
-    planId: planDetails.id,
-    planCreditsInUSDCents: planDetails.creditsInUSDCents,
-    stripeCustomerId: customerId,
-    stripeSubscriptionId: subscriptionId,
+    user: user,
+    planDetails: planDetails,
+    stripeCustomer: customerId,
+    stripeSubscription: subscriptionId,
     triggeringEventId: session.id, triggeringEventType: 'checkout.session.completed',
   });
 
-  if (grantResult.error) {
+  if (grantResult.success) {
+    console.log(`[Stripe Webhook] checkout.session.completed: Credits processed for ${session.id}. Awarded: ${grantResult.creditsAwarded}. Msg: ${grantResult.message}`);
+  } else {
     console.error(`[Stripe Webhook] checkout.session.completed: Failed for ${session.id}: ${grantResult.error}`);
+    if (grantResult.error === 'Credits already granted for this transaction.') throw new Error(grantResult.error);
     throw new Error(grantResult.error || 'Failed from checkout.session.completed.');
   }
 }
@@ -130,60 +132,41 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Initial grants are handled by checkout.session.completed.
  */
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  if (!invoice.id) {
-    console.error('[Stripe Webhook] invoice.payment_succeeded: Invoice ID missing');
-    throw new Error('Invoice ID missing');
-  }
-  if (!invoice.customer) {
-    console.error('[Stripe Webhook] invoice.payment_succeeded: Customer ID missing');
-    throw new Error('Customer ID missing');
-  }
+  console.log(`[Stripe Webhook] Received invoice.payment_succeeded for invoice: ${invoice.id}`);
 
-  if (!invoice.billing_reason) {
-    console.error('[Stripe Webhook] invoice.payment_succeeded: Billing reason missing');
-    throw new Error('Billing reason missing');
-  }
-
-  // Accessing 'subscription' property using 'as any' due to potential outdated/incorrect type definition for Stripe.Invoice
-  // The official Stripe API documentation confirms 'invoice.subscription' exists.
-  // @ts-ignore
-  const invoiceSubscription = invoice.subscription;
-  if (!invoiceSubscription) {
-    console.error('[Stripe Webhook] invoice.payment_succeeded: Subscription ID missing');
+  const subscriptionIdFromInvoice = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+  if (!subscriptionIdFromInvoice) {
     throw new Error('Not a subscription invoice (ID missing), skipping.');
   }
-  const stripeCustomer = invoice.customer as Stripe.Customer;
-  const userId = invoiceSubscription.metadata?.userId;
-  const planId = invoiceSubscription.metadata?.planId as string;
+
   // If invoice.billing_reason is 'subscription_create', it's the first invoice of a new subscription.
   // This should have been handled by 'checkout.session.completed'.
   // We add this check to prevent potential double granting if checkout.session.completed fails or is delayed,
   // and grantInitialSubscriptionCredits has strong idempotency.
   if (invoice.billing_reason === 'subscription_create') {
     console.log(`[Stripe Webhook] Invoice ${invoice.id} (reason: ${invoice.billing_reason}). Fallback initial grant.`);
+    const subDetails = await stripe.subscriptions.retrieve(subscriptionIdFromInvoice, { expand: ['metadata'] });
+    const userId = subDetails.metadata?.userId;
+    const planType = subDetails.metadata?.planType as string | undefined;
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
 
-
-    if (!userId || !planId || !stripeCustomer) {
-      console.error('[Stripe Webhook] invoice.payment_succeeded (subscription_create): Missing data:', { userId, planType: planId, customerId: stripeCustomer.id, subId: invoiceSubscription.id });
+    if (!userId || !planType || !customerId) {
+      console.error('[Stripe Webhook] invoice.payment_succeeded (subscription_create): Missing data:', { userId, planType, customerId, subId: subscriptionIdFromInvoice });
       throw new Error('Missing data for initial grant (invoice subscription_create).');
     }
-    const planDetails = getPlanDetails(planId);
+    const planDetails = getPlanDetails(planType);
     if (!planDetails) {
-      console.error(`[Stripe Webhook] invoice.payment_succeeded (subscription_create): Invalid planType '${planId}'.`);
-      throw new Error(`Invalid planType from sub metadata: ${planId}`);
+      console.error(`[Stripe Webhook] invoice.payment_succeeded (subscription_create): Invalid planType '${planType}'.`);
+      throw new Error(`Invalid planType from sub metadata: ${planType}`);
     }
 
     const grantResult = await grantInitialSubscriptionCredits({
-      userId,
-      planId: planDetails.id, 
-      planCreditsInUSDCents: planDetails.creditsInUSDCents, 
-      stripeCustomerId: stripeCustomer.id, 
-      stripeSubscriptionId: invoiceSubscription.id,
-      triggeringEventId: invoice.id, 
-      triggeringEventType: 'invoice.payment_succeeded',
+      userId, planType, planName: planDetails.name, creditsToGrant: planDetails.creditsInUSDCents,
+      stripeCustomerId: customerId, stripeSubscriptionId: subscriptionIdFromInvoice,
+      triggeringEventId: invoice.id, triggeringEventType: 'invoice.payment_succeeded',
     });
-    if (!grantResult.error) { 
-        console.log(`[Stripe Webhook] invoice.payment_succeeded (subscription_create): Credits via invoice ${invoice.id} for plan ${planDetails.name}. Intended grant: ${planDetails.creditsInUSDCents}.`);
+    if (grantResult.success) {
+        console.log(`[Stripe Webhook] invoice.payment_succeeded (subscription_create): Credits via invoice ${invoice.id}. Awarded: ${grantResult.creditsAwarded}.`);
     } else {
         console.error(`[Stripe Webhook] invoice.payment_succeeded (subscription_create): Failed via invoice ${invoice.id}: ${grantResult.error}`);
         if (grantResult.error === 'Credits already granted for this transaction.') throw new Error(grantResult.error);
@@ -198,28 +181,32 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
      throw new Error(`Invoice ${invoice.id} reason (${invoice.billing_reason}) not eligible for recurring grant.`);
   }
 
-  if (invoiceSubscription.status !== 'active') { 
-    console.error(`[Stripe Webhook] invoice.payment_succeeded: Subscription ${invoiceSubscription.id} not active (status: ${invoiceSubscription.status}).`);
-    throw new Error(`Subscription ${invoiceSubscription.id} not active (status: ${invoiceSubscription.status}).`);
+  const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+  if (!customerId) {
+    console.error('[Stripe Webhook] invoice.payment_succeeded: Customer ID missing on invoice:', invoice.id);
+    throw new Error('Customer ID missing on invoice for recurring.');
   }
 
-  const creditsToGrant = await calculateCreditsFromSubscription(invoiceSubscription); 
+  const subscription = await stripe.subscriptions.retrieve(subscriptionIdFromInvoice);
+  if (subscription.status !== 'active') {
+    throw new Error(`Subscription ${subscriptionIdFromInvoice} not active (status: ${subscription.status}).`);
+  }
+
+  const creditsToGrant = await calculateCreditsFromSubscription(subscription);
   if (creditsToGrant > 0) {
+    const stripeCustomer = await stripe.customers.retrieve(customerId);
     if (stripeCustomer.deleted) {
-        console.warn(`[Stripe Webhook] Customer ${stripeCustomer.id} is deleted.`);
+        console.warn(`[Stripe Webhook] Customer ${customerId} is deleted.`);
         throw new Error('Customer is deleted, cannot grant monthly credits.');
     }
 
     await grantMonthlyStripeCredits(
-        stripeCustomer as Stripe.Customer, 
-        creditsToGrant, 
-        invoiceSubscription.id, 
-        invoice.id, 
-        `${new Date((invoiceSubscription as any).current_period_start * 1000).toISOString().slice(0, 7)}` 
+        stripeCustomer as Stripe.Customer, creditsToGrant, subscriptionIdFromInvoice, invoice.id, 
+        `${new Date(subscription.current_period_start * 1000).toISOString().slice(0, 7)}`
     );
-    console.log('[Stripe Webhook] invoice.payment_succeeded: Granted recurring credits:', { customerId: stripeCustomer.id, credits: creditsToGrant, sub: invoiceSubscription.id, inv: invoice.id });
+    console.log('[Stripe Webhook] invoice.payment_succeeded: Granted recurring credits:', { customerId, credits: creditsToGrant, sub: subscriptionIdFromInvoice, inv: invoice.id });
   } else {
-    console.log('[Stripe Webhook] invoice.payment_succeeded: No recurring credits to grant:', { customerId: stripeCustomer.id, subId: invoiceSubscription.id, invId: invoice.id });
+    console.log('[Stripe Webhook] invoice.payment_succeeded: No recurring credits to grant:', { customerId, subId: subscriptionIdFromInvoice, invId: invoice.id });
   }
 }
 
@@ -227,35 +214,12 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
  * Handle new subscription creation (logging purposes primarily)
  */
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  if (!subscription.id) {
-    console.error('[Stripe Webhook] customer.subscription.created: Subscription ID missing');
-    throw new Error('Subscription ID missing');
-  }
-  if (!subscription.customer) {
-    console.error('[Stripe Webhook] customer.subscription.created: Customer ID missing');
-    throw new Error('Customer ID missing');
-  }
-  // @ts-ignore
-  const currentPeriodStart = subscription.current_period_start;
-  if (!currentPeriodStart) {
-    console.error('[Stripe Webhook] customer.subscription.created: Current period start missing');
-    throw new Error('Current period start missing');
-  }
-  // @ts-ignore
-  const currentPeriodEnd = subscription.current_period_end;
-  if (!currentPeriodEnd) {
-    console.error('[Stripe Webhook] customer.subscription.created: Current period end missing');
-    throw new Error('Current period end missing');
-  }
-
   // Ensure customer is an ID string for logging, or null/undefined
-  const customerId = subscription.customer as Stripe.Customer;
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
   console.log('[Stripe Webhook] customer.subscription.created:', {
-    subId: subscription.id,
-    customerId,
-    status: subscription.status,
-    currentPeriodStart: new Date(currentPeriodStart * 1000).toISOString(), 
-    currentPeriodEnd: new Date(currentPeriodEnd * 1000).toISOString(), 
+    subId: subscription.id, customerId, status: subscription.status,
+    currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+    currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
     metadata: subscription.metadata
   });
 }
@@ -264,27 +228,16 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  * Handle subscription updates (logging purposes or specific update logic)
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  if (!subscription.id) {
-    console.error('[Stripe Webhook] customer.subscription.updated: Subscription ID missing');
-    throw new Error('Subscription ID missing');
-  }
-  if (!subscription.customer) {
-    console.error('[Stripe Webhook] customer.subscription.updated: Customer ID missing');
-    throw new Error('Customer ID missing');
-  }
-  const stripeCustomer = subscription.customer as Stripe.Customer;
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
   // Ensure price and product are accessed safely if they are potentially complex objects or IDs
-  let newPlanId: string | undefined | null = null;
+  let newPlanProductId: string | undefined | null = null;
   if (subscription.items.data[0]?.price?.product) {
     const product = subscription.items.data[0].price.product;
-    newPlanId = typeof product === 'string' ? product : product.id;
+    newPlanProductId = typeof product === 'string' ? product : product.id;
   }
   console.log('[Stripe Webhook] customer.subscription.updated:', {
-    subId: subscription.id,
-    customerId: stripeCustomer.id, 
-    status: subscription.status, 
-    newPlanId: newPlanId,
-    previousAttributes: (subscription as any).previous_attributes, 
+    subId: subscription.id, customerId, status: subscription.status, newPlanProductId,
+    previousAttributes: subscription.previous_attributes,
     metadata: subscription.metadata
   });
 }

@@ -25,7 +25,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
     // setUserWebhooks([]); // Clear previous webhooks while fetching? Let's clear on success/fail.
 
     try {
-      const response = await fetch('/api/webhooks/get-created', {
+      const response = await fetch('/api/webhook-tools/get-created', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json' // Explicitly set content type

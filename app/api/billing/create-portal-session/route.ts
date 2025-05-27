@@ -4,16 +4,16 @@
  * Creates a Stripe Billing Portal session for the authenticated user.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { getOrCreateStripeCustomer, createStripePortalSessionForUser } from '@/lib/stripe'; 
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { getOrCreateStripeCustomer, createStripePortalSessionForUser } from '@/lib/stripe/stripe'; 
 import { createErrorResponse } from '@/app/api/utils'; // Adjusted path based on typical structure
 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authentication check
-    const { userId, orgId } = await auth(); // orgId might be useful for B2B scenarios, userId for individual
+    const user = await currentUser();
     
-    if (!userId) {
+    if (!user) {
       console.error('[API /billing/create-portal-session] User not authenticated');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
     // 2. Get Stripe customer ID
     // The getOrCreateStripeCustomer function from stripe.ts handles finding or creating the customer.
     // It requires the Clerk userId.
-    const stripeCustomer = await getOrCreateStripeCustomer(userId);
+    const stripeCustomer = await getOrCreateStripeCustomer(user);
     if (!stripeCustomer || !stripeCustomer.id) {
-        console.error('[API /billing/create-portal-session] Failed to get or create Stripe customer for user:', userId);
+        console.error('[API /billing/create-portal-session] Failed to get or create Stripe customer for user:', user.id);
         return createErrorResponse(500, 'STRIPE_CUSTOMER_ERROR', 'Could not retrieve or create customer information.');
     }
     const stripeCustomerId = stripeCustomer.id;

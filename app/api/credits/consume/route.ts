@@ -5,13 +5,13 @@
  * This should be called after the streaming response is completed.
  */
 import { NextRequest } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { createErrorResponse } from '../../utils';
 import {
   getOrCreateStripeCustomer,
   consumeStripeCredits,
   getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents,
-} from '../../../../lib/stripe'; // Adjusted path to lib/stripe.ts
+} from '../../../../lib/stripe/stripe'; // Adjusted path to lib/stripe.ts
 import { ServiceResponse } from '@agent-base/types';
 import Stripe from 'stripe';
 import { ConsumeCreditsRequest, ConsumeCreditsResponse } from '@/types/credit';
@@ -22,9 +22,9 @@ import { ConsumeCreditsRequest, ConsumeCreditsResponse } from '@/types/credit';
 export async function POST(req: NextRequest) {
   try {
     // 1. Authentication check
-    const { userId } = await auth();
+    const user = await currentUser();
     
-    if (!userId) {
+    if (!user) {
       console.error('[API /credits/consume] User not authenticated');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       return createErrorResponse(400, 'INVALID_REQUEST', 'Missing conversationId');
     }
 
-    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
+    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(user);
 
     // If no credits to consume (e.g. 0 tokens, or free operation), return success with current balance.
     if (totalAmountInUSDCents <= 0) {

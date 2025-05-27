@@ -4,7 +4,17 @@
  * credit balance, subscriptions, and credit consumption.
  */
 import Stripe from 'stripe';
-import { ConsumeCreditsResponse, Pricing } from '@/types/credit';
+import { User } from '@clerk/nextjs/server';
+import {
+  ConsumeCreditsResponse,
+  GrantInitialCreditsResult,
+  PlanDetails,
+  Pricing,
+  GrantInitialCreditsParams,
+  PlansList,
+} from '@/types/credit';
+import { getUserName } from '../clerk';
+import { getUserEmail } from '../clerk';
 
 // Initialize Stripe with the secret key from environment variables.
 // Throw an error if the Stripe secret key is not set, as it's crucial for operations.
@@ -14,62 +24,108 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
+ * Retrieves plan details based on the plan type.
+ * @param planType - The type of the plan (e.g., 'starter', 'pro', 'enterprise').
+ * @returns The plan details (name, credits) or null if the plan type is invalid.
+ */
+export function getPlanDetails(planType: string): PlanDetails {
+  const plan = PlansList.find(plan => plan.id === planType);
+  if (!plan) {
+    throw new Error(`Invalid plan type: ${planType}`);
+  }
+  return plan;
+}
+
+/**
  * Retrieves the Stripe customer ID for a given user ID.
  * If the customer does not exist, it creates a new one and grants initial credits.
  * @param userId - The unique identifier for the user (e.g., Clerk user ID).
+ * @param userEmail - The email of the user.
+ * @param userName - The name of the user.
  * @returns The Stripe customer ID.
  * @throws Error if fetching or creating the customer fails.
  */
-export async function getOrCreateStripeCustomer(userId: string): Promise<Stripe.Customer> {
+export async function getOrCreateStripeCustomer(
+  user: User,
+): Promise<Stripe.Customer> {
   try {
-    // Search for existing customers by metadata.
-    const existingCustomers = await stripe.customers.list({
-      limit: 100, // Fetch up to 100 customers to search through.
+    // Search for an existing customer by userId in metadata
+    const searchResults = await stripe.customers.search({
+      query: `metadata['userId']:'${user.id}'`,
+      limit: 1,
     });
 
-    // Find the customer whose metadata contains the matching clerk_user_id.
-    const customer = existingCustomers.data.find(
-      (cust: Stripe.Customer) => cust.metadata && cust.metadata.clerk_user_id === userId
-    );
-
+    let customer: Stripe.Customer | null = null;
+    if (searchResults.data.length > 0) {
+      customer = searchResults.data[0];
+    }
+    const userEmail = getUserEmail(user);
+    const userName = getUserName(user);
     if (customer) {
       // If customer exists, check if initial credits were already granted.
+      // Also, update email and name if provided and different.
+      let metadataUpdate: Stripe.MetadataParam = {};
+      let customerUpdate: Stripe.CustomerUpdateParams = {};
+      let needsUpdate = false;
+
+
+      if (customer.email !== userEmail) {
+        customerUpdate.email = userEmail;
+        needsUpdate = true;
+      }
+      if (customer.name !== userName) {
+        customerUpdate.name = userName;
+        needsUpdate = true;
+      }
+      
+
       if (!customer.metadata?.initial_credits_granted) {
         console.log('[getOrCreateStripeCustomer] Granting initial credits to existing customer:', customer.id);
         await grantInitialCreditsIfNeeded(customer);
-        // Update customer metadata to mark initial credits as granted.
-        await stripe.customers.update(customer.id, {
+        metadataUpdate.initial_credits_granted = 'true';
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+         const updatedCustomer = await stripe.customers.update(customer.id, {
+          ...customerUpdate,
           metadata: {
-            ...customer.metadata,
-            initial_credits_granted: 'true',
+            ...customer.metadata, // Preserve existing metadata
+            ...metadataUpdate, // Apply updates
           },
         });
+        return updatedCustomer;
       }
       return customer;
     }
 
     // If customer does not exist, create a new one.
-    console.log('[getOrCreateStripeCustomer] Creating new customer for user:', userId);
-    const newCustomer = await stripe.customers.create({
+    console.log('[getOrCreateStripeCustomer] Creating new customer for user:', user.id);
+    const newCustomerParams: Stripe.CustomerCreateParams = {
+      email: userEmail,
+      name: userName,
       metadata: {
-        clerk_user_id: userId,
-        plan_type: 'free', // Default plan type for new customers.
-        created_via: 'api_lazy_creation', // Tracking how the customer was created.
+        userId: user.id,
+        planType: 'free', // Default plan type for new customers.
+        createdVia: 'api_lazy_creation', // Tracking how the customer was created.
+
       },
-    });
+    };
+    const newCustomer = await stripe.customers.create(newCustomerParams);
 
     // Grant initial credits to the newly created customer.
     await grantInitialCreditsIfNeeded(newCustomer);
     
     // Update customer metadata to mark initial credits as granted.
-     await stripe.customers.update(newCustomer.id, {
+    // This is important as grantInitialCreditsIfNeeded doesn't update metadata itself.
+     const finalCustomer = await stripe.customers.update(newCustomer.id, {
         metadata: {
-          ...newCustomer.metadata, // Preserve existing metadata
+          ...newCustomer.metadata, // Preserve existing metadata from creation
           initial_credits_granted: 'true',
         },
       });
 
-    return newCustomer;
+    return finalCustomer;
   } catch (error) {
     console.error('[getOrCreateStripeCustomer] Error:', error);
     throw new Error('Failed to get or create Stripe customer.');
@@ -108,7 +164,7 @@ export async function grantInitialCreditsIfNeeded(stripeCustomer: Stripe.Custome
       metadata: {
         type: 'welcome_bonus',
         plan: 'free', // Or based on customer's current plan if more complex
-        granted_at: new Date().toISOString(),
+        grantedAt: new Date().toISOString(),
       },
     });
 
@@ -277,7 +333,7 @@ export async function consumeStripeCredits(
       currency: 'usd',
       description: `Consumption for ${conversationId}`,
       metadata: { // Pass relevant metadata, ensure it's flat key-value strings
-        conversation_id: conversationId?.toString(),
+        conversationId: conversationId?.toString(),
         timestamp: new Date().toISOString(),
       },
     });
@@ -346,10 +402,10 @@ export async function grantMonthlyStripeCredits(
       description: `Monthly credit allocation for subscription ${subscriptionId}`,
       metadata: {
         type: 'monthly_allocation',
-        subscription_id: subscriptionId,
-        invoice_id: invoiceId,
-        billing_period: billingPeriod,
-        granted_at: new Date().toISOString(),
+        subscriptionId: subscriptionId,
+        invoiceId: invoiceId,
+        billingPeriod: billingPeriod,
+        grantedAt: new Date().toISOString(),
       },
     });
 
@@ -387,5 +443,97 @@ export async function createStripePortalSessionForUser(
   } catch (error: any) {
     console.error(`[createStripePortalSessionForUser] Error creating Stripe Billing Portal session for customer ${stripeCustomerId}:`, error);
     throw new Error('Failed to create Stripe Billing Portal session.');
+  }
+}
+
+/**
+ * Grants initial credits for a new subscription idempotently.
+ * It checks if credits have already been granted for the given triggeringEventId.
+ * @param params - Parameters for granting credits.
+ * @returns Result of the credit grant operation.
+ */
+export async function grantInitialSubscriptionCredits(
+  params: GrantInitialCreditsParams
+): Promise<GrantInitialCreditsResult> {
+  const { 
+    userId, 
+    planId,
+    planCreditsInUSDCents,
+    stripeCustomerId,
+    stripeSubscriptionId,
+    triggeringEventId,
+    triggeringEventType
+  } = params;
+
+  try {
+    // Idempotency Check: List recent balance transactions for the customer
+    // and check if one matches the triggeringEventId.
+    // Note: Stripe's listBalanceTransactions might not directly filter by metadata.
+    // We fetch recent transactions and check metadata in code.
+    // For high volume, a more robust solution might involve a separate tracking DB.
+    const recentTransactions = await stripe.customers.listBalanceTransactions(
+      stripeCustomerId,
+      { limit: 10 } // Fetch a small number of recent transactions
+    );
+
+    const existingTransaction = recentTransactions.data.find(
+      tx => tx.metadata?.triggeringEventId === triggeringEventId && 
+            tx.metadata?.triggeringEventType === triggeringEventType
+    );
+
+    if (existingTransaction) {
+      console.log(`[grantInitialSubscriptionCredits] Credits already granted for ${triggeringEventType} ${triggeringEventId} (Subscription: ${stripeSubscriptionId}). Existing Transaction ID: ${existingTransaction.id}`);
+      return {
+        creditsAwardedInUSDCents: 0,
+        details: 'Credits already granted for this event.',
+      };
+    }
+
+    // Ensure creditsToGrant is a positive integer.
+    if (planCreditsInUSDCents <= 0) {
+      console.warn(`[grantInitialSubscriptionCredits] Invalid amount: ${planCreditsInUSDCents} cents. No credits to grant for customer ${stripeCustomerId}, subscription ${stripeSubscriptionId}.`);
+      return {
+        creditsAwardedInUSDCents: 0,
+        error: 'Credits to grant must be a positive amount.',
+      };
+    }
+
+    console.log(`[grantInitialSubscriptionCredits] Granting ${planCreditsInUSDCents} cents to customer ${stripeCustomerId} for plan ${planId}, subscription ${stripeSubscriptionId}. Event: ${triggeringEventType} ${triggeringEventId}`);
+
+    const balanceTransaction = await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+      amount: -planCreditsInUSDCents, // Negative amount to credit the customer
+      currency: 'usd',
+      description: `Initial credits for ${planId} (Subscription: ${stripeSubscriptionId})`,
+      metadata: {
+        type: 'initial_subscription_credits',
+        userId: userId,
+        planId: planId,
+        stripeSubscriptionId: stripeSubscriptionId, // Ensure this is stored
+        triggeringEventId: triggeringEventId, 
+        triggeringEventType: triggeringEventType,
+        grantedAt: new Date().toISOString(), // Add a timestamp for the grant
+      },
+    });
+
+    console.log('[grantInitialSubscriptionCredits] Successfully granted initial credits:', {
+      stripeCustomerId,
+      creditsAwardedInUSDCents: planCreditsInUSDCents,
+      transactionId: balanceTransaction.id,
+      stripeSubscriptionId,
+      triggeringEventId,
+    });
+
+    return {
+      creditsAwardedInUSDCents: planCreditsInUSDCents,
+      details: `Successfully granted ${planCreditsInUSDCents / 100} credits.`,
+    };
+
+  } catch (error: any) {
+    console.error(`[grantInitialSubscriptionCredits] Error granting initial credits for customer ${stripeCustomerId}, subscription ${stripeSubscriptionId}, event ${triggeringEventId}:`, error);
+    return {
+      creditsAwardedInUSDCents: 0,
+      error: error.message || 'Failed to grant initial subscription credits due to an internal error.',
+      details: error.toString(),
+    };
   }
 }

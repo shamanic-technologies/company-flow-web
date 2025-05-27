@@ -37,7 +37,7 @@ export function SidebarCreditBalance({ className = '' }: SidebarCreditBalancePro
     );
   }
 
-  const { plan, credits, hasActiveSubscription } = planInfo;
+  const { planStatus: plan, credits, hasActiveSubscription } = planInfo;
   const isLowCredits = credits.balance > -10;
   const planName = plan?.name;
 

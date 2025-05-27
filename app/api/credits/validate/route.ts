@@ -5,13 +5,13 @@
  * Returns credit balance and validation status.
  */
 import { NextRequest } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { createErrorResponse } from '../../utils';
 import {
   getOrCreateStripeCustomer,
   getCustomerCreditBalance as getCustomerCreditBalanceInUSDCents,
   getActiveSubscription,
-} from '../../../../lib/stripe'; // Adjusted path
+} from '../../../../lib/stripe/stripe'; // Adjusted path
 import { CreditBalance } from '@/types/credit';
 import Stripe from 'stripe';
 import { ServiceResponse } from '@agent-base/types';
@@ -24,15 +24,15 @@ import { ServiceResponse } from '@agent-base/types';
 export async function POST(req: NextRequest) {
   try {
     // 1. Authentication check
-    const { userId } = await auth();
+    const user = await currentUser();
     
-    if (!userId) {
+    if (!user) {
       console.error('[API /credits/validate] User not authenticated');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
 
     // 2. Get or create Stripe customer
-    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(userId);
+    const stripeCustomer: Stripe.Customer = await getOrCreateStripeCustomer(user);
 
     // 3. Check credit balance (in cents)
     const creditBalanceInUSDCents = await getCustomerCreditBalanceInUSDCents(stripeCustomer);

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, Crown, Zap, Loader2, Star } from 'lucide-react';
 import { usePlanInfo } from '@/hooks/usePlanInfo';
+import { PlansList, PlanDetails } from '@/types/credit';
 
 /**
  * Billing Settings Page
@@ -18,69 +19,126 @@ import { usePlanInfo } from '@/hooks/usePlanInfo';
 export default function BillingSettingsPage() {
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
-  const { planInfo, isLoading: planInfoLoading } = usePlanInfo();
+  const { planInfo, isLoading: planInfoLoading, fetch: fetchPlanInfo } = usePlanInfo();
   const [isCreatingPortalSession, setIsCreatingPortalSession] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [processedSessionId, setProcessedSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const sessionId = searchParams.get('session_id');
+
+    if (sessionId && sessionId === processedSessionId) {
+      console.log(`[BillingPage] Session ${sessionId} already processed in this client session. Skipping re-verification.`);
+      return;
+    }
+
+    if (status === 'success' && sessionId) {
+      const verifySessionAndRefreshData = async () => {
+        try {
+          console.log(`[BillingPage] Verifying session: ${sessionId}`);
+          const response = await fetch(`/api/billing/verify-checkout-session?session_id=${sessionId}`);
+          const data = await response.json();
+
+          if (response.ok && data.paymentStatus === 'paid') {
+            // Check the message to confirm credits were handled (either granted or idempotently skipped)
+            const message = data.message?.toLowerCase() || '';
+            if (message.includes('granted') || message.includes('processed') || message.includes('re-applied')) { // Check for keywords
+              console.log(`[BillingPage] Session ${sessionId} verified successfully. API Message: ${data.message}. Refreshing plan info.`);
+              await fetchPlanInfo(); // Re-fetch plan info to show updated credits
+              setProcessedSessionId(sessionId); 
+            } else {
+               console.warn(`[BillingPage] Session ${sessionId} paid, but API message indicates credits might not have been processed as expected:`, data.message);
+               await fetchPlanInfo(); // Still refresh to get the latest confirmed state
+               setProcessedSessionId(sessionId);
+            }
+          } else if (response.ok && data.paymentStatus !== 'paid') {
+            console.log(`[BillingPage] Session ${sessionId} payment status: ${data.paymentStatus}. Not refreshing credits yet as payment is not complete.`);
+            setProcessedSessionId(sessionId); 
+          } else {
+            // Handle cases where response is not ok (e.g., API error)
+            console.warn(`[BillingPage] Failed to verify session ${sessionId} or an API error occurred:`, data.message || response.statusText);
+            // Optionally, still mark as processed to avoid loops if it's a non-recoverable API error for this session verification
+            // setProcessedSessionId(sessionId);
+          }
+        } catch (error) {
+          console.error(`[BillingPage] Error calling verify-checkout-session API for session ${sessionId}:`, error);
+        }
+      };
+
+      verifySessionAndRefreshData();
+    }
+    // Ensure router is only included if it's actually used for navigation that should re-trigger this effect.
+    // For just cleaning URL, it might not be needed here if handled differently.
+  }, [searchParams, fetchPlanInfo, router, processedSessionId]);
 
   /**
-   * Subscription plans configuration
+   * Subscription plans configuration - Now uses PlansList from types/credit.ts
+   * We'll map PlansList to the structure needed by the UI if necessary,
+   * or adapt the UI to directly use PlanDetails properties.
+   * For simplicity, let's adapt the rendering part to use PlanDetails directly.
+   * We'll need to add UI-specific properties like 'popular', 'buttonText', 'price string', 'period', 'features' to PlansList items
+   * or create a mapping. For now, let's define UI-specific details here and merge.
    */
-  const subscriptionPlans = [
-    {
-      id: 'starter',
-      name: 'Hobby',
-      price: '$19',
+  const uiPlanDetails = {
+    free: {
+      priceDisplay: '$0',
+      period: '/month',
+      description: 'Get started for free',
+      features: ['Basic access'],
+      popular: false,
+      buttonText: 'Current Plan' // Or not shown if it's the default free
+    },
+    first: { // Corresponds to 'first' ID from types/credit.ts
+      priceDisplay: '$19',
       period: '/month',
       description: 'Perfect for personal projects',
-      features: [
-        '2,000 credits per month'
-      ],
+      features: ['1,000 credits per month'], // This should align with PlanDetails.creditsInUSDCents
       popular: false,
       buttonText: 'Get Started'
     },
-    {
-      id: 'pro',
-      name: 'Standard',
-      price: '$49',
+    second: { // Corresponds to 'second' ID
+      priceDisplay: '$49',
       period: '/month',
       description: 'Best for growing businesses',
-      features: [
-        '4,000 credits per month'
-      ],
+      features: ['4,000 credits per month'],
       popular: true,
       buttonText: 'Start Standard'
     },
-    {
-      id: 'enterprise',
-      name: 'Growth',
-      price: '$99',
+    third: { // Corresponds to 'third' ID
+      priceDisplay: '$99',
       period: '/month',
       description: 'For scaling organizations',
-      features: [
-        '10,000 credits per month'
-      ],
+      features: ['10,000 credits per month'],
       popular: false,
       buttonText: 'Get Growth'
     }
-  ];
+  };
+
+  // Combine PlanDetails from types/credit.ts with UI specific details
+  const displayPlans = PlansList.filter(plan => plan.id !== 'free').map(plan => ({
+    ...plan,
+    ...(uiPlanDetails as any)[plan.id] // Type assertion for dynamic access
+  }));
 
   /**
    * Handle subscription checkout
    */
-  const handleSubscriptionCheckout = async (planType: string) => {
+  const handleSubscriptionCheckout = async (planId: string) => {
     if (!isSignedIn) {
       router.push('/sign-in');
       return;
     }
 
-    setCheckoutLoading(planType);
+    setCheckoutLoading(planId);
     try {
       const response = await fetch('/api/billing/create-subscription-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ planType }),
+        body: JSON.stringify({ planId }),
       });
 
       if (!response.ok) {
@@ -207,7 +265,7 @@ export default function BillingSettingsPage() {
                           {hasActiveSubscription ? (
                             <>
                               <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-400" suppressHydrationWarning />
-                              Current Plan: {planInfo.plan?.name}
+                              Current Plan: {planInfo.planStatus?.name}
                             </>
                           ) : (
                             <>
@@ -218,7 +276,7 @@ export default function BillingSettingsPage() {
                         </CardTitle>
                         <CardDescription className="text-gray-700 dark:text-gray-300">
                           {hasActiveSubscription
-                            ? `Status: ${planInfo.plan?.status} • ${planInfo.plan?.price} ${planInfo.plan?.billingPeriod}`
+                            ? `Status: ${planInfo.planStatus?.status} • ${planInfo.planStatus?.price} ${planInfo.planStatus?.billingPeriod}`
                             : "You're currently on the free plan"}
                         </CardDescription>
                       </div>
@@ -244,7 +302,7 @@ export default function BillingSettingsPage() {
                     <CardContent>
                       <div className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Credits Balance: </span>
-                        ${(-planInfo.credits.balance / 100).toFixed(2)}
+                        {(-planInfo.credits.balance)} credits
                       </div>
                     </CardContent>
                   )}
@@ -264,7 +322,7 @@ export default function BillingSettingsPage() {
       {/* Subscription Plans */}
       <div className="mb-12 w-full">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-          {subscriptionPlans.map((plan) => (
+          {displayPlans.map((plan) => (
             <Card 
               key={plan.id}
               className={`relative ${
@@ -288,7 +346,7 @@ export default function BillingSettingsPage() {
                 </CardTitle>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {plan.price}
+                    {plan.priceDisplay}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400">
                     {plan.period}
@@ -301,7 +359,7 @@ export default function BillingSettingsPage() {
               
               <CardContent className="space-y-4">
                 <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
+                  {plan.features.map((feature: string, index: number) => (
                     <li key={index} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" suppressHydrationWarning />
                       {feature}
