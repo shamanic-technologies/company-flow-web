@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         message as Message,
         platformUserApiServiceCredentials
     );
-    
+
     // 4. Handle Streaming Response
     const headers = new Headers();
     headers.set('Content-Type', 'text/event-stream');

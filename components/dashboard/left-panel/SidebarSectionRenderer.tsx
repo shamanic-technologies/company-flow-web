@@ -18,10 +18,10 @@ export const renderSectionContent = (
     )
   }
   if (error) {
-    return <div className="p-2 text-sm text-red-400">Error: {error}</div>
+    return <div className="p-2 text-xs text-red-400">Error: {error}</div>
   }
   if (items.length === 0) {
-    return <div className="p-2 text-sm text-gray-400">{emptyMessage}</div>
+    return <div className="p-2 text-xs text-muted-foreground">{emptyMessage}</div>
   }
   return items.map(renderItem)
 } 
