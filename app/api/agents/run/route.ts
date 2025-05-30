@@ -6,17 +6,21 @@
  * Forwards the request to the gateway /run endpoint, sending the payload
  * expected by the agent-service /run endpoint: { message: lastMessage, conversation_id: id }.
  */
-import { NextRequest } from 'next/server';
-// Removed imports for appendClientMessage, CoreMessage
+import { NextRequest, NextResponse } from 'next/server';
+import { Message } from 'ai';
+import { PlatformUserApiServiceCredentials } from '@agent-base/types';
 import { 
   createErrorResponse, 
-  callAgentServiceStream,
   handleApiError
 } from '../../utils';
 import { auth } from '@clerk/nextjs/server';
+import { triggerAgentRunPlatformUserApiServiceStream } from '@agent-base/api-client';
 
 /**
- * POST handler for agent run requests
+ * POST handler for agent run requests.
+ * This function handles incoming POST requests to run an agent.
+ * It authenticates the user, validates the request payload,
+ * and then calls the agent service to process the request, streaming the response back.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +29,11 @@ export async function POST(req: NextRequest) {
 
     // Validate incoming payload
     if (!message || typeof message !== 'object' || !message.content) {
-      console.error('[API /agents/run] Invalid message object received' + JSON.stringify(message));
+      console.error('[API /agents/run] Invalid message object received: ' + JSON.stringify(message));
       return createErrorResponse(400, 'INVALID_REQUEST', 'Invalid message object received');
     }
     if (!conversationId) {
-      console.error('[API /agents/run] Missing required field: id (conversationId)' + JSON.stringify(conversationId));
+      console.error('[API /agents/run] Missing required field: id (conversationId): ' + JSON.stringify(conversationId));
       return createErrorResponse(400, 'INVALID_REQUEST', 'Missing required field: id (conversationId)');
     }
 
@@ -51,23 +55,18 @@ export async function POST(req: NextRequest) {
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
-
-    // 3. Call Gateway for /run endpoint
-    const gatewayRunPath = '/agent/run'; // Path expected by api-gateway-service for agent-service /run
-
-    // Prepare payload expected by agent-service /run endpoint
-    const runPayload = {
-        message, // Pass the single message object received
-        conversationId // Pass the conversationId
+    // 3. Call Agent Service using the new SDK client
+    const platformUserApiServiceCredentials: PlatformUserApiServiceCredentials = {
+        platformClientUserId: userId,
+        platformApiKey: agentBaseApiKey
     };
 
-    const response = await callAgentServiceStream(
-        gatewayRunPath, 
-        agentBaseApiKey, 
-        userId,
-        runPayload // Send the simplified payload
+    const response = await triggerAgentRunPlatformUserApiServiceStream(
+        conversationId,
+        message as Message,
+        platformUserApiServiceCredentials
     );
-
+    
     // 4. Handle Streaming Response
     const headers = new Headers();
     headers.set('Content-Type', 'text/event-stream');
@@ -78,9 +77,8 @@ export async function POST(req: NextRequest) {
     headers.set('x-vercel-ai-data-stream', 'v1');
 
     try {
-      // Ensure response.body is a ReadableStream
       if (!response.body) {
-        console.error('[API /agents/run] Error: Response body from callAgentServiceStream is null or undefined.');
+        console.error('[API /agents/run] Error: Response body from triggerAgentRunPlatformUserApiServiceStream is null or undefined.');
         return createErrorResponse(500, 'STREAM_ERROR', 'Upstream response body is missing');
       }
       return new Response(response.body, { headers });
