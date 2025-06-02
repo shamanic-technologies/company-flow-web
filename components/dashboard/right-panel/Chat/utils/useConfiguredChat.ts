@@ -7,9 +7,9 @@ import { createIdGenerator } from 'ai';
 import { 
   AgentBaseCreditStreamPayload, 
   AgentBaseDeductCreditRequest,
-  AgentBaseCreditConsumptionItem,
-  CreditBalance
+  AgentBaseCreditConsumptionItem
 } from '@agent-base/types';
+import { CreditBalance } from '@/types/credit';
 
 /**
  * @file useConfiguredChat.ts

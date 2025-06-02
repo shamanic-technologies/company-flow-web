@@ -12,7 +12,7 @@ import { useConversations } from '../../../hooks/useConversations';
 import { useWebhooks } from '../../../hooks/useWebhooks';
 import { useApiTools } from '../../../hooks/useApiTools';
 import { usePlanInfo } from '../../../hooks/usePlanInfo';
-import { PlanInfo } from '@/types/credit';
+import { PlanInfo, CreditBalance } from '@/types/credit';
 import { useOrganizations } from '../../../hooks/useOrganizations';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
@@ -55,6 +55,7 @@ interface DashboardContextType {
   selectedAgentIdRightPanel: string | null;
   selectAgentMiddlePanel: (agentId: string | null) => void;
   selectAgentRightPanel: (agentId: string | null) => void;
+  fetchAgents: () => Promise<void>;
   
   // Conversations
   conversationList: Conversation[]; 
@@ -85,6 +86,7 @@ interface DashboardContextType {
   // Webhooks
   userWebhooks: SearchWebhookResultItem[];
   selectedWebhook: SearchWebhookResultItem | null;
+  selectWebhook: (webhook: SearchWebhookResultItem | null) => void;
   isLoadingWebhooks: boolean;
   webhookError: string | null;
   fetchUserWebhooks: () => Promise<void>;
@@ -109,6 +111,15 @@ interface DashboardContextType {
   planInfoError: string | null;
   fetchPlanInfo: () => Promise<void>;
   // updateCreditBalanceLocally: (newBalanceInUSDCents: number) => void;
+
+  // Credits - Explicitly define all credit fields
+  isValidating: boolean;
+  isConsuming: boolean;
+  creditBalance: CreditBalance | null;
+  error: string | null; // This is the 'error' from useCredits
+  validateCredits: (estimatedCredits?: number) => Promise<boolean>;
+  consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
+  clearError: () => void;
 
   // Action wrappers combining state updates and view changes
   selectAgentAndSetView: (agentId: string | null) => void;
@@ -140,6 +151,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   selectedAgentIdRightPanel: null,
   selectAgentMiddlePanel: () => { console.warn("selectAgentMiddlePanel called on default context"); },
   selectAgentRightPanel: () => { console.warn("selectAgentRightPanel called on default context"); },
+  fetchAgents: async () => { console.warn("fetchAgents called on default context"); },
   isLoadingAgents: false,
   agentError: null,
   conversationList: [],
@@ -154,12 +166,14 @@ export const DashboardContext = createContext<DashboardContextType>({
   isCreatingConversationRightPanel: false,
   currentMessagesRightPanel: [],
   isLoadingMessagesRightPanel: false,
-  messageErrorRightPanel: null, // Defaulted
+  messageErrorRightPanel: null,
   selectConversationIdMiddlePanel: () => { console.warn("selectConversationIdMiddlePanel called on default context"); },
   selectConversationIdRightPanel: () => { console.warn("selectConversationIdRightPanel called on default context"); },
   handleCreateNewChatRightPanel: async () => { console.warn("handleCreateNewChatRightPanel called on default context"); return null; },
+  refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
   userWebhooks: [],
   selectedWebhook: null,
+  selectWebhook: () => { console.warn("selectWebhook called on default context"); },
   isLoadingWebhooks: false,
   webhookError: null,
   fetchUserWebhooks: async () => { console.warn("fetchUserWebhooks called on default context"); },
@@ -174,13 +188,19 @@ export const DashboardContext = createContext<DashboardContextType>({
   isLoadingPlanInfo: true,
   planInfoError: null,
   fetchPlanInfo: async () => { console.warn("fetchPlanInfo called on default context"); },
+  isValidating: false,
+  isConsuming: false,
+  creditBalance: null,
+  error: null,
+  validateCredits: async () => { console.warn("validateCredits default called"); return false; },
+  consumeCredits: async () => { console.warn("consumeCredits default called"); return false; },
+  clearError: () => { console.warn("clearError default called"); },
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
   createNewChatAndSetView: async () => {},
   selectWebhookAndSetView: () => {},
   selectToolAndSetView: () => { console.warn("selectToolAndSetView called on default context"); },
   refreshAgents: async () => { console.warn("refreshAgents called on default context"); },
-  refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
   refreshApiTools: async () => { console.warn("refreshApiTools called on default context"); },
   fetchMessagesMiddlePanel: async (conversationId: string) => { console.warn("fetchMessagesMiddlePanel called on default context with", conversationId); },
   fetchMessagesRightPanel: async (conversationId: string) => { console.warn("fetchMessagesRightPanel called on default context with", conversationId); },

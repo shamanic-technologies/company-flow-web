@@ -16,8 +16,8 @@ import { PlansList } from '@/types/credit'; // PlanDetails might not be directly
  */
 function BillingPageClientContent() {
   const router = useRouter();
-  const { isSignedIn, isLoaded } = useAuth();
-  const { planInfo, isLoading: planInfoLoading, fetch: fetchPlanInfo } = usePlanInfo();
+  const { isSignedIn, isLoaded, orgId } = useAuth();
+  const { planInfo, isLoading: planInfoLoading, fetch: fetchPlanInfo } = usePlanInfo({ activeOrgId: orgId });
   const [isCreatingPortalSession, setIsCreatingPortalSession] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const searchParams = useSearchParams();
