@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState } from 'react';
+import { useClerk } from '@clerk/nextjs';
 import { Building2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/hooks/use-toast";
+import { ClientOrganization } from "@agent-base/types";
 
 interface CreateOrganizationDialogProps {
   open: boolean;
@@ -29,12 +32,14 @@ interface CreateOrganizationDialogProps {
  * - Form validation and loading states
  * - Responsive design
  * - Accessibility compliant
+ * - Uses Clerk to create organizations
  */
 export function CreateOrganizationDialog({ 
   open, 
   onOpenChange, 
   onOrganizationCreated 
 }: CreateOrganizationDialogProps) {
+  const { createOrganization, setActive } = useClerk();
   const [formData, setFormData] = useState({
     name: '',
   })
@@ -62,34 +67,57 @@ export function CreateOrganizationDialog({
     }
 
     setIsLoading(true)
+    setErrors({});
     
     try {
-      // Simulate API call - replace with actual organization creation logic
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      const newOrganization = {
-        id: `org-${Date.now()}`,
-        name: formData.name.trim(),
-        type: 'organization' as const,
-        createdAt: new Date().toISOString(),
+      if (!createOrganization || !setActive) {
+        toast({
+          title: "Error",
+          description: "Clerk is not ready. Please try again shortly.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
-      // TODO: Replace with actual API call
-      console.log('Creating organization:', newOrganization)
-      
-      // Call the callback with the new organization
-      if (onOrganizationCreated) {
-        onOrganizationCreated(newOrganization)
+      const organizationName = formData.name.trim();
+
+      // Create organization using Clerk
+      const newClerkOrg = await createOrganization({ name: organizationName });
+
+      if (!newClerkOrg || !newClerkOrg.id) {
+        throw new Error("Organization creation failed or returned no ID.");
       }
+
+      console.log('Clerk: Organization created:', newClerkOrg);
+
+      // Set the new organization as active
+      await setActive({ organization: newClerkOrg.id });
+      console.log('Clerk: Set new organization as active:', newClerkOrg.id);
+      
+      // Call the callback with the new organization data from Clerk
+      if (onOrganizationCreated) {
+        onOrganizationCreated(newClerkOrg);
+      }
+
+      toast({
+        title: "Organization Created",
+        description: `Successfully created and switched to ${organizationName}.`,
+      });
 
       // Reset form and close dialog
       setFormData({ name: '' })
-      setErrors({})
       onOpenChange(false)
       
-    } catch (error) {
-      console.error('Error creating organization:', error)
-      setErrors({ general: 'Failed to create organization. Please try again.' })
+    } catch (error: any) {
+      console.error('Error creating organization with Clerk:', error);
+      const errorMessage = error.errors?.[0]?.message || error.message || 'Failed to create organization. Please try again.';
+      setErrors({ general: errorMessage });
+      toast({
+        title: "Creation Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false)
     }

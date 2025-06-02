@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Agent, Conversation, SearchApiToolResultItem } from '@agent-base/types';
+import { Agent, Conversation, SearchApiToolResultItem, ClientOrganization } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
-import type { UserResource, OrganizationMembershipResource } from '@clerk/types';
+import type { UserResource } from '@clerk/types';
 
 import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
@@ -13,11 +13,11 @@ import { useWebhooks } from '../../../hooks/useWebhooks';
 import { useApiTools } from '../../../hooks/useApiTools';
 import { usePlanInfo } from '../../../hooks/usePlanInfo';
 import { PlanInfo } from '@/types/credit';
+import { useOrganizations } from '../../../hooks/useOrganizations';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
 import { useMessages } from '../../../hooks/useMessages';
-import { usePersonalOrgActivator } from '../../../hooks/usePersonalOrgActivator';
 
 import { SearchWebhookResultItem } from '@agent-base/types';
 
@@ -38,6 +38,14 @@ interface DashboardContextType {
   handleClerkLogout: () => Promise<void>;
   getClerkUserInitials: () => string;
 
+  // Organizations - Sourced from useOrganizations hook
+  organizations: ClientOrganization[];
+  currentOrganization: ClientOrganization | null;
+  activeOrgId: string | null | undefined; // This will come from useOrganizations
+  isLoadingOrganizations: boolean;
+  organizationError: string | null;
+  switchOrganization: (organizationId: string) => Promise<void>; 
+  
   // Agents
   agents: Agent[];
   isLoadingAgents: boolean;
@@ -120,6 +128,12 @@ export const DashboardContext = createContext<DashboardContextType>({
   isSignedIn: undefined,
   handleClerkLogout: async () => { console.error("handleClerkLogout called on default context"); },
   getClerkUserInitials: () => '?',
+  organizations: [],
+  currentOrganization: null,
+  activeOrgId: null,
+  isLoadingOrganizations: false,
+  organizationError: null,
+  switchOrganization: async () => { console.warn("switchOrganization called on default context"); },
   agents: [],
   selectedAgentIdMiddlePanel: null,
   selectedAgentIdRightPanel: null,
@@ -174,18 +188,18 @@ export const DashboardContext = createContext<DashboardContextType>({
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
-  const { isSignedIn, orgId: activeOrgId, isLoaded: authIsLoaded } = useClerkAuth();
-  const { signOut, setActive } = useClerk();
+  const { isSignedIn, orgId: activeOrgIdFromClerkAuth, isLoaded: authIsLoaded } = useClerkAuth();
+  const { signOut } = useClerk();
 
-  // Call the custom hook to handle Personal org activation
-  usePersonalOrgActivator({
-    clerkIsLoaded,
-    authIsLoaded,
-    isSignedIn,
-    clerkUser,
-    activeOrgId,
-    setActive,
-  });
+  // Use the new organizations hook
+  const {
+    organizations,
+    currentOrganization,
+    isLoadingOrganizations,
+    organizationError,
+    switchOrganization,
+    activeOrgId, // This is the authoritative activeOrgId from the hook
+  } = useOrganizations();
 
   const handleClerkLogout = useCallback(async () => {
     console.log("DashboardContext: Signing out with Clerk...");
@@ -362,6 +376,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isSignedIn,
     handleClerkLogout,
     getClerkUserInitials,
+    organizations,
+    currentOrganization,
+    activeOrgId,
+    isLoadingOrganizations,
+    organizationError,
+    switchOrganization,
     agents, 
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
@@ -413,6 +433,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchMessagesRightPanel,
   }), [
     clerkUser, clerkIsLoaded, authIsLoaded, isSignedIn, handleClerkLogout, getClerkUserInitials,
+    organizations, currentOrganization, activeOrgId, isLoadingOrganizations, organizationError, switchOrganization,
     agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, selectAgentMiddlePanel, selectAgentRightPanel, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationIdMiddlePanel, isLoadingConversationsMiddlePanel, conversationError, 
     currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageError, 

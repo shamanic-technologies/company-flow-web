@@ -20,42 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CreateOrganizationDialog } from './CreateOrganizationDialog'
 import { toast } from "@/hooks/use-toast"
-
-// Organization type definition
-type Organization = {
-  id: string;
-  name: string;
-  type: 'personal' | 'organization';
-  description?: string;
-  createdAt?: string;
-}
-
-// Mock organizations data - replace with actual data from your backend
-const mockOrganizations: Organization[] = [
-  {
-    id: 'personal',
-    name: 'Personal',
-    type: 'personal',
-  },
-  {
-    id: 'acme-corp',
-    name: 'Acme Corp',
-    type: 'organization',
-  },
-  {
-    id: 'startup-inc',
-    name: 'Startup Inc',
-    type: 'organization',
-  },
-  {
-    id: 'techflow-ai',
-    name: 'TechFlow AI',
-    type: 'organization',
-  },
-]
+import { useDashboard } from '../context/DashboardContext'
+import { ClientOrganization } from '@agent-base/types'
 
 interface OrganizationSelectorProps {
-  onOrganizationChange?: (organization: Organization) => void;
+  onOrganizationChange?: (organization: ClientOrganization) => void;
   onCreateOrganization?: () => void;
 }
 
@@ -64,19 +33,26 @@ interface OrganizationSelectorProps {
  * Integrates seamlessly with the existing sidebar design system
  * 
  * Features:
- * - Switch between personal and organization workspaces
+ * - Switch between personal and organization workspaces using real Clerk data
  * - Create new organizations with modal dialog
  * - Visual distinction between personal and organization types
  * - Responsive design with proper hover states
  * - Keyboard navigation support
  * - Toast notifications for user feedback
+ * - Integration with DashboardContext for real organization management
  */
 export function OrganizationSelector({ 
   onOrganizationChange, 
   onCreateOrganization 
 }: OrganizationSelectorProps) {
-  const [selectedOrg, setSelectedOrg] = useState<Organization>(mockOrganizations[0])
-  const [organizations, setOrganizations] = useState<Organization[]>(mockOrganizations)
+  const {
+    organizations,
+    currentOrganization,
+    isLoadingOrganizations,
+    organizationError,
+    switchOrganization,
+  } = useDashboard();
+
   const [isOpen, setIsOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
@@ -85,50 +61,90 @@ export function OrganizationSelector({
     setIsCreateDialogOpen(true)
   }
 
-  const handleOrganizationCreated = (newOrganization: Organization) => {
-    // Add the new organization to the list
-    setOrganizations(prev => [...prev, newOrganization])
+  const handleOrganizationCreated = (newlyCreatedClerkOrg: any) => {
+    // The CreateOrganizationDialog now handles its own success toast and closes itself.
+    // The useOrganizations hook will update the organization list based on Clerk state changes.
     
-    // Automatically switch to the new organization
-    setSelectedOrg(newOrganization)
-    
-    // Show success toast
-    toast({
-      title: 'Organization created successfully!',
-      description: `Welcome to ${newOrganization.name}. You can now start organizing your work.`,
-    })
+    console.log('[OrganizationSelector] Organization creation process signaled by dialog. Clerk org:', newlyCreatedClerkOrg);
 
-    // Call the callback if provided
-    if (onOrganizationChange) {
-      onOrganizationChange(newOrganization);
+    // If a parent component needs to know about this event, call the prop.
+    if (onCreateOrganization) {
+      onCreateOrganization(); // This prop might not need the org data anymore, just the event signal.
     }
 
-    // Call the create callback if provided
-    if (onCreateOrganization) {
-      onCreateOrganization();
+    // Optional: If a specific action is needed in OrganizationSelector after creation, handle here.
+    // For now, we assume the primary UI updates (list refresh, current org update) are handled by useOrganizations.
+  }
+
+  const handleSwitchOrganization = async (org: ClientOrganization) => {
+    if (!org.clientAuthOrganisationId) {
+      console.error('[OrganizationSelector] Organization missing clientAuthOrganisationId:', org);
+      toast({
+        title: 'Error switching organization',
+        description: 'Organization ID not found. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const previousOrg = currentOrganization;
+    setIsOpen(false);
+    
+    try {
+      await switchOrganization(org.clientAuthOrganisationId);
+      
+      // Show switch confirmation toast
+      if (!previousOrg || org.clientAuthOrganisationId !== previousOrg.clientAuthOrganisationId) {
+        toast({
+          title: `Switched to ${org.name}`,
+          description: `You're now working in ${org.name === 'Personal' ? 'your personal workspace' : org.name}.`,
+        });
+      }
+      
+      if (onOrganizationChange) {
+        onOrganizationChange(org);
+      }
+      
+    } catch (error: any) {
+      console.error('[OrganizationSelector] Error switching organization:', error);
+      toast({
+        title: 'Failed to switch organization',
+        description: 'There was an error switching organizations. Please try again.',
+        variant: 'destructive',
+      });
     }
   }
 
-  const handleSwitchOrganization = (org: Organization) => {
-    const previousOrg = selectedOrg
-    setSelectedOrg(org)
-    setIsOpen(false)
-    
-    // Show switch confirmation toast
-    if (org.id !== previousOrg.id) {
-      toast({
-        title: `Switched to ${org.name}`,
-        description: `You're now working in ${org.type === 'personal' ? 'your personal workspace' : org.name}.`,
-      })
-    }
-    
-    if (onOrganizationChange) {
-      onOrganizationChange(org);
-    } else {
-      // Default behavior - you can customize this
-      console.log('Switched to organization:', org.name);
-      // TODO: Implement organization switching logic (context update, API calls, etc.)
-    }
+  // Show loading state
+  if (isLoadingOrganizations) {
+    return (
+      <Button
+        variant="ghost"
+        disabled
+        className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-muted-foreground opacity-50"
+      >
+        <div className="flex items-center gap-2 overflow-hidden">
+          <FolderClosed className="h-4 w-4 shrink-0" />
+          <span className="truncate">Loading...</span>
+        </div>
+      </Button>
+    );
+  }
+
+  // Show error state
+  if (organizationError) {
+    return (
+      <Button
+        variant="ghost"
+        disabled
+        className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-destructive opacity-75"
+      >
+        <div className="flex items-center gap-2 overflow-hidden">
+          <FolderClosed className="h-4 w-4 shrink-0" />
+          <span className="truncate">Error loading organizations</span>
+        </div>
+      </Button>
+    );
   }
 
   return (
@@ -140,12 +156,14 @@ export function OrganizationSelector({
             className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset transition-colors"
           >
             <div className="flex items-center gap-2 overflow-hidden">
-              {selectedOrg.type === 'personal' ? (
+              {currentOrganization?.name === 'Personal' ? (
                 <FolderClosed className="h-4 w-4 shrink-0" />
               ) : (
                 <Building2 className="h-4 w-4 shrink-0" />
               )}
-              <span className="truncate">{selectedOrg.name}</span>
+              <span className="truncate">
+                {currentOrganization?.name || 'Select Organization'}
+              </span>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
           </Button>
@@ -161,9 +179,9 @@ export function OrganizationSelector({
               className="flex items-center gap-2 cursor-pointer text-xs"
             >
               <div className="flex h-4 w-4 items-center justify-center">
-                {selectedOrg.id === org.id && <Check className="h-3.5 w-3.5" />}
+                {currentOrganization?.id === org.id && <Check className="h-3.5 w-3.5" />}
               </div>
-              {org.type === 'personal' ? (
+              {org.name === 'Personal' ? (
                 <FolderClosed className="h-4 w-4" />
               ) : (
                 <Building2 className="h-4 w-4" />
