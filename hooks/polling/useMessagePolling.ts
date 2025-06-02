@@ -8,6 +8,7 @@ interface UseMessagePollingProps {
   pollingInterval?: number; // in milliseconds
   isSignedIn: boolean | undefined;
   activeAgentView: string; // To ensure we only poll when in 'chat' view
+  activeOrgId: string | null | undefined; // Added activeOrgId
 }
 
 /**
@@ -18,6 +19,7 @@ interface UseMessagePollingProps {
  * @param {number} [props.pollingInterval=5000] - Interval in milliseconds to poll. Defaults to 5000ms.
  * @param {boolean | undefined} props.isSignedIn - Boolean indicating if the user is signed in.
  * @param {string} props.activeAgentView - The current view in the dashboard (e.g., 'chat', 'conversations'). Polling for messages only happens if view is 'chat'.
+ * @param {string | null | undefined} props.activeOrgId - Active organization ID. Polling occurs if set.
  */
 export function useMessagePolling({
   fetchMessages,
@@ -25,6 +27,7 @@ export function useMessagePolling({
   pollingInterval = 5000,
   isSignedIn,
   activeAgentView,
+  activeOrgId, // Added activeOrgId
 }: UseMessagePollingProps): void {
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -43,13 +46,17 @@ export function useMessagePolling({
       intervalIdRef.current = null;
     }
 
-    // Start polling only if user is signed in, a conversation is selected, AND the view is 'chat'
-    if (isSignedIn && currentConversationIdMiddlePanel && activeAgentView === 'chat') {
+    // Start polling only if user is signed in, an org is active, a conversation is selected, AND the view is 'chat'
+    if (isSignedIn && activeOrgId && currentConversationIdMiddlePanel && activeAgentView === 'chat') {
       performFetch(); // Initial fetch
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useMessagePolling: Started polling for messages every ${pollingInterval}ms for conversation ${currentConversationIdMiddlePanel}.`);
+      console.log(`useMessagePolling: Started polling for messages every ${pollingInterval}ms for conversation ${currentConversationIdMiddlePanel} in org ${activeOrgId}.`);
     } else {
-      let reason = !isSignedIn ? "user not signed in" : !currentConversationIdMiddlePanel ? "no conversation selected" : "not in chat view";
+      let reason = "unknown";
+      if (!isSignedIn) reason = "user not signed in";
+      else if (!activeOrgId) reason = "no active organization";
+      else if (!currentConversationIdMiddlePanel) reason = "no conversation selected";
+      else if (activeAgentView !== 'chat') reason = "not in chat view";
       console.log(`useMessagePolling: Polling for messages stopped/not started (${reason}).`);
     }
 
@@ -60,5 +67,5 @@ export function useMessagePolling({
         console.log('useMessagePolling: Stopped polling for messages.');
       }
     };
-  }, [fetchMessages, currentConversationIdMiddlePanel, pollingInterval, isSignedIn, activeAgentView]);
+  }, [fetchMessages, currentConversationIdMiddlePanel, pollingInterval, isSignedIn, activeAgentView, activeOrgId]); // Added activeOrgId
 } 

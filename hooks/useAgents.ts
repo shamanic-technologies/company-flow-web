@@ -5,35 +5,47 @@ import { Agent, ServiceResponse } from '@agent-base/types';
 
 interface UseAgentsProps {
   handleLogout: () => void;
+  activeOrgId: string | null | undefined;
 }
 
 /**
  * @description Hook to manage agent data fetching, selection, and state.
- * @param {UseAgentsProps} props - The logout handler.
+ * @param {UseAgentsProps} props - The logout handler and activeOrgId.
  * @returns An object containing agents list, selected agent ID, loading/error states, and related functions.
  */
-export function useAgents({ handleLogout }: UseAgentsProps) {
+export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentIdMiddlePanel, setSelectedAgentIdMiddlePanel] = useState<string | null>(null);
   const [selectedAgentIdRightPanel, setSelectedAgentIdRightPanel] = useState<string | null>(null);
-  const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(false); // Initial loading false, true when fetching
+  const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(false);
   const [agentError, setAgentError] = useState<string | null>(null);
 
   // --- Fetch Agents Logic --- 
   const fetchAgents = useCallback(async () => {
-    // Clear previous agents while fetching new list
-    // setAgents([]); // Optional: Clear immediately or only on success/failure?
-    // Let's clear only if fetch succeeds or fails to avoid UI flicker
+    if (!activeOrgId) {
+      console.log("useAgents: Waiting for activeOrgId to fetch agents...");
+      setAgents([]);
+      setSelectedAgentIdMiddlePanel(null);
+      setSelectedAgentIdRightPanel(null);
+      setIsLoadingAgents(false); // Not truly loading
+      // setAgentError("Organization not selected. Cannot fetch agents."); // Optional error
+      return;
+    }
+    console.log(`useAgents: Fetching agents for org: ${activeOrgId}`);
+    // setIsLoadingAgents(true); // Set loading true only when proceeding
+    setAgentError(null); // Clear previous errors
 
     try {
       const response = await fetch('/api/agents/get-or-create', {
-        method: 'GET', // Changed from POST to GET
-        // headers and body removed as they are not typically used for GET requests
+        method: 'GET',
       });
 
       if (response.status === 401) {
         console.error('🚫 useAgents - Unauthorized fetching agents, logging out.');
-        handleLogout();
+        setAgents([]); // Clear data
+        setSelectedAgentIdMiddlePanel(null);
+        setSelectedAgentIdRightPanel(null);
+        handleLogout(); // Logout as session is invalid
         return;
       }
 
@@ -50,71 +62,63 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
 
       if (agentsData) {
         const fetchedAgents = agentsData;
-        // Only update state if the fetched data is different from the current state
         if (JSON.stringify(fetchedAgents) !== JSON.stringify(agents)) {
           setAgents(fetchedAgents);
         }
-
-        // Auto-select logic is handled in the effect below
-
       } else {
-        // if API returns null/undefined but ok response, treat as empty list if current is not already empty
         if (agents.length > 0) {
           setAgents([]); 
         }
-        console.log('useAgents: Invalid data format from agents API');
-        throw new Error('Invalid data format from agents API');
+        console.log('useAgents: Invalid data format from agents API, received null or undefined but response was ok.');
+        // Not throwing an error here, just setting to empty. Could be a valid state.
       }
 
     } catch (error: any) {
       console.error('❌ useAgents - Error fetching agents:', error);
       setAgentError(error.message || 'Failed to fetch agents.');
-      setAgents([]); // Clear agents on exception
+      setAgents([]);
       setSelectedAgentIdMiddlePanel(null);
       setSelectedAgentIdRightPanel(null);
     } finally {
       setIsLoadingAgents(false);
     }
-  }, [handleLogout]);
+  }, [activeOrgId, handleLogout]); // Added activeOrgId. `agents` removed from deps for setAgents comparison logic.
 
-  // --- Effect to Fetch Agents When Token Available (now on component mount if not dependent on token) ---
+  // --- Effect to Fetch Agents --- 
   useEffect(() => {
-    // Init at mount
-    setIsLoadingAgents(true);
-    setAgentError(null);
-    // Fetch agents
-    fetchAgents();
-  }, [fetchAgents]);
-
-  // --- Effect for Agent Auto-Selection Logic --- 
-  useEffect(() => {
-    // Don't run auto-selection while loading or if there was an error fetching
-    if (isLoadingAgents || agentError) return;
-
-    const currentSelectionValid = 
-      selectedAgentIdMiddlePanel && agents.some(agent => agent.id === selectedAgentIdMiddlePanel)
-      && selectedAgentIdRightPanel && agents.some(agent => agent.id === selectedAgentIdRightPanel);
-
-    if (agents.length > 0 && !currentSelectionValid) {
-      // Auto-select first agent if list is populated and current selection is invalid or null
-      const firstAgentId = agents[0].id;
-      // Only set if different to avoid potential loops if this effect is triggered by selectedAgentId itself
-      if (selectedAgentIdMiddlePanel !== firstAgentId && selectedAgentIdRightPanel !== firstAgentId) {
-        setSelectedAgentIdMiddlePanel(firstAgentId);
-        setSelectedAgentIdRightPanel(firstAgentId);
-      }
-    } else if (agents.length === 0 && (selectedAgentIdMiddlePanel || selectedAgentIdRightPanel)) {
-      // If list becomes empty, clear selection
+    if (activeOrgId) { // Only fetch if activeOrgId is available
+      setIsLoadingAgents(true);
+      fetchAgents();
+    } else {
+      // If activeOrgId is not available, reset state
+      setAgents([]);
       setSelectedAgentIdMiddlePanel(null);
       setSelectedAgentIdRightPanel(null);
+      setIsLoadingAgents(false);
+      setAgentError(null); // Or an error like "No active organization"
     }
-    // If agents.length > 0 AND currentSelectionValid, do nothing - keep existing selection.
+  }, [activeOrgId, fetchAgents]); // Added activeOrgId
 
-  }, [agents, isLoadingAgents, agentError, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel]); // selectedAgentId added to dependencies for the setSelectedAgentId condition
+  // Effect for Agent Auto-Selection Logic remains the same, 
+  // as it depends on `agents` list which is now correctly managed based on `activeOrgId`
+  useEffect(() => {
+    if (isLoadingAgents || agentError) return;
+    const currentSelectionValidMiddle = selectedAgentIdMiddlePanel && agents.some(agent => agent.id === selectedAgentIdMiddlePanel);
+    const currentSelectionValidRight = selectedAgentIdRightPanel && agents.some(agent => agent.id === selectedAgentIdRightPanel);
 
-  // --- Handler for Explicit Agent Selection --- 
-  // This simple setter is enough for the hook.
-  // The context provider will use this AND potentially trigger other actions (like loading conversations).
+    if (agents.length > 0) {
+      if (!currentSelectionValidMiddle) {
+        setSelectedAgentIdMiddlePanel(agents[0].id);
+      }
+      if (!currentSelectionValidRight) {
+        setSelectedAgentIdRightPanel(agents[0].id);
+      }
+    } else {
+      if (selectedAgentIdMiddlePanel !== null) setSelectedAgentIdMiddlePanel(null);
+      if (selectedAgentIdRightPanel !== null) setSelectedAgentIdRightPanel(null);
+    }
+  }, [agents, isLoadingAgents, agentError, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel]);
+
   const selectAgentMiddlePanel = useCallback((agentId: string | null) => {
     setSelectedAgentIdMiddlePanel(agentId);
   }, []);
@@ -126,10 +130,10 @@ export function useAgents({ handleLogout }: UseAgentsProps) {
     agents,
     selectedAgentIdMiddlePanel,
     selectedAgentIdRightPanel,
-    selectAgentMiddlePanel, // Expose the explicit selection function
-    selectAgentRightPanel, // Expose the explicit selection function
+    selectAgentMiddlePanel,
+    selectAgentRightPanel,
     isLoadingAgents,
     agentError,
-    fetchAgents, // Expose fetch function maybe for manual refresh?
+    fetchAgents,
   };
 } 

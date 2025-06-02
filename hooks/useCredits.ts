@@ -6,6 +6,9 @@ import { ConsumeCreditsResponse, CreditBalance } from '@/types/credit';
 import { ServiceResponse } from '@agent-base/types';
 import { useState, useCallback } from 'react';
 
+interface UseCreditsProps {
+  activeOrgId: string | null | undefined; // Added activeOrgId
+}
 
 interface UseCreditsReturn {
   // State
@@ -20,7 +23,7 @@ interface UseCreditsReturn {
   clearError: () => void;
 }
 
-export function useCredits(): UseCreditsReturn {
+export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
   const [isValidating, setIsValidating] = useState(false);
   const [isConsuming, setIsConsuming] = useState(false);
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -30,6 +33,12 @@ export function useCredits(): UseCreditsReturn {
    * Validate if user has enough credits before operation
    */
   const validateCredits = useCallback(async (estimatedCredits: number = 1): Promise<boolean> => {
+    if (!activeOrgId) {
+      console.warn('[useCredits] Validate: activeOrgId is missing. Cannot validate credits.');
+      setError('Organization context not available. Cannot validate credits.');
+      return false;
+    }
+    console.log(`[useCredits] Validate: Validating credits for org: ${activeOrgId}`);
     setIsValidating(true);
     setError(null);
 
@@ -43,15 +52,20 @@ export function useCredits(): UseCreditsReturn {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to validate credits');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
+        // Check for 402 specifically, as it's a known "insufficient credits" scenario
+        if (response.status === 402) {
+            setError(errorData.message || 'Insufficient credits. Please upgrade your plan.');
+        } else {
+            setError(errorData.message || 'Failed to validate credits');
+        }
+        return false; // Return false directly if not ok
       }
 
-      const creditBalance: CreditBalance = await response.json();
+      const fetchedCreditBalance: CreditBalance = await response.json();
+      setCreditBalance(fetchedCreditBalance);
 
-      setCreditBalance(creditBalance);
-
-      if (!creditBalance.hasCredits) {
+      if (!fetchedCreditBalance.hasCredits) {
         setError('Insufficient credits. Please upgrade your plan.');
         return false;
       }
@@ -63,7 +77,7 @@ export function useCredits(): UseCreditsReturn {
     } finally {
       setIsValidating(false);
     }
-  }, []);
+  }, [activeOrgId]); // Added activeOrgId
 
   /**
    * Consume credits after operation completion
@@ -72,6 +86,12 @@ export function useCredits(): UseCreditsReturn {
     totalAmountInUSDCents: number, 
     conversationId?: string
   ): Promise<boolean> => {
+    if (!activeOrgId) {
+      console.warn('[useCredits] Consume: activeOrgId is missing. Cannot consume credits.');
+      setError('Organization context not available. Cannot consume credits.');
+      return false;
+    }
+    console.log(`[useCredits] Consume: Consuming credits for org: ${activeOrgId}`);
     setIsConsuming(true);
     setError(null);
 
@@ -85,25 +105,28 @@ export function useCredits(): UseCreditsReturn {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
         if (response.status === 402) {
           console.error('[useCredits] Insufficient credits. Operation could not be completed.');
-          setError('Insufficient credits. Operation could not be completed.');
-          return false;
+          setError(errorData.message || 'Insufficient credits. Operation could not be completed.');
+        } else {
+          setError(errorData.message || 'Failed to consume credits');
         }
-        throw new Error(errorData.message || 'Failed to consume credits');
+        return false; // Return false directly if not ok
       }
 
       const { remainingBalanceInUSDCents }: ConsumeCreditsResponse = await response.json();
       
-      // Update credit balance with remaining balance
-      if (creditBalance) {
-        setCreditBalance({
-          ...creditBalance,
-          balance: remainingBalanceInUSDCents,
-          hasCredits: remainingBalanceInUSDCents > 0
-        });
-      }
+      setCreditBalance(prevBalance => ({
+        ...(prevBalance || { 
+          balance: 0, 
+          hasCredits: false, 
+          stripeCustomerId: '', // Add default empty string for required field
+          subscription: null 
+        }), 
+        balance: remainingBalanceInUSDCents,
+        hasCredits: remainingBalanceInUSDCents > 0
+      }));
 
       return true;
     } catch (err: any) {
@@ -113,7 +136,7 @@ export function useCredits(): UseCreditsReturn {
     } finally {
       setIsConsuming(false);
     }
-  }, [creditBalance]);
+  }, [activeOrgId]); // Added activeOrgId. Removed creditBalance from deps as we use functional update for setCreditBalance.
 
   /**
    * Clear error state

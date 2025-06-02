@@ -1,49 +1,66 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useChat, Message, CreateMessage, UseChatOptions } from 'ai/react';
 import { type JSONValue } from 'ai';
-import { useCredits } from '@/hooks/useCredits';
 import { useDashboard } from '@/components/dashboard/context/DashboardContext';
 import { CreditInfo, CreditDataMessagePayload, isCreditDataMessage, CustomChatRequestOptions } from './chatUtils';
 import { createIdGenerator } from 'ai';
 import { 
   AgentBaseCreditStreamPayload, 
   AgentBaseDeductCreditRequest,
-  AgentBaseCreditConsumptionItem } from '@agent-base/types';
+  AgentBaseCreditConsumptionItem,
+  CreditBalance
+} from '@agent-base/types';
 
 /**
  * @file useConfiguredChat.ts
  * @description Custom hook to configure and wrap Vercel AI SDK's useChat with credit validation and consumption.
  */
 
+// Props for the credit functionalities needed by this hook
+interface CreditFunctionsAndState {
+  validateCredits: (estimatedCredits?: number) => Promise<boolean>;
+  consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
+  isValidatingCredits: boolean;
+  creditBalance: CreditBalance | null;
+  creditHookError: string | null;
+  clearCreditHookError: () => void;
+}
+
+// Extend UseChatOptions to include activeOrgId and credit functions/state
+interface ConfiguredChatOptions extends UseChatOptions {
+  activeOrgId: string | null | undefined;
+  creditOps: CreditFunctionsAndState;
+}
 
 /**
  * A custom hook that configures and wraps the Vercel AI SDK's useChat hook 
  * with upfront credit validation and downstream credit consumption.
- * @param {UseChatOptions} params - Options for the useChat hook.
+ * @param {ConfiguredChatOptions} params - Options for the useChat hook, including activeOrgId and credit operations.
  * @returns {object} Enhanced chat helpers and credit-related states/functions.
  */
-export function useConfiguredChat(params: UseChatOptions) {
+export function useConfiguredChat(params: ConfiguredChatOptions) {
   const { 
     onFinish: callerOnFinish, 
     onError: callerOnError,   
     id: conversationIdFromParams, 
     api: apiFromParams, 
     streamProtocol: streamProtocolFromParams,
+    activeOrgId, 
+    creditOps,
     ...restOfParams 
   } = params;
 
   const { 
     validateCredits, 
     consumeCredits,
-    isValidating: isValidatingCredits, 
+    isValidatingCredits, 
     creditBalance,
-    error: creditHookError, 
-    clearError: clearCreditHookError 
-  } = useCredits();
+    creditHookError,
+    clearCreditHookError 
+  } = creditOps;
 
   const { fetchPlanInfo } = useDashboard();
   const [lastProcessedTransactionId, setLastProcessedTransactionId] = useState<string | null>(null);
-
 
   // State for chat-specific errors that might occur during send/receive
   const [chatError, setChatError] = useState<string | null>(null);

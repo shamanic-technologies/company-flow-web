@@ -5,14 +5,15 @@ import { Webhook, ServiceResponse, SearchWebhookResultItem, SearchWebhookResult 
 
 interface UseWebhooksProps {
   handleLogout: () => void;
+  activeOrgId: string | null | undefined;
 }
 
 /**
  * @description Hook to manage webhook data fetching, selection, and state.
- * @param {UseWebhooksProps} props - The logout handler.
+ * @param {UseWebhooksProps} props - The logout handler and activeOrgId.
  * @returns An object containing user webhooks, selected webhook, loading/error states, and related functions.
  */
-export function useWebhooks({ handleLogout }: UseWebhooksProps) {
+export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
   const [userWebhooks, setUserWebhooks] = useState<SearchWebhookResultItem[]>([]);
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
@@ -20,7 +21,15 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
   // --- Fetch User Webhooks --- 
   const fetchUserWebhooks = useCallback(async () => {
-    console.log("🎣 useWebhooks - Polling for user webhooks...");
+    if (!activeOrgId) {
+      console.log("🎣 useWebhooks - Waiting for activeOrgId to fetch webhooks...");
+      setUserWebhooks([]); // Clear if orgId is lost or not available
+      setIsLoadingWebhooks(false); // Not truly loading if prerequisites aren't met
+      // setWebhookError("Organization not selected. Cannot fetch webhooks."); // Optional: set an error
+      return;
+    }
+    console.log(`🎣 useWebhooks - Polling for user webhooks for org: ${activeOrgId}`);
+    setWebhookError(null); // Clear previous errors
 
     // setUserWebhooks([]); // Clear previous webhooks while fetching? Let's clear on success/fail.
 
@@ -34,6 +43,7 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
 
       if (response.status === 401) {
         console.error('🚫 useWebhooks - Unauthorized fetching webhooks');
+        // handleLogout(); // Consider if logout is appropriate here or if context should handle
         throw new Error('Unauthorized fetching webhooks');
       }
 
@@ -55,14 +65,21 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
     } finally {
       setIsLoadingWebhooks(false);
     }
-  }, []);
+  }, [activeOrgId, handleLogout]); // Added activeOrgId to dependencies
 
   // --- Effect to Poll for Webhooks Every 5 Seconds --- 
   useEffect(() => {
+    if (!activeOrgId) {
+      // If no active org, ensure state is clean and don't attempt to fetch/poll
+      setUserWebhooks([]);
+      setSelectedWebhook(null);
+      setIsLoadingWebhooks(false);
+      setWebhookError(null); // Or set a specific error like "No organization selected"
+      return; // Do not proceed to fetch or set up interval
+    }
+    setIsLoadingWebhooks(true); // Set loading true only when proceeding with fetch
 
-    // Fetch immediately on mount
-    setIsLoadingWebhooks(true);
-    setWebhookError(null);
+    // Fetch immediately on mount if activeOrgId is present
     fetchUserWebhooks(); 
 
     // Then set up the interval for polling
@@ -71,12 +88,12 @@ export function useWebhooks({ handleLogout }: UseWebhooksProps) {
     }, 5000); // 5000 milliseconds = 5 seconds
 
     // Cleanup function to clear the interval when the component unmounts
-    // or if the dependencies of useEffect change (though fetchUserWebhooks is stable here)
+    // or if the dependencies of useEffect change (e.g., activeOrgId)
     return () => {
       clearInterval(intervalId);
       console.log("🛑 useWebhooks - Stopped polling for webhooks.");
     };
-  }, [fetchUserWebhooks]); // fetchUserWebhooks is a dependency
+  }, [activeOrgId, fetchUserWebhooks]); // Added activeOrgId to dependencies
 
   // --- Select Webhook --- 
   // This hook only manages the state. The context provider will handle view changes.

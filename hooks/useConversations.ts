@@ -11,16 +11,23 @@ interface UseConversationsProps {
   selectedAgentIdRightPanel: string | null;
   user: UserResource | null | undefined;
   handleLogout: () => void;
+  activeOrgId: string | null | undefined; // Added activeOrgId
 }
 
 /**
  * @description Hook to manage all user conversations.
  * Message-related logic is handled by the useMessages hook.
- * @param {UseConversationsProps} props - Selected agent ID, Clerk user object, and logout handler.
+ * @param {UseConversationsProps} props - Selected agent ID, Clerk user object, logout handler, and activeOrgId.
  * @returns An object containing all user conversations, loading/error states for conversations,
  * and message-related states/functions from useMessages.
  */
-export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, user, handleLogout }: UseConversationsProps) {
+export function useConversations({ 
+  selectedAgentIdMiddlePanel, 
+  selectedAgentIdRightPanel, 
+  user, 
+  handleLogout, 
+  activeOrgId 
+}: UseConversationsProps) {
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
   const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
@@ -38,10 +45,20 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
     isLoadingMessages,
     messageError,
     fetchMessages, // This is fetchMessages from useMessages
-  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout });
+  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId }); // Pass activeOrgId
 
   // --- Function to fetch ALL conversations for the user ---
   const fetchUserConversations = useCallback(async () => {
+    if (!activeOrgId) {
+      console.log("useConversations: Waiting for activeOrgId to fetch conversations...");
+      setConversationList([]);
+      setIsLoadingConversationsMiddlePanel(false);
+      // setConversationError("Organization not selected. Cannot fetch conversations.");
+      return;
+    }
+    console.log(`useConversations: Fetching conversations for org: ${activeOrgId}`);
+    setConversationError(null);
+
     try {
       const response = await fetch('/api/conversations/list-all-for-user', {
         method: 'GET',
@@ -49,6 +66,7 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
       });
       if (response.status === 401) {
         console.error('🚫 useConversations - Unauthorized fetching all user conversations');
+        setConversationList([]);
         handleLogout();
         return;
       }
@@ -77,20 +95,22 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
     } finally {
       setIsLoadingConversationsMiddlePanel(false);
     }
-  }, [handleLogout]);
+  }, [activeOrgId, handleLogout]); // Added activeOrgId. conversationList removed from deps.
 
   // --- Effect to update currentConversationIdMiddlePanel based on selectedAgentIdMiddlePanel and conversationList ---
   useEffect(() => {
+    if (!activeOrgId) { // If org changes, selection logic might need to reset or re-evaluate
+        setCurrentConversationIdMiddlePanel(null);
+        return;
+    }
     if (selectedAgentIdMiddlePanel) {
       const agentConversations = conversationList
         .filter(convo => convo.agentId === selectedAgentIdMiddlePanel)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       if (agentConversations.length > 0) {
         const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdMiddlePanel);
-        if (!currentConvoStillValid) {
+        if (!currentConvoStillValid || currentConversationIdMiddlePanel === null) {
           setCurrentConversationIdMiddlePanel(agentConversations[0].conversationId);
-        } else if (currentConversationIdMiddlePanel === null) {
-             setCurrentConversationIdMiddlePanel(agentConversations[0].conversationId);
         }
       } else {
         if (currentConversationIdMiddlePanel !== null) {
@@ -99,23 +119,24 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
       }
     } else {
       if (currentConversationIdMiddlePanel !== null) {
-        console.log("useConversations: No agent selected, clearing current conversation ID.");
         setCurrentConversationIdMiddlePanel(null);
       }
     }
-  }, [selectedAgentIdMiddlePanel, conversationList, currentConversationIdMiddlePanel]);
+  }, [selectedAgentIdMiddlePanel, conversationList, currentConversationIdMiddlePanel, activeOrgId]); // Added activeOrgId
 
   // --- Effect to update currentConversationIdRightPanel based on selectedAgentIdRightPanel and conversationList ---
   useEffect(() => {
+    if (!activeOrgId) {
+        setCurrentConversationIdRightPanel(null);
+        return;
+    }
     if (selectedAgentIdRightPanel) {
       const agentConversations = conversationList
           .filter(convo => convo.agentId === selectedAgentIdRightPanel)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         if (agentConversations.length > 0) {
           const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdRightPanel);
-          if (!currentConvoStillValid) {
-            setCurrentConversationIdRightPanel(agentConversations[0].conversationId);
-          } else if (currentConversationIdRightPanel === null) {
+          if (!currentConvoStillValid || currentConversationIdRightPanel === null) {
                setCurrentConversationIdRightPanel(agentConversations[0].conversationId);
           }
         } else {
@@ -124,27 +145,36 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
           }
         }
       } else {
-        if (currentConversationIdMiddlePanel !== null) {
-          console.log("useConversations: No agent selected, clearing current conversation ID.");
+        if (currentConversationIdRightPanel !== null) { // Corrected from currentConversationIdMiddlePanel
           setCurrentConversationIdRightPanel(null);
         }
       }
-    }, [selectedAgentIdRightPanel, conversationList, currentConversationIdRightPanel]);
+    }, [selectedAgentIdRightPanel, conversationList, currentConversationIdRightPanel, activeOrgId]); // Added activeOrgId
 
   // --- Refresh all user conversations (used by polling for conversation list) ---
   const refreshConversationList = useCallback(async () => {
+    if (!activeOrgId) {
+        console.log("useConversations: Cannot refresh list, no active org.");
+        return; 
+    }
     await fetchUserConversations();
-  }, [fetchUserConversations]);
+  }, [activeOrgId, fetchUserConversations]); // Added activeOrgId
 
   // --- Handler to Create New Chat --- 
   const handleCreateNewChatRightPanel = useCallback(async (): Promise<string | null> => {
+    if (!activeOrgId) {
+      console.warn("useConversations: activeOrgId is missing. Cannot create chat.");
+      setConversationError("Organization context not available. Cannot create chat.");
+      return null;
+    }
     if (!selectedAgentIdRightPanel || !user) {
       console.warn("useConversations: Agent ID or user info missing for creating chat.");
       setConversationError("Cannot create chat: missing required information.");
       return null;
     }
+    console.log(`useConversations: Creating new chat for org ${activeOrgId}, agent ${selectedAgentIdRightPanel}`);
     setIsCreatingConversationRightPanel(true);
-    setConversationError(null); // Clear conversation list error
+    setConversationError(null);
     try {
       const newConversationId = crypto.randomUUID();
       const channelId = 'web';
@@ -174,8 +204,7 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
         throw new Error('Invalid conversation data received from API');
       }
       console.log("useConversations: New chat created successfully, fetching all user conversations to update list.");
-      await fetchUserConversations(); // Refresh the conversation list
-      // Set the new conversation as current. This will trigger useMessages to fetch its messages.
+      await fetchUserConversations();
       setCurrentConversationIdRightPanel(responseData.conversationId);
       return responseData.conversationId;
     } catch (error: any) {
@@ -185,7 +214,7 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
     } finally {
       setIsCreatingConversationRightPanel(false);
     }
-  }, [selectedAgentIdRightPanel, user, handleLogout, fetchUserConversations]);
+  }, [activeOrgId, selectedAgentIdRightPanel, user, handleLogout, fetchUserConversations]); // Added activeOrgId
 
   // --- Simple setter for selecting a conversation ID --- 
   const selectConversationIdMiddlePanel = useCallback((conversationId: string | null) => {
@@ -203,12 +232,18 @@ export function useConversations({ selectedAgentIdMiddlePanel, selectedAgentIdRi
 
   // --- Initial fetch of all conversations when the hook mounts and user is available ---
   useEffect(() => {
-    // Load the conversation list
-    setIsLoadingConversationsMiddlePanel(true);
-    setConversationError(null);  
-    // Fetch the conversation list
-    fetchUserConversations();
-  }, [fetchUserConversations]);
+    if (activeOrgId) { // Only fetch if activeOrgId is available
+      setIsLoadingConversationsMiddlePanel(true);
+      setConversationError(null);  
+      fetchUserConversations();
+    } else {
+      setConversationList([]);
+      setCurrentConversationIdMiddlePanel(null);
+      setCurrentConversationIdRightPanel(null);
+      setIsLoadingConversationsMiddlePanel(false);
+      setConversationError(null); // Or an error like "No active organization"
+    }
+  }, [activeOrgId, fetchUserConversations]); // Added activeOrgId
 
   return {
     // Conversation list related

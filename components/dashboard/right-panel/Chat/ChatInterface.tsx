@@ -16,12 +16,12 @@ import MessageInput, { MessageInputRef } from './MessageInput';
 import ThinkingIndicator from './ThinkingIndicator';
 import { classifyError } from './utils/errorHandlers';
 import { createIdGenerator } from 'ai';
-import { useCredits } from '@/hooks/useCredits';
 import { CreditDataMessagePayload, isCreditDataMessage, CreditInfo } from './utils/chatUtils';
 import { useChatViewEffects } from './utils/useChatViewEffects';
 import { ChatErrorDisplay } from './ChatErrorDisplay';
 import { ChatInitialStateDisplay } from './ChatInitialStateDisplay';
 import { useConfiguredChat } from './utils/useConfiguredChat'; 
+import { useDashboard } from '@/components/dashboard/context/DashboardContext'; // Import useDashboard
 
 interface ChatInterfaceProps {
   userInitials: string;
@@ -45,6 +45,17 @@ export const ChatInterface = ({
   error: propError = null,
 }: ChatInterfaceProps) => {
   
+  const {
+    activeOrgId,
+    validateCredits,
+    consumeCredits,
+    isValidating,
+    isConsuming,
+    creditBalance,
+    error: directErrorFromCreditsHook,
+    clearError: directClearErrorFromCreditsHook,
+  } = useDashboard();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<MessageInputRef>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -53,22 +64,27 @@ export const ChatInterface = ({
   const [showErrorDetails, setShowErrorDetails] = useState(false); 
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
+  const creditOpsForChat = {
+    validateCredits,
+    consumeCredits,
+    isValidatingCredits: isValidating,
+    creditBalance,
+    creditHookError: directErrorFromCreditsHook,
+    clearCreditHookError: directClearErrorFromCreditsHook,
+  };
+
   const {
     messages,
     input,
     handleInputChange,
     handleSubmit,
     isLoading,
-    error: chatHookError,
+    error: chatHookErrorFromVercel,
     append,
     reload,
     stop,
     setMessages,
     addToolResult,
-    isValidatingCredits,
-    creditBalance,
-    creditHookError,
-    clearCreditHookError,
     chatError,
     rawError,
     errorInfo,
@@ -77,22 +93,22 @@ export const ChatInterface = ({
     api: '/api/agents/run',
     id: conversationId,
     initialMessages: initialMessages,
+    activeOrgId: activeOrgId,
+    creditOps: creditOpsForChat,
   });
 
-  // Effect to update prevChatHookIsLoading for useChatViewEffects dependency
   useEffect(() => {
     setPrevChatHookIsLoading(isLoading);
   }, [isLoading]);
 
-  // Sync initialMessages from props with the chat hook's messages state
   useEffect(() => {
     if (initialMessages) {
         setMessages(initialMessages);
     }
-    setUserHasScrolledUp(false); // Reset scroll when conversation/messages change
-    if (chatError) setChatError(null); // Clear previous errors from the hook if messages are reloaded
-    setShowErrorDetails(false); // Reset error detail view
-  }, [initialMessages, setMessages, chatError, setChatError]); // Added chatError and setChatError as deps
+    setUserHasScrolledUp(false);
+    if (chatError && setChatError) setChatError(null);
+    setShowErrorDetails(false);
+  }, [initialMessages, setMessages, chatError, setChatError]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -105,7 +121,7 @@ export const ChatInterface = ({
     messagesEndRef,
     inputRef,
     scrollAreaRef,
-    prevChatIsLoading: prevChatHookIsLoading, // Use renamed state
+    prevChatIsLoading: prevChatHookIsLoading,
     chatIsLoading: isLoading, 
     propIsLoading,
     propError,
@@ -114,22 +130,19 @@ export const ChatInterface = ({
     scrollToBottom,
   });
 
-  // Display initial loading or error screens based on props
   const initialStateDisplay = (
     <ChatInitialStateDisplay isLoading={propIsLoading} error={propError} />
   );
   if (propIsLoading || propError) return initialStateDisplay;
 
-  // Handler for the ChatErrorDisplay component to retry actions
   const handleRetryFromErrorDisplay = () => {
-    if (setChatError) setChatError(null); // Clear error in useConfiguredChat state
+    if (setChatError) setChatError(null);
     setShowErrorDetails(false);
-    reload(); // Attempt to reload the chat state
+    reload();
   };
 
-  // Handler for dismissing errors from ChatErrorDisplay
   const handleDismissFromErrorDisplay = () => {
-    if (setChatError) setChatError(null); // Clear error in useConfiguredChat state
+    if (setChatError) setChatError(null);
     setShowErrorDetails(false);
   };
 
@@ -137,9 +150,9 @@ export const ChatInterface = ({
     <Card className="flex-1 flex flex-col overflow-hidden bg-gray-900 border-none shadow-none rounded-none">
       <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
         <ChatErrorDisplay 
-          chatError={chatError} 
+          chatError={chatError || directErrorFromCreditsHook}
           errorInfo={errorInfo}
-          rawError={rawError} 
+          rawError={rawError}
           showErrorDetails={showErrorDetails}
           onRetry={handleRetryFromErrorDisplay}
           onShowDetails={() => setShowErrorDetails(!showErrorDetails)}
@@ -149,7 +162,7 @@ export const ChatInterface = ({
         <div className="flex-1 overflow-hidden">
           <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-2">
             <div className="space-y-4">
-              {messages.map((msg: Message) => ( // Explicitly type msg as Message
+              {messages.map((msg: Message) => (
                 <ChatMessage 
                   key={msg.id} 
                   message={msg} 
@@ -175,7 +188,7 @@ export const ChatInterface = ({
           <MessageInput
             ref={inputRef}
             input={input}
-            isLoading={isLoading || isValidatingCredits}
+            isLoading={isLoading || isValidating}
             handleInputChange={handleInputChange}
             handleSubmit={handleSubmit} 
             stop={stop}

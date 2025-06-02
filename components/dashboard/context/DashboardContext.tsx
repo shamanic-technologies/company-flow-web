@@ -20,6 +20,7 @@ import { useConversationPolling } from '../../../hooks/polling/useConversationPo
 import { useMessages } from '../../../hooks/useMessages';
 
 import { SearchWebhookResultItem } from '@agent-base/types';
+import { useCredits } from '../../../hooks/useCredits';
 
 // --- BEGIN MODIFICATION ---
 // Import the ToolItem type, assuming it might be defined in Sidebar or a shared types file
@@ -191,14 +192,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, orgId: activeOrgIdFromClerkAuth, isLoaded: authIsLoaded } = useClerkAuth();
   const { signOut } = useClerk();
 
-  // Use the new organizations hook
   const {
     organizations,
     currentOrganization,
     isLoadingOrganizations,
     organizationError,
     switchOrganization,
-    activeOrgId, // This is the authoritative activeOrgId from the hook
+    activeOrgId, // This is the authoritative activeOrgId from useOrganizations
   } = useOrganizations();
 
   const handleClerkLogout = useCallback(async () => {
@@ -229,7 +229,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoadingAgents, 
     agentError, 
     fetchAgents 
-  } = useAgents({ handleLogout: handleClerkLogout });
+  } = useAgents({ handleLogout: handleClerkLogout, activeOrgId });
 
   const {
     conversationList, 
@@ -251,7 +251,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
     user: clerkUser, 
-    handleLogout: handleClerkLogout 
+    handleLogout: handleClerkLogout, 
+    activeOrgId // Pass activeOrgId
   });
 
   const currentMessagesMiddlePanel = currentMessagesForMiddlePanelHook;
@@ -265,40 +266,32 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoadingWebhooks, 
     webhookError, 
     fetchUserWebhooks 
-  } = useWebhooks({ handleLogout: handleClerkLogout });
+  } = useWebhooks({ handleLogout: handleClerkLogout, activeOrgId });
 
   const {
     apiTools,
     isLoadingApiTools,
     apiToolsError,
     fetchApiTools,
-  } = useApiTools({ handleLogout: handleClerkLogout });
+  } = useApiTools({ handleLogout: handleClerkLogout, activeOrgId });
 
   const {
     planInfo: displayPlanInfo,
     isLoading: isLoadingPlanInfoFromHook,
     error: planInfoErrorFromHook,
     fetch: fetchPlanInfoFromHook
-  } = usePlanInfo();
+  } = usePlanInfo({ activeOrgId });
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const POLLING_INTERVAL = 5000;
 
-  useEffect(() => {
-    if (displayPlanInfo) {
-      // Assuming displayPlanInfo is the same as planInfo in usePlanInfo
-      // If not, you might want to update this line to use the correct planInfo variable
-      // This is a placeholder and should be updated based on your actual implementation
-    }
-  }, [displayPlanInfo]);
-
   const fetchPlanInfo = useCallback(async () => {
     await fetchPlanInfoFromHook();
   }, [fetchPlanInfoFromHook]);
 
-  useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn });
-  useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn });
+  useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
+  useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
     selectAgentMiddlePanel(agentId);
@@ -344,29 +337,31 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const isClerkLoading = !clerkIsLoaded || !authIsLoaded;
 
-  const {
+  const creditsHook = useCredits({ activeOrgId });
+  const { 
     currentMessages: currentMessagesRightPanelData,
     isLoadingMessages: isLoadingMessagesRightPanelData,
     messageError: messageErrorRightPanelData,
     fetchMessages: fetchMessagesForRightPanelFromHook,
   } = useMessages({ 
     conversationId: currentConversationIdRightPanel, 
-    handleLogout: handleClerkLogout 
+    handleLogout: handleClerkLogout, 
+    activeOrgId
   });
-
-  const fetchMessagesMiddlePanel = useCallback(async () => {
+  
+  const fetchMessagesForMiddlePanel = useCallback(async () => {
     if (currentConversationIdMiddlePanel) {
-      await fetchMessagesFromConversationsHook(currentConversationIdMiddlePanel);
+        await fetchMessagesFromConversationsHook(currentConversationIdMiddlePanel);
     } else {
-      console.warn("[DashboardContext] fetchMessagesMiddlePanel called without a selected middle panel conversation.");
+        console.warn("[DashboardContext] fetchMessagesForMiddlePanel called without a selected middle panel conversation.");
     }
   }, [currentConversationIdMiddlePanel, fetchMessagesFromConversationsHook]);
 
-  const fetchMessagesRightPanel = useCallback(async () => {
+  const fetchMessagesForRightPanel = useCallback(async () => {
     if (currentConversationIdRightPanel) {
       await fetchMessagesForRightPanelFromHook(currentConversationIdRightPanel);
     } else {
-      console.warn("[DashboardContext] fetchMessagesRightPanel called without a selected right panel conversation.");
+      console.warn("[DashboardContext] fetchMessagesForRightPanel called without a selected right panel conversation.");
     }
   }, [currentConversationIdRightPanel, fetchMessagesForRightPanelFromHook]);
 
@@ -376,12 +371,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isSignedIn,
     handleClerkLogout,
     getClerkUserInitials,
+    // Organizations
     organizations,
     currentOrganization,
     activeOrgId,
     isLoadingOrganizations,
     organizationError,
     switchOrganization,
+    // Agents
     agents, 
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
@@ -389,67 +386,82 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectAgentRightPanel,     
     isLoadingAgents, 
     agentError, 
+    fetchAgents, 
+    // Conversations
     conversationList, 
     currentConversationIdMiddlePanel, 
     isLoadingConversationsMiddlePanel,
-    conversationError,
-    currentMessagesMiddlePanel,
-    isLoadingMessagesMiddlePanel,
-    messageError,
+    conversationError, 
+    currentMessagesMiddlePanel, 
+    isLoadingMessagesMiddlePanel, 
+    messageError, 
     currentConversationIdRightPanel, 
-    isLoadingConversationsRightPanel,
-    isCreatingConversationRightPanel,
-    currentMessagesRightPanel: currentMessagesRightPanelData,
-    isLoadingMessagesRightPanel: isLoadingMessagesRightPanelData,
+    isLoadingConversationsRightPanel, 
+    isCreatingConversationRightPanel, 
+    currentMessagesRightPanel: currentMessagesRightPanelData, 
+    isLoadingMessagesRightPanel: isLoadingMessagesRightPanelData, 
     messageErrorRightPanel: messageErrorRightPanelData,
     selectConversationIdMiddlePanel,  
     selectConversationIdRightPanel,   
-    handleCreateNewChatRightPanel: handleCreateNewChatRightPanel,
+    handleCreateNewChatRightPanel, 
+    refreshConversations: refreshConversationList,
+    // Webhooks
     userWebhooks, 
     selectedWebhook, 
+    selectWebhook, 
     isLoadingWebhooks, 
     webhookError, 
     fetchUserWebhooks, 
+    // UI State
     activeAgentView, 
     setActiveAgentView,
+    // API Tools
     apiTools, 
     isLoadingApiTools, 
     apiToolsError, 
     fetchApiTools, 
     selectedTool,
+    // Plan Info
     planInfo: displayPlanInfo, 
     isLoadingPlanInfo: isLoadingPlanInfoFromHook, 
     planInfoError: planInfoErrorFromHook, 
     fetchPlanInfo, 
+    // Credits
+    isValidating: creditsHook.isValidating,
+    isConsuming: creditsHook.isConsuming,
+    creditBalance: creditsHook.creditBalance,
+    error: creditsHook.error, 
+    validateCredits: creditsHook.validateCredits,
+    consumeCredits: creditsHook.consumeCredits,
+    clearError: creditsHook.clearError,
+    // View Setters & Other Actions
     selectAgentAndSetView, 
     selectConversationAndSetView, 
     createNewChatAndSetView, 
     selectWebhookAndSetView, 
     selectToolAndSetView, 
     refreshAgents: fetchAgents, 
-    refreshConversations: refreshConversationList, 
     refreshApiTools: fetchApiTools, 
-    fetchMessagesMiddlePanel,
-    fetchMessagesRightPanel,
+    fetchMessagesMiddlePanel: fetchMessagesForMiddlePanel,
+    fetchMessagesRightPanel: fetchMessagesForRightPanel,
   }), [
-    clerkUser, clerkIsLoaded, authIsLoaded, isSignedIn, handleClerkLogout, getClerkUserInitials,
+    clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     organizations, currentOrganization, activeOrgId, isLoadingOrganizations, organizationError, switchOrganization,
     agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, selectAgentMiddlePanel, selectAgentRightPanel, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationIdMiddlePanel, isLoadingConversationsMiddlePanel, conversationError, 
     currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageError, 
     currentConversationIdRightPanel, isLoadingConversationsRightPanel, isCreatingConversationRightPanel, 
     currentMessagesRightPanelData, isLoadingMessagesRightPanelData, messageErrorRightPanelData,
-    selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel,
-    userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
+    selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel, refreshConversationList,
+    userWebhooks, selectedWebhook, selectWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
     activeAgentView, setActiveAgentView,
     apiTools, isLoadingApiTools, apiToolsError, fetchApiTools,
     selectedTool,
-    displayPlanInfo, isLoadingPlanInfoFromHook, planInfoErrorFromHook, fetchPlanInfo, 
+    displayPlanInfo, isLoadingPlanInfoFromHook, planInfoErrorFromHook, fetchPlanInfo,
+    creditsHook, 
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
     selectToolAndSetView,
-    refreshConversationList, fetchAgents, fetchApiTools,
-    fetchMessagesMiddlePanel,
-    fetchMessagesRightPanel
+    fetchMessagesForMiddlePanel, fetchMessagesForRightPanel
   ]);
   
   useEffect(() => {

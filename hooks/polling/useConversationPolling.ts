@@ -6,7 +6,7 @@ interface UseConversationPollingProps {
   refreshConversations: () => Promise<void>;
   pollingInterval?: number; // in milliseconds
   isSignedIn: boolean | undefined;
-  // selectedAgentIdMiddlePanel: string | null; // Removed as polling now fetches all user conversations
+  activeOrgId: string | null | undefined;
 }
 
 /**
@@ -14,13 +14,14 @@ interface UseConversationPollingProps {
  * @param {UseConversationPollingProps} props - Configuration for conversation polling.
  * @param {() => Promise<void>} props.refreshConversations - Function to refresh all user conversations.
  * @param {number} [props.pollingInterval=5000] - Interval in milliseconds to poll. Defaults to 5000ms.
- * @param {boolean | undefined} props.isSignedIn - Boolean indicating if the user is signed in. Polling occurs if signed in.
+ * @param {boolean | undefined} props.isSignedIn - Boolean indicating if the user is signed in.
+ * @param {string | null | undefined} props.activeOrgId - The active organization ID. Polling occurs if signed in AND org is active.
  */
 export function useConversationPolling({
   refreshConversations,
   pollingInterval = 5000,
   isSignedIn,
-  // selectedAgentIdMiddlePanel, // Removed
+  activeOrgId,
 }: UseConversationPollingProps): void {
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -37,13 +38,14 @@ export function useConversationPolling({
       intervalIdRef.current = null;
     }
 
-    // Start polling only if user is signed in
-    if (isSignedIn) { 
+    // Start polling only if user is signed in AND an organization is active
+    if (isSignedIn && activeOrgId) { 
       performFetch(); // Initial fetch
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useConversationPolling: Started polling for all user conversations every ${pollingInterval}ms.`);
+      console.log(`useConversationPolling: Started polling for all user conversations for org ${activeOrgId} every ${pollingInterval}ms.`);
     } else {
-      console.log(`useConversationPolling: Polling for conversations stopped/not started (user not signed in).`);
+      let reason = !isSignedIn ? "user not signed in" : "no active organization";
+      console.log(`useConversationPolling: Polling for conversations stopped/not started (${reason}).`);
     }
 
     return () => {
@@ -53,5 +55,5 @@ export function useConversationPolling({
         console.log('useConversationPolling: Stopped polling for all user conversations.');
       }
     };
-  }, [refreshConversations, pollingInterval, isSignedIn]); // Removed selectedAgentIdMiddlePanel from dependencies
+  }, [refreshConversations, pollingInterval, isSignedIn, activeOrgId]);
 } 

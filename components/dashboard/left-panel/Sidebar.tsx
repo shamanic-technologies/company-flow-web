@@ -125,7 +125,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
       <SidebarContent className="flex-1 overflow-y-auto p-2">
         <SidebarMenu>
-          <SidebarMenuItem>
+          {/* <SidebarMenuItem>
             <Collapsible open={isDashboardsOpen} onOpenChange={setIsDashboardsOpen}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
@@ -139,7 +139,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
 
           {/* Webhooks Section (renamed to Inbound) */}
           <SidebarMenuItem>
