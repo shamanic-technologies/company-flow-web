@@ -29,6 +29,7 @@ import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToo
 import WebhookSubfolder from './WebhookSubfolder';
 import { renderSectionContent } from './SidebarSectionRenderer';
 import ToolSubfolder from './ToolSubfolder';
+import { OrganizationSelector } from './OrganizationSelector';
 
 import {
   Collapsible,
@@ -119,10 +120,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   return (
     <Sidebar {...props} className="border-r border-border/40">
       <SidebarHeader className="p-2 border-b border-border/40">
-        <div className="group flex h-9 w-full shrink-0 items-center justify-center rounded-md border border-dashed border-border/70 text-xs font-medium text-muted-foreground">
-          <FolderClosed className="h-4 w-4 mr-2" />
-          Personal
-        </div>
+        <OrganizationSelector />
       </SidebarHeader>
 
       <SidebarContent className="flex-1 overflow-y-auto p-2">
