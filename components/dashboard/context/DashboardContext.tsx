@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Agent, Conversation, SearchApiToolResultItem } from '@agent-base/types';
 import { Message as VercelMessage } from 'ai/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/nextjs';
-import { UserResource } from '@clerk/types';
+import type { UserResource, OrganizationMembershipResource } from '@clerk/types';
 
 import { useAgents } from '../../../hooks/useAgents';
 import { useConversations } from '../../../hooks/useConversations';
@@ -16,10 +16,10 @@ import { PlanInfo } from '@/types/credit';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
-// import { useMessagePolling } from '../../../hooks/polling/useMessagePolling'; // Still commented out
+import { useMessages } from '../../../hooks/useMessages';
+import { usePersonalOrgActivator } from '../../../hooks/usePersonalOrgActivator';
 
 import { SearchWebhookResultItem } from '@agent-base/types';
-import { useMessages } from '../../../hooks/useMessages';
 
 // --- BEGIN MODIFICATION ---
 // Import the ToolItem type, assuming it might be defined in Sidebar or a shared types file
@@ -66,6 +66,7 @@ interface DashboardContextType {
   // Right panel messages are managed locally if it has a dedicated message stream
   currentMessagesRightPanel: VercelMessage[]; 
   isLoadingMessagesRightPanel: boolean;
+  messageErrorRightPanel?: string | null; // Added optional based on previous context values
 
   // Functions for selecting conversations in different panels
   selectConversationIdMiddlePanel: (conversationId: string | null) => void;
@@ -108,6 +109,9 @@ interface DashboardContextType {
   selectToolAndSetView: (tool: SearchApiToolResultItem | null) => void;
   refreshAgents: () => Promise<void>;
   refreshConversations: () => Promise<void>; // Refreshes the master list of conversations
+  refreshApiTools?: () => Promise<void>; // Added optional for completeness
+  fetchMessagesMiddlePanel?: (conversationId: string) => Promise<void>; // Expects no arguments
+  fetchMessagesRightPanel?: (conversationId: string) => Promise<void>;  // Expects no arguments
 }
 
 export const DashboardContext = createContext<DashboardContextType>({
@@ -135,6 +139,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   isCreatingConversationRightPanel: false,
   currentMessagesRightPanel: [],
   isLoadingMessagesRightPanel: false,
+  messageErrorRightPanel: null, // Defaulted
   selectConversationIdMiddlePanel: () => { console.warn("selectConversationIdMiddlePanel called on default context"); },
   selectConversationIdRightPanel: () => { console.warn("selectConversationIdRightPanel called on default context"); },
   handleCreateNewChatRightPanel: async () => { console.warn("handleCreateNewChatRightPanel called on default context"); return null; },
@@ -150,12 +155,10 @@ export const DashboardContext = createContext<DashboardContextType>({
   apiToolsError: null,
   fetchApiTools: async () => { console.warn("fetchApiTools called on default context"); },
   selectedTool: null,
-  // Default plan info values
   planInfo: null,
-  isLoadingPlanInfo: true, // Default to true as it will likely load on init
+  isLoadingPlanInfo: true,
   planInfoError: null,
-  fetchPlanInfo: async () => { console.warn("refetchPlanInfo called on default context"); },
-  // updateCreditBalanceLocally: () => { console.warn("updateCreditBalanceLocally called on default context"); },
+  fetchPlanInfo: async () => { console.warn("fetchPlanInfo called on default context"); },
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
   createNewChatAndSetView: async () => {},
@@ -163,13 +166,26 @@ export const DashboardContext = createContext<DashboardContextType>({
   selectToolAndSetView: () => { console.warn("selectToolAndSetView called on default context"); },
   refreshAgents: async () => { console.warn("refreshAgents called on default context"); },
   refreshConversations: async () => { console.warn("refreshConversations called on default context"); },
+  refreshApiTools: async () => { console.warn("refreshApiTools called on default context"); },
+  fetchMessagesMiddlePanel: async (conversationId: string) => { console.warn("fetchMessagesMiddlePanel called on default context with", conversationId); },
+  fetchMessagesRightPanel: async (conversationId: string) => { console.warn("fetchMessagesRightPanel called on default context with", conversationId); },
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
-  const { isSignedIn } = useClerkAuth();
-  const { signOut } = useClerk();
+  const { isSignedIn, orgId: activeOrgId, isLoaded: authIsLoaded } = useClerkAuth();
+  const { signOut, setActive } = useClerk();
+
+  // Call the custom hook to handle Personal org activation
+  usePersonalOrgActivator({
+    clerkIsLoaded,
+    authIsLoaded,
+    isSignedIn,
+    clerkUser,
+    activeOrgId,
+    setActive,
+  });
 
   const handleClerkLogout = useCallback(async () => {
     console.log("DashboardContext: Signing out with Clerk...");
@@ -203,20 +219,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const {
     conversationList, 
-    currentConversationIdMiddlePanel, // From useConversations
-    currentConversationIdRightPanel,  // From useConversations
-    selectConversationIdMiddlePanel,  // From useConversations
-    selectConversationIdRightPanel,   // From useConversations
-    isLoadingConversationsMiddlePanel,// From useConversations (for list)
-    isLoadingConversationsRightPanel, // From useConversations (for right panel specific ops)
-    isCreatingConversationRightPanel, // From useConversations
+    currentConversationIdMiddlePanel,
+    currentConversationIdRightPanel,
+    selectConversationIdMiddlePanel,
+    selectConversationIdRightPanel,
+    isLoadingConversationsMiddlePanel,
+    isLoadingConversationsRightPanel,
+    isCreatingConversationRightPanel,
     conversationError, 
-    handleCreateNewChatRightPanel,    // From useConversations
+    handleCreateNewChatRightPanel,
     refreshConversationList,
-    currentMessages,                 // For Middle Panel messages (from useMessages via useConversations)
-    isLoadingMessages,               // For Middle Panel messages loading (from useMessages via useConversations)
-    messageError,                    // For Middle Panel messages error (from useMessages via useConversations)
-    fetchMessages,                   // For Middle Panel messages fetch (from useMessages via useConversations)
+    currentMessages: currentMessagesForMiddlePanelHook,
+    isLoadingMessages: isLoadingMessagesForMiddlePanelHook,
+    messageError: messageErrorForMiddlePanelHook,
+    fetchMessages: fetchMessagesFromConversationsHook,
   } = useConversations({ 
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
@@ -224,10 +240,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleLogout: handleClerkLogout 
   });
 
-  // Assign Middle Panel messages from useConversations hook's output
-  const currentMessagesMiddlePanel = currentMessages;
-  const isLoadingMessagesMiddlePanel = isLoadingMessages;
-  // messageError is already correctly named
+  const currentMessagesMiddlePanel = currentMessagesForMiddlePanelHook;
+  const isLoadingMessagesMiddlePanel = isLoadingMessagesForMiddlePanelHook;
+  const messageError = messageErrorForMiddlePanelHook;
 
   const { 
     userWebhooks, 
@@ -238,7 +253,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchUserWebhooks 
   } = useWebhooks({ handleLogout: handleClerkLogout });
 
-  // --- API Tools Hook ---
   const {
     apiTools,
     isLoadingApiTools,
@@ -246,11 +260,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetchApiTools,
   } = useApiTools({ handleLogout: handleClerkLogout });
 
-  // --- Plan Info Hook ---
   const {
-    planInfo: planInfo,
-    isLoading: isLoadingPlanInfo,
-    error: planInfoError,
+    planInfo: displayPlanInfo,
+    isLoading: isLoadingPlanInfoFromHook,
+    error: planInfoErrorFromHook,
     fetch: fetchPlanInfoFromHook
   } = usePlanInfo();
 
@@ -258,34 +271,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const POLLING_INTERVAL = 5000;
 
-  // State for the plan info that will be displayed and can be locally updated
-  const [displayPlanInfo, setDisplayPlanInfo] = useState<PlanInfo | null>(null);
-
-  // Effect to initialize and update displayPlanInfo when fetchedPlanInfo changes
   useEffect(() => {
-    if (planInfo) {
-      setDisplayPlanInfo(planInfo);
+    if (displayPlanInfo) {
+      // Assuming displayPlanInfo is the same as planInfo in usePlanInfo
+      // If not, you might want to update this line to use the correct planInfo variable
+      // This is a placeholder and should be updated based on your actual implementation
     }
-  }, [planInfo]);
+  }, [displayPlanInfo]);
 
-  // // Function to update only the credit balance locally
-  // const updateCreditBalanceLocally = useCallback((newBalanceInUSDCents: number) => {
-  //   setDisplayPlanInfo(prevInfo => {
-  //     if (prevInfo) {
-  //       return { ...prevInfo, creditBalanceInUSDCents: newBalanceInUSDCents };
-  //     }
-  //     // If prevInfo is null, we might initialize a partial PlanInfo object.
-  //     // This depends on how PlanInfo is structured and what's acceptable.
-  //     // For now, assuming PlanInfo might have other mandatory fields,
-  //     // it's safer to only update if prevInfo exists.
-  //     // Or, ensure PlanInfo type allows partial initialization for this case.
-  //     console.warn("[DashboardContext] updateCreditBalanceLocally called when displayPlanInfo is null. Balance not updated.");
-  //     return prevInfo; // Or return a new minimal PlanInfo object if appropriate
-  //   });
-  // }, []);
-
-  // The refetchPlanInfo exposed by context will now use refetchFetchedPlanInfo
-  // and rely on the useEffect above to update displayPlanInfo.
   const fetchPlanInfo = useCallback(async () => {
     await fetchPlanInfoFromHook();
   }, [fetchPlanInfoFromHook]);
@@ -293,42 +286,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn });
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn });
 
-  // useMessagePolling for middle panel messages (if re-enabled)
-  // useMessagePolling({
-  //   fetchMessages: fetchMessages, 
-  //   currentConversationIdMiddlePanel: currentConversationIdMiddlePanel,
-  //   pollingInterval: POLLING_INTERVAL,
-  //   isSignedIn,
-  //   activeAgentView,
-  // });
-
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
-    selectAgentMiddlePanel(agentId); // Set selected agent for the middle panel
+    selectAgentMiddlePanel(agentId);
     if (agentId) {
       setActiveAgentView('conversations'); 
       selectWebhook(null); 
-    } else {
-      selectWebhook(null);
-    }
-  }, [selectAgentMiddlePanel, selectWebhook]);
+      setSelectedTool(null);
+    } 
+  }, [selectAgentMiddlePanel, setActiveAgentView, selectWebhook, setSelectedTool]);
 
-  // This action wrapper is for the Middle Panel / main conversation view
   const selectConversationAndSetView = useCallback((conversationId: string | null) => {
-    selectConversationIdMiddlePanel(conversationId); // Use the setter from useConversations
+    selectConversationIdMiddlePanel(conversationId);
     if (conversationId) {
       setActiveAgentView('chat');
     }
   }, [selectConversationIdMiddlePanel, setActiveAgentView]);
 
-  // This action wrapper is for the Right Panel's new chat functionality
   const createNewChatAndSetView = useCallback(async () => {
-    const newConvId = await handleCreateNewChatRightPanel(); // Use the specific function from useConversations
-    if (newConvId) {
-      // Optionally, focus the right panel or set its active view if it has one
-      // For now, setting main view to chat assuming it might relate to the new convo
-      setActiveAgentView('chat'); 
-    }
-  }, [handleCreateNewChatRightPanel, setActiveAgentView]);
+    const newConvId = await handleCreateNewChatRightPanel();
+    // if (newConvId) { setActiveAgentView('chat'); } 
+  }, [handleCreateNewChatRightPanel]);
 
   const selectWebhookAndSetView = useCallback((webhook: SearchWebhookResultItem | null) => {
     selectWebhook(webhook);
@@ -336,11 +313,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setActiveAgentView('webhookDetail');
       setSelectedTool(null);
     } else {
-      if (selectedAgentIdMiddlePanel) { // Revert to conversations if an agent is selected
-        setActiveAgentView('conversations');
-      }
+      if (selectedAgentIdMiddlePanel) setActiveAgentView('conversations');
     }
-  }, [selectWebhook, setActiveAgentView, selectedAgentIdMiddlePanel, selectedWebhook]);
+  }, [selectWebhook, setActiveAgentView, setSelectedTool, selectedAgentIdMiddlePanel]);
 
   const selectToolAndSetView = useCallback((tool: SearchApiToolResultItem | null) => {
     setSelectedTool(tool);
@@ -348,116 +323,112 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setActiveAgentView('toolDetail');
       selectWebhook(null);
     } else {
-      if (selectedAgentIdMiddlePanel) {
-        setActiveAgentView('conversations');
-      } else if (selectedWebhook) {
-        setActiveAgentView('webhookDetail');
-      } else {
-        // For now, let MiddlePanel handle a null tool. If activeView is still 'toolDetail', it shows "select a tool".
-      }
+      if (selectedAgentIdMiddlePanel) setActiveAgentView('conversations');
+      else if (selectedWebhook) setActiveAgentView('webhookDetail');
     }
-  }, [setActiveAgentView, selectWebhook, selectedAgentIdMiddlePanel, selectedWebhook]);
+  }, [setSelectedTool, setActiveAgentView, selectWebhook, selectedAgentIdMiddlePanel, selectedWebhook]);
 
-  const isClerkLoading = !clerkIsLoaded;
+  const isClerkLoading = !clerkIsLoaded || !authIsLoaded;
 
-  // --- Messages for Right Panel (NEW INSTANCE of useMessages) ---
   const {
-    currentMessages: currentMessagesRightPanel, // Renamed for context
-    isLoadingMessages: isLoadingMessagesRightPanel, // Renamed for context
-    messageError: messageErrorRightPanel,       // Renamed for context
-    fetchMessages: fetchMessagesRightPanel,     // Renamed for context
+    currentMessages: currentMessagesRightPanelData,
+    isLoadingMessages: isLoadingMessagesRightPanelData,
+    messageError: messageErrorRightPanelData,
+    fetchMessages: fetchMessagesForRightPanelFromHook,
   } = useMessages({ 
     conversationId: currentConversationIdRightPanel, 
     handleLogout: handleClerkLogout 
   });
 
+  const fetchMessagesMiddlePanel = useCallback(async () => {
+    if (currentConversationIdMiddlePanel) {
+      await fetchMessagesFromConversationsHook(currentConversationIdMiddlePanel);
+    } else {
+      console.warn("[DashboardContext] fetchMessagesMiddlePanel called without a selected middle panel conversation.");
+    }
+  }, [currentConversationIdMiddlePanel, fetchMessagesFromConversationsHook]);
+
+  const fetchMessagesRightPanel = useCallback(async () => {
+    if (currentConversationIdRightPanel) {
+      await fetchMessagesForRightPanelFromHook(currentConversationIdRightPanel);
+    } else {
+      console.warn("[DashboardContext] fetchMessagesRightPanel called without a selected right panel conversation.");
+    }
+  }, [currentConversationIdRightPanel, fetchMessagesForRightPanelFromHook]);
+
   const contextValue = useMemo(() => ({
     clerkUser,
-    isClerkLoading,
+    isClerkLoading: !clerkIsLoaded || !authIsLoaded,
     isSignedIn,
     handleClerkLogout,
     getClerkUserInitials,
-    agents,
-    selectedAgentIdMiddlePanel,
-    selectedAgentIdRightPanel,
-    selectAgentMiddlePanel,
-    selectAgentRightPanel,
-    isLoadingAgents,
-    agentError,
-    conversationList,
-    currentConversationIdMiddlePanel,
-    isLoadingConversationsMiddlePanel, // For the list itself
-    conversationError, // General conversation error (list/create)
-    
-    // Middle Panel Messages
+    agents, 
+    selectedAgentIdMiddlePanel, 
+    selectedAgentIdRightPanel, 
+    selectAgentMiddlePanel,    
+    selectAgentRightPanel,     
+    isLoadingAgents, 
+    agentError, 
+    conversationList, 
+    currentConversationIdMiddlePanel, 
+    isLoadingConversationsMiddlePanel,
+    conversationError,
     currentMessagesMiddlePanel,
     isLoadingMessagesMiddlePanel,
-    messageError, // Specific message error for middle panel
-
-    // Right Panel Conversation and Messages
-    currentConversationIdRightPanel,
-    isLoadingConversationsRightPanel, // For right panel conversation operations (like create)
+    messageError,
+    currentConversationIdRightPanel, 
+    isLoadingConversationsRightPanel,
     isCreatingConversationRightPanel,
-    currentMessagesRightPanel,      // From the new useMessages instance for right panel
-    isLoadingMessagesRightPanel,    // From the new useMessages instance for right panel
-    messageErrorRightPanel,         // Specific message error for right panel
-    
-    selectConversationIdMiddlePanel,
-    selectConversationIdRightPanel,
-    handleCreateNewChatRightPanel,
-    
-    userWebhooks,
-    selectedWebhook,
-    isLoadingWebhooks,
-    webhookError,
-    fetchUserWebhooks,
-    
-    activeAgentView,
+    currentMessagesRightPanel: currentMessagesRightPanelData,
+    isLoadingMessagesRightPanel: isLoadingMessagesRightPanelData,
+    messageErrorRightPanel: messageErrorRightPanelData,
+    selectConversationIdMiddlePanel,  
+    selectConversationIdRightPanel,   
+    handleCreateNewChatRightPanel: handleCreateNewChatRightPanel,
+    userWebhooks, 
+    selectedWebhook, 
+    isLoadingWebhooks, 
+    webhookError, 
+    fetchUserWebhooks, 
+    activeAgentView, 
     setActiveAgentView,
-    
-    apiTools,
-    isLoadingApiTools,
-    apiToolsError,
-    fetchApiTools,
-    
+    apiTools, 
+    isLoadingApiTools, 
+    apiToolsError, 
+    fetchApiTools, 
     selectedTool,
-
-    // Plan Info from context
-    planInfo: displayPlanInfo,
-    isLoadingPlanInfo,
-    planInfoError,
-    fetchPlanInfo,
-    // updateCreditBalanceLocally,
-    
-    selectAgentAndSetView,
-    selectConversationAndSetView,
-    createNewChatAndSetView,
-    selectWebhookAndSetView,
-    selectToolAndSetView,
-    
-    refreshAgents: fetchAgents,
-    refreshConversations: refreshConversationList,
-    refreshApiTools: fetchApiTools,
-    fetchMessagesMiddlePanel: fetchMessages,
+    planInfo: displayPlanInfo, 
+    isLoadingPlanInfo: isLoadingPlanInfoFromHook, 
+    planInfoError: planInfoErrorFromHook, 
+    fetchPlanInfo, 
+    selectAgentAndSetView, 
+    selectConversationAndSetView, 
+    createNewChatAndSetView, 
+    selectWebhookAndSetView, 
+    selectToolAndSetView, 
+    refreshAgents: fetchAgents, 
+    refreshConversations: refreshConversationList, 
+    refreshApiTools: fetchApiTools, 
+    fetchMessagesMiddlePanel,
     fetchMessagesRightPanel,
   }), [
-    clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
+    clerkUser, clerkIsLoaded, authIsLoaded, isSignedIn, handleClerkLogout, getClerkUserInitials,
     agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, selectAgentMiddlePanel, selectAgentRightPanel, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationIdMiddlePanel, isLoadingConversationsMiddlePanel, conversationError, 
     currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageError, 
     currentConversationIdRightPanel, isLoadingConversationsRightPanel, isCreatingConversationRightPanel, 
-    currentMessagesRightPanel, isLoadingMessagesRightPanel, messageErrorRightPanel,
+    currentMessagesRightPanelData, isLoadingMessagesRightPanelData, messageErrorRightPanelData,
     selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel,
     userWebhooks, selectedWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
-    activeAgentView, 
+    activeAgentView, setActiveAgentView,
     apiTools, isLoadingApiTools, apiToolsError, fetchApiTools,
     selectedTool,
-    // Add plan info dependencies
-    displayPlanInfo, isLoadingPlanInfo, planInfoError, fetchPlanInfo,
-    // updateCreditBalanceLocally,
+    displayPlanInfo, isLoadingPlanInfoFromHook, planInfoErrorFromHook, fetchPlanInfo, 
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
     selectToolAndSetView,
-    refreshConversationList, fetchMessages, fetchMessagesRightPanel,
+    refreshConversationList, fetchAgents, fetchApiTools,
+    fetchMessagesMiddlePanel,
+    fetchMessagesRightPanel
   ]);
   
   useEffect(() => {

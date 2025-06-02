@@ -2,7 +2,8 @@
  * Clerk Authentication Middleware
  * Protects routes based on Clerk authentication status.
  */
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import { NextResponse } from 'next/server';
 
 // Define routes that should be publicly accessible
 // Includes home, auth callbacks, public API endpoints, and health checks
@@ -22,18 +23,54 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 // Clerk middleware configuration
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   // Protect routes that are not public
   if (!isPublicRoute(req)) {
     // Call protect() directly on the auth object passed to the callback
-    auth.protect();
-  }
+    const { userId, orgId } = await auth.protect();
 
-  // Example: Apply additional protection/logic for specific routes if needed
-  // if (isProtectedRoute(req)) {
-  //   // You could add role/permission checks here if necessary
-  //   // await auth().protect((has) => has({ role: 'admin' }));
-  // }
+    if (userId) {
+      try {
+        const client = await clerkClient(); // Corrected: Call clerkClient() to get the instance
+
+        const orgName = "Personal";
+        let personalOrgId: string | null = null; // To store the ID of the personal org
+        let personalOrgExistsAndWasCreatedByUser = false;
+
+        const membershipsResponse = await client.users.getOrganizationMembershipList({ userId });
+        const organizationMemberships = membershipsResponse.data;
+
+        for (const membership of organizationMemberships) {
+          if (membership.organization &&
+              membership.organization.name === orgName &&
+              membership.organization.createdBy === userId) {
+            personalOrgId = membership.organization.id;
+            personalOrgExistsAndWasCreatedByUser = true;
+            console.log(`[Middleware] "Personal" organization already exists for user ${userId}. Org ID: ${personalOrgId}`);
+            break;
+          }
+        }
+
+        if (!personalOrgExistsAndWasCreatedByUser) {
+          console.log(`[Middleware] "Personal" organization not found for user ${userId}. Creating it...`);
+          const newOrg = await client.organizations.createOrganization({
+            name: orgName,
+            createdBy: userId,
+          });
+          personalOrgId = newOrg.id;
+          console.log(`[Middleware] "Personal" organization created for user ${userId}. New Org ID: ${personalOrgId}`);
+        }
+        
+        // Note: Activating the organization is typically handled client-side in the DashboardContext
+        // or by Clerk's default behavior when a user has only one org or based on last active.
+        // The middleware's primary role here is to ensure the org exists.
+
+      } catch (error) {
+        console.error(`[Middleware] Error ensuring "Personal" organization for user ${userId} for path ${req.nextUrl.pathname}:`, error);
+      }
+    }
+  }
+  return NextResponse.next();
 });
 
 // Configuration for the Next.js middleware matcher
