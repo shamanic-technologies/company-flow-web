@@ -14,6 +14,8 @@ import {
 // Import Clerk's auth helper for server-side authentication
 import { auth } from "@clerk/nextjs/server";
 import { getOrCreateAgent } from '@agent-base/api-client';
+import { AgentBaseCredentials } from '@agent-base/types';
+
 
 /**
  * GET handler for getting or creating agents (placeholder)
@@ -23,12 +25,17 @@ import { getOrCreateAgent } from '@agent-base/api-client';
 export async function GET(req: NextRequest) {
   try {
     // Use Clerk's auth() helper to get the userId - Added await
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
 
     // Check if the user is authenticated
     if (!userId) {
       console.error('[API /agents/get-or-create] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
+    }
+
+    if (!orgId) {
+      console.error('[API /agents/get-or-create] User not in an organization via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
     }
 
     // Retrieve the shared API key from environment variables
@@ -40,8 +47,9 @@ export async function GET(req: NextRequest) {
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
-    const platformUserApiServiceCredentials = {
-      platformClientUserId: userId,
+    const platformUserApiServiceCredentials: AgentBaseCredentials = {
+      clientAuthUserId: userId,
+      clientAuthOrganizationId: orgId,
       platformApiKey: agentBaseApiKey
     }
     const getOrCreateAgentResponse = await getOrCreateAgent(platformUserApiServiceCredentials);

@@ -8,13 +8,14 @@ import { API_GATEWAY_URL } from './types';
 /**
  * Makes a request to the API service
  */
-export async function callApiService(endpoint: string, method: string, platformClientUserId: string, apiKey: string, body?: any) {
+export async function callApiService(endpoint: string, method: string, clientAuthUserId: string, clientAuthOrganizationId: string, apiKey: string, body?: any) {
   try {
     const options: RequestInit = {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'x-platform-client-user-id': platformClientUserId,
+        'x-client-auth-user-id': clientAuthUserId,
+        'x-client-auth-organization-id': clientAuthOrganizationId,
         'x-platform-api-key': apiKey
       }
     };
@@ -73,13 +74,14 @@ export async function callApiService(endpoint: string, method: string, platformC
 /**
  * Makes a streaming request to the agent service
  */
-export async function callAgentServiceStream(endpoint: string, apiKey: string, platformClientUserId: string, body: any) {
+export async function callAgentServiceStream(endpoint: string, apiKey: string, clientAuthUserId: string, clientAuthOrganizationId: string, body: any) {
   try {
     const response = await fetch(`${API_GATEWAY_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-platform-client-user-id': platformClientUserId,
+        'x-client-auth-user-id': clientAuthUserId,
+        'x-client-auth-organization-id': clientAuthOrganizationId,
         'x-platform-api-key': apiKey,
         'Accept': 'text/event-stream'
       },

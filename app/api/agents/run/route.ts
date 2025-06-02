@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { Message } from 'ai';
-import { PlatformUserApiServiceCredentials } from '@agent-base/types';
+import { AgentBaseCredentials } from '@agent-base/types';
 import { 
   createErrorResponse, 
   handleApiError
@@ -38,12 +38,16 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Auth
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
 
     // Check if the user is authenticated
     if (!userId) {
       console.error('[API /agents/run] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
+    }
+    if (!orgId) {
+      console.error('[API /agents/run] User not in an organization via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
     }
 
     // Retrieve the shared API key from environment variables
@@ -56,8 +60,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Call Agent Service using the new SDK client
-    const platformUserApiServiceCredentials: PlatformUserApiServiceCredentials = {
-        platformClientUserId: userId,
+    const platformUserApiServiceCredentials: AgentBaseCredentials = {
+        clientAuthUserId: userId,
+        clientAuthOrganizationId: orgId,
         platformApiKey: agentBaseApiKey
     };
 

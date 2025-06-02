@@ -8,11 +8,9 @@ import { type NextRequest } from 'next/server';
 import {
   createErrorResponse,
   createSuccessResponse,
-  getAuthToken,
   handleApiError
 } from '../../utils';
-import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
-import { ServiceResponse, PlatformUser, PlatformUserApiServiceCredentials, CreateConversationInput } from '@agent-base/types';
+import { CreateConversationInput, AgentBaseCredentials } from '@agent-base/types';
 // Import the specific API client function
 import { createConversationExternalApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
@@ -43,7 +41,7 @@ export const POST = async (req: NextRequest) => {
 
     // Prepare credentials
 
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
     const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
 
     // Check if the user is authenticated
@@ -51,15 +49,19 @@ export const POST = async (req: NextRequest) => {
       console.error('[API /agents/get-or-create] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
-
+    if (!orgId) {
+      console.error('[API /conversations/create] User not in an organization via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
+    }
     // Check if the API key is configured
     if (!agentBaseApiKey) {
       console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
-    const credentials: PlatformUserApiServiceCredentials = {
-        platformClientUserId: userId,
+    const credentials: AgentBaseCredentials = {
+        clientAuthUserId: userId,
+        clientAuthOrganizationId: orgId,
         platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
 

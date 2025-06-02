@@ -4,19 +4,23 @@
  */
 import { NextRequest } from 'next/server';
 import { getUserApiTools } from '@agent-base/api-client';
-import { ServiceResponse, ApiTool, PlatformUserApiServiceCredentials, SearchApiToolResult } from '@agent-base/types';
+import { ServiceResponse, SearchApiToolResult, AgentBaseCredentials } from '@agent-base/types';
 import { createErrorResponse, createSuccessResponse } from '../utils/types';
 import { auth } from '@clerk/nextjs/server';
 
 export async function GET(request: NextRequest) {
     try {
-        const { userId } = await auth();
+        const { userId, orgId } = await auth();
         const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
 
         // Check if the user is authenticated
         if (!userId) {
             console.error('[API /api-tools] User not authenticated via Clerk');
             return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
+        }
+        if (!orgId) {
+            console.error('[API /api-tools] User not in an organization via Clerk');
+            return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
         }
 
         // Check if the API key is configured
@@ -25,8 +29,9 @@ export async function GET(request: NextRequest) {
             return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
         }
 
-        const credentials: PlatformUserApiServiceCredentials = {
-            platformClientUserId: userId,
+        const credentials: AgentBaseCredentials = {
+            clientAuthUserId: userId,
+            clientAuthOrganizationId: orgId,
             platformApiKey: agentBaseApiKey
         };
 

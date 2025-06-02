@@ -1,9 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getAllUserConversationsPlatformUserApiService } from '@agent-base/api-client'; 
-import { PlatformUserApiServiceCredentials, ServiceResponse, Conversation } from '@agent-base/types';
+import { ServiceResponse, Conversation, AgentBaseCredentials } from '@agent-base/types';
 
 // Import Clerk's auth helper for server-side authentication
 import { auth } from "@clerk/nextjs/server";
+import { createErrorResponse } from '../../utils';
 
 // Assuming these utility functions are available and correctly pathed from the example
 // You might need to adjust the path or ensure these exist in your ../../utils location
@@ -13,16 +14,16 @@ import { auth } from "@clerk/nextjs/server";
 export async function GET(req: NextRequest) { // Changed to NextRequest for consistency with example
     try {
         // Use Clerk's auth() helper to get the userId
-        const { userId: platformClientUserId } = await auth(); // Renaming to platformClientUserId for clarity
+        const { userId, orgId } = await auth(); // Renaming to platformClientUserId for clarity
 
         // Check if the user is authenticated
-        if (!platformClientUserId) {
+        if (!userId) {
             console.error('[API /conversations/list-all-for-user] User not authenticated via Clerk');
-            // Using NextResponse directly for error response
-            return NextResponse.json(
-                { success: false, error: 'Authentication required', details: 'User must be logged in.' }, 
-                { status: 401 }
-            );
+            return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
+        }
+        if (!orgId) {
+            console.error('[API /conversations/list-all-for-user] User not in an organization via Clerk');
+            return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
         }
 
         // Retrieve the shared API key from environment variables (using AGENT_BASE_API_KEY from example)
@@ -31,14 +32,12 @@ export async function GET(req: NextRequest) { // Changed to NextRequest for cons
         // Check if the API key is configured
         if (!platformApiKey) {
             console.error('[API /conversations/list-all-for-user] AGENT_BASE_API_KEY environment variable not set');
-            return NextResponse.json(
-                { success: false, error: 'Server configuration error', details: 'Required API key is missing.' }, 
-                { status: 500 }
-            );
+            return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
         }
 
-        const credentials: PlatformUserApiServiceCredentials = {
-            platformClientUserId: platformClientUserId, 
+        const credentials: AgentBaseCredentials = {
+            clientAuthUserId: userId,
+            clientAuthOrganizationId: orgId,
             platformApiKey: platformApiKey,
         };
 

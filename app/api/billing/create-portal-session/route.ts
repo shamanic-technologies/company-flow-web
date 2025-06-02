@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required');
     }
 
+
     // 2. Get Stripe customer ID
     // The getOrCreateStripeCustomer function from stripe.ts handles finding or creating the customer.
     // It requires the Clerk userId.

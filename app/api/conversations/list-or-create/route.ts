@@ -11,7 +11,7 @@ import {
   createSuccessResponse, 
   handleApiError
 } from '../../utils';
-import { PlatformUserApiServiceCredentials, Conversation } from '@agent-base/types';
+import { Conversation, AgentBaseCredentials } from '@agent-base/types';
 import { getOrCreateConversationsPlatformUserApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
 
@@ -20,7 +20,7 @@ export const GET = async (req: NextRequest) => {
     
     // Get agent_id from query parameters
     const agentId = req.nextUrl.searchParams.get('agent_id');
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
     const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
 
     if (!agentId) {
@@ -33,15 +33,19 @@ export const GET = async (req: NextRequest) => {
       console.error('[API /agents/get-or-create] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
-
+    if (!orgId) {
+      console.error('[API /conversations/list-or-create] User not in an organization via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
+    }
     // Check if the API key is configured
     if (!agentBaseApiKey) {
       console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
-    const credentials: PlatformUserApiServiceCredentials = {
-        platformClientUserId: userId,
+    const credentials: AgentBaseCredentials = {
+        clientAuthUserId: userId,
+        clientAuthOrganizationId: orgId,
         platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
 

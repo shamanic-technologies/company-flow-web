@@ -51,13 +51,13 @@ export function createSuccessResponse(data: any, status = 200) {
   );
 }
 
-/**
- * Extracts the auth token from request headers
- */
-export function getAuthToken(req: NextRequest): string | null {
-  const token = req.headers.get('Authorization')?.substring(7) || '';
-  return token || null;
-}
+// /**
+//  * Extracts the auth token from request headers
+//  */
+// export function getAuthToken(req: NextRequest): string | null {
+//   const token = req.headers.get('Authorization')?.substring(7) || '';
+//   return token || null;
+// }
 
 /**
  * Standardizes error handling for API calls

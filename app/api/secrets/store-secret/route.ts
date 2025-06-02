@@ -1,22 +1,16 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   createErrorResponse,
   createSuccessResponse,
-  getAuthToken,
-  callApiService, // Using this generic function to call via API Gateway
   handleApiError
 } from '../../utils';
-import { getOrCreateKeyByName, getPlatformUserFromToken } from '../../utils/web-client';
 import { ServiceResponse,
   StoreSecretRequest,
-  StoreActionConfirmationRequest,
   UserType,
   UtilityProvider,
   UtilitySecretType,
-  PlatformUserApiServiceCredentials,
-  UtilityProviderEnum
+  AgentBaseCredentials
 } from '@agent-base/types';
-import { PlatformUser } from '@agent-base/types';
 import { storeSecretExternalApiClient } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
 
@@ -34,7 +28,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Authentication & Authorization
     
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
     const agentBaseApiKey = process.env.AGENT_BASE_API_KEY;
     
     // Check if the user is authenticated
@@ -42,15 +36,19 @@ export async function POST(req: NextRequest) {
       console.error('[API /agents/get-or-create] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
-
+    if (!orgId) {
+      console.error('[API /secrets/store-secret] User not in an organization via Clerk');
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be in an organization.');
+    }
     // Check if the API key is configured
     if (!agentBaseApiKey) {
       console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
-    const platformUserApiServiceCredentials: PlatformUserApiServiceCredentials = {
-        platformClientUserId: userId,
+    const platformUserApiServiceCredentials: AgentBaseCredentials = {
+        clientAuthUserId: userId,
+        clientAuthOrganizationId: orgId,
         platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
 
