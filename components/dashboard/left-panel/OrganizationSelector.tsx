@@ -77,8 +77,8 @@ export function OrganizationSelector({
   }
 
   const handleSwitchOrganization = async (org: ClientOrganization) => {
-    if (!org.clientAuthOrganisationId) {
-      console.error('[OrganizationSelector] Organization missing clientAuthOrganisationId:', org);
+    if (!org.clientAuthOrganizationId) {
+      console.error('[OrganizationSelector] Organization missing clientAuthOrganizationId:', org);
       toast({
         title: 'Error switching organization',
         description: 'Organization ID not found. Please try again.',
@@ -91,10 +91,10 @@ export function OrganizationSelector({
     setIsOpen(false);
     
     try {
-      await switchOrganization(org.clientAuthOrganisationId);
+      await switchOrganization(org.clientAuthOrganizationId);
       
       // Show switch confirmation toast
-      if (!previousOrg || org.clientAuthOrganisationId !== previousOrg.clientAuthOrganisationId) {
+      if (!previousOrg || org.clientAuthOrganizationId !== previousOrg.clientAuthOrganizationId) {
         toast({
           title: `Switched to ${org.name}`,
           description: `You're now working in ${org.name === 'Personal' ? 'your personal workspace' : org.name}.`,

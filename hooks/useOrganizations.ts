@@ -54,7 +54,7 @@ export function useOrganizations(): UseOrganizationsReturn {
             const org: ClientOrganization = {
               id: membership.organization.id,
               name: membership.organization.name,
-              clientAuthOrganisationId: membership.organization.id,
+              clientAuthOrganizationId: membership.organization.id,
               creatorClientUserId: clerkUser.id, // Use current Clerk user's ID as a proxy for creator
               profileImage: membership.organization.imageUrl || undefined,
               createdAt: membership.organization.createdAt || new Date(),
@@ -75,7 +75,7 @@ export function useOrganizations(): UseOrganizationsReturn {
 
       // Handle current organization and automatic "Personal" org activation
       if (activeOrgIdFromClerk) {
-        const currentOrg = orgList.find(org => org.clientAuthOrganisationId === activeOrgIdFromClerk);
+        const currentOrg = orgList.find(org => org.clientAuthOrganizationId === activeOrgIdFromClerk);
         setCurrentOrganization(currentOrg || null);
       } else {
         // No active org from Clerk, try to activate "Personal" org
@@ -83,14 +83,14 @@ export function useOrganizations(): UseOrganizationsReturn {
           (org) => org.name === "Personal" // Assuming creator check is handled by Clerk permissions or already part of orgList creation
         );
 
-        if (personalOrgMembership && personalOrgMembership.clientAuthOrganisationId) {
-          console.log(`[useOrganizations] No active organization. Attempting to set 'Personal' org (ID: ${personalOrgMembership.clientAuthOrganisationId}).`);
+        if (personalOrgMembership && personalOrgMembership.clientAuthOrganizationId) {
+          console.log(`[useOrganizations] No active organization. Attempting to set 'Personal' org (ID: ${personalOrgMembership.clientAuthOrganizationId}).`);
           try {
-            await setActive({ organization: personalOrgMembership.clientAuthOrganisationId });
+            await setActive({ organization: personalOrgMembership.clientAuthOrganizationId });
             setCurrentOrganization(personalOrgMembership);
             console.log("[useOrganizations] Successfully set 'Personal' org as active.");
           } catch (err: any) {
-            console.error(`[useOrganizations] Error calling setActive for 'Personal' org ID ${personalOrgMembership.clientAuthOrganisationId}:`, err);
+            console.error(`[useOrganizations] Error calling setActive for 'Personal' org ID ${personalOrgMembership.clientAuthOrganizationId}:`, err);
             // Set error or let it be handled by the general catch? For now, log and continue.
             // If this fails, currentOrganization will remain null, and activeOrgIdFromClerk will still be null.
           }
@@ -144,7 +144,7 @@ export function useOrganizations(): UseOrganizationsReturn {
   // This ensures currentOrganization is in sync with Clerk's state after a switchOrganization call or initial load.
   useEffect(() => {
     if (activeOrgIdFromClerk && organizations.length > 0) {
-      const orgDetails = organizations.find(org => org.clientAuthOrganisationId === activeOrgIdFromClerk);
+      const orgDetails = organizations.find(org => org.clientAuthOrganizationId === activeOrgIdFromClerk);
       setCurrentOrganization(orgDetails || null);
     } else if (!activeOrgIdFromClerk) {
       // If activeOrgId becomes null (e.g., user leaves all orgs, or error), clear currentOrganization
