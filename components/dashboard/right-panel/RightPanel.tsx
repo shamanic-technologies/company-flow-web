@@ -144,9 +144,8 @@ export default function RightPanel() {
                             agentFirstName={selectedAgent.firstName}
                             agentLastName={selectedAgent.lastName}
                             conversationId={currentConversationId} // Pass the selected ID for the right panel
-                            initialMessages={currentMessages} // Pass messages for the right panel
-                            // isLoading={isLoadingMessages} // Pass loading state for the right panel
-                            // error={conversationError} // Pass error state for the right panel
+                            // @ts-ignore - We know from logs currentMessages is an object with a .messages array
+                            initialMessages={currentMessages?.messages} // Pass the nested messages array
                         />
                     );
                  })()}

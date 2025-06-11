@@ -102,7 +102,7 @@ export const ChatInterface = ({
   }, [isLoading]);
 
   useEffect(() => {
-    if (initialMessages) {
+    if (initialMessages && Array.isArray(initialMessages)) {
         setMessages(initialMessages);
     }
     setUserHasScrolledUp(false);
