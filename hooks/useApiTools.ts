@@ -15,7 +15,7 @@ interface UseApiToolsProps {
  * @returns An object containing API tools, loading/error states, and related functions.
  */
 export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const [apiTools, setApiTools] = useState<SearchApiToolResultItem[]>([]);
   const [isLoadingApiTools, setIsLoadingApiTools] = useState<boolean>(false);
   const [apiToolsError, setApiToolsError] = useState<string | null>(null);
@@ -118,7 +118,8 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
 
   // --- Effect to Poll for API Tools Every 5 Seconds ---
   useEffect(() => {
-    if (!activeOrgId) {
+    // Only poll if Clerk is loaded and an active organization is selected
+    if (!isLoaded || !activeOrgId) {
       setApiTools([]);
       setIsLoadingApiTools(false);
       setApiToolsError(null);
@@ -136,7 +137,7 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
       clearInterval(intervalId);
       console.log("🛑 useApiTools - Stopped polling for API tools.");
     };
-  }, [activeOrgId, fetchApiTools]);
+  }, [isLoaded, activeOrgId, fetchApiTools]);
 
   // --- Placeholder for Select API Tool (if needed later) ---
   // const [selectedApiTool, setSelectedApiTool] = useState<ApiTool | null>(null);

@@ -15,7 +15,7 @@ interface UseWebhooksProps {
  * @returns An object containing user webhooks, selected webhook, loading/error states, and related functions.
  */
 export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const [userWebhooks, setUserWebhooks] = useState<SearchWebhookResultItem[]>([]);
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
@@ -73,15 +73,16 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
 
   // --- Effect to Poll for Webhooks Every 5 Seconds --- 
   useEffect(() => {
-    if (!activeOrgId) {
+    // Only poll if Clerk is loaded and an active organization is selected
+    if (!isLoaded || !activeOrgId) {
       // If no active org, ensure state is clean and don't attempt to fetch/poll
       setUserWebhooks([]);
       setSelectedWebhook(null);
       setIsLoadingWebhooks(false);
-      setWebhookError(null); // Or set a specific error like "No organization selected"
+      setWebhookError(null);
       return; // Do not proceed to fetch or set up interval
     }
-    setIsLoadingWebhooks(true); // Set loading true only when proceeding with fetch
+    setIsLoadingWebhooks(true);
 
     // Fetch immediately on mount if activeOrgId is present
     fetchUserWebhooks(); 
@@ -97,7 +98,7 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
       clearInterval(intervalId);
       console.log("🛑 useWebhooks - Stopped polling for webhooks.");
     };
-  }, [activeOrgId, fetchUserWebhooks]); // Added activeOrgId to dependencies
+  }, [isLoaded, activeOrgId, fetchUserWebhooks]); // Added activeOrgId to dependencies
 
   // --- Select Webhook --- 
   // This hook only manages the state. The context provider will handle view changes.

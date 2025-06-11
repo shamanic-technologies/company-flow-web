@@ -29,7 +29,7 @@ export function useConversations({
   handleLogout, 
   activeOrgId 
 }: UseConversationsProps) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
   const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
@@ -242,18 +242,20 @@ export function useConversations({
 
   // --- Initial fetch of all conversations when the hook mounts and user is available ---
   useEffect(() => {
-    if (activeOrgId) { // Only fetch if activeOrgId is available
+    // Only fetch if Clerk is loaded and an active organization is selected
+    if (isLoaded && activeOrgId) {
       setIsLoadingConversationsMiddlePanel(true);
       setConversationError(null);  
       fetchUserConversations();
     } else {
+      // Clear data if clerk is not loaded or no org is selected
       setConversationList([]);
       setCurrentConversationIdMiddlePanel(null);
       setCurrentConversationIdRightPanel(null);
       setIsLoadingConversationsMiddlePanel(false);
-      setConversationError(null); // Or an error like "No active organization"
+      setConversationError(null);
     }
-  }, [activeOrgId, fetchUserConversations]); // Added activeOrgId
+  }, [isLoaded, activeOrgId, fetchUserConversations]);
 
   return {
     // Conversation list related

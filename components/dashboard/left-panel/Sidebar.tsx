@@ -68,7 +68,6 @@ const agentSubMenuItems = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'conversations', label: 'Conversations', icon: List },
   { id: 'memory', label: 'Memory', icon: MemoryStick },
-  { id: 'actions', label: 'Actions', icon: ToyBrick },
 ]
 
 // Main Sidebar Component

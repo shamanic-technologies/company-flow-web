@@ -15,7 +15,7 @@ interface UseAgentsProps {
  * @returns An object containing agents list, selected agent ID, loading/error states, and related functions.
  */
 export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentIdMiddlePanel, setSelectedAgentIdMiddlePanel] = useState<string | null>(null);
   const [selectedAgentIdRightPanel, setSelectedAgentIdRightPanel] = useState<string | null>(null);
@@ -92,18 +92,19 @@ export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
 
   // --- Effect to Fetch Agents --- 
   useEffect(() => {
-    if (activeOrgId) { // Only fetch if activeOrgId is available
+    // Only fetch if Clerk is loaded, and we have an active organization
+    if (isLoaded && activeOrgId) {
       setIsLoadingAgents(true);
       fetchAgents();
     } else {
-      // If activeOrgId is not available, reset state
+      // If clerk is not loaded or activeOrgId is not available, reset state
       setAgents([]);
       setSelectedAgentIdMiddlePanel(null);
       setSelectedAgentIdRightPanel(null);
       setIsLoadingAgents(false);
       setAgentError(null); // Or an error like "No active organization"
     }
-  }, [activeOrgId, fetchAgents]); // Added activeOrgId
+  }, [isLoaded, activeOrgId, fetchAgents]);
 
   // Effect for Agent Auto-Selection Logic remains the same, 
   // as it depends on `agents` list which is now correctly managed based on `activeOrgId`
