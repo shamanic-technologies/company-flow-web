@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Agent, ServiceResponse } from '@agent-base/types';
+import { useAuth } from '@clerk/nextjs';
 
 interface UseAgentsProps {
   handleLogout: () => void;
@@ -14,6 +15,7 @@ interface UseAgentsProps {
  * @returns An object containing agents list, selected agent ID, loading/error states, and related functions.
  */
 export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
+  const { getToken } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentIdMiddlePanel, setSelectedAgentIdMiddlePanel] = useState<string | null>(null);
   const [selectedAgentIdRightPanel, setSelectedAgentIdRightPanel] = useState<string | null>(null);
@@ -36,8 +38,12 @@ export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
     setAgentError(null); // Clear previous errors
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/agents/get-or-create', {
         method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.status === 401) {
@@ -82,7 +88,7 @@ export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
     } finally {
       setIsLoadingAgents(false);
     }
-  }, [activeOrgId, handleLogout]); // Added activeOrgId. `agents` removed from deps for setAgents comparison logic.
+  }, [activeOrgId, handleLogout, getToken]); // Added activeOrgId. `agents` removed from deps for setAgents comparison logic.
 
   // --- Effect to Fetch Agents --- 
   useEffect(() => {

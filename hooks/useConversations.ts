@@ -5,6 +5,7 @@ import { Conversation, CreateConversationInput, ServiceResponse } from '@agent-b
 // import { Message as VercelMessage } from 'ai/react'; // No longer directly used here
 import { UserResource } from '@clerk/types';
 import { useMessages } from './useMessages'; // Import the new hook
+import { useAuth } from '@clerk/nextjs';
 
 interface UseConversationsProps {
   selectedAgentIdMiddlePanel: string | null;
@@ -28,6 +29,7 @@ export function useConversations({
   handleLogout, 
   activeOrgId 
 }: UseConversationsProps) {
+  const { getToken } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
   const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
@@ -60,9 +62,13 @@ export function useConversations({
     setConversationError(null);
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/conversations/list-all-for-user', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (response.status === 401) {
         console.error('🚫 useConversations - Unauthorized fetching all user conversations');
@@ -95,7 +101,7 @@ export function useConversations({
     } finally {
       setIsLoadingConversationsMiddlePanel(false);
     }
-  }, [activeOrgId, handleLogout]); // Added activeOrgId. conversationList removed from deps.
+  }, [activeOrgId, handleLogout, getToken]); // Added activeOrgId. conversationList removed from deps.
 
   // --- Effect to update currentConversationIdMiddlePanel based on selectedAgentIdMiddlePanel and conversationList ---
   useEffect(() => {
@@ -176,6 +182,7 @@ export function useConversations({
     setIsCreatingConversationRightPanel(true);
     setConversationError(null);
     try {
+      const token = await getToken();
       const newConversationId = crypto.randomUUID();
       const channelId = 'web';
       const requestBody: CreateConversationInput = {
@@ -185,7 +192,10 @@ export function useConversations({
       };
       const response = await fetch('/api/conversations/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(requestBody)
       });
       if (response.status === 401) {
@@ -214,7 +224,7 @@ export function useConversations({
     } finally {
       setIsCreatingConversationRightPanel(false);
     }
-  }, [activeOrgId, selectedAgentIdRightPanel, user, handleLogout, fetchUserConversations]); // Added activeOrgId
+  }, [activeOrgId, selectedAgentIdRightPanel, user, handleLogout, fetchUserConversations, getToken]); // Added activeOrgId
 
   // --- Simple setter for selecting a conversation ID --- 
   const selectConversationIdMiddlePanel = useCallback((conversationId: string | null) => {

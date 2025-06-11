@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { ApiTool, ErrorResponse, SearchApiToolResult, SearchApiToolResultItem, ServiceResponse } from '@agent-base/types';
+import { useAuth } from '@clerk/nextjs';
 
 interface UseApiToolsProps {
   handleLogout: () => void;
@@ -14,6 +15,7 @@ interface UseApiToolsProps {
  * @returns An object containing API tools, loading/error states, and related functions.
  */
 export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
+  const { getToken } = useAuth();
   const [apiTools, setApiTools] = useState<SearchApiToolResultItem[]>([]);
   const [isLoadingApiTools, setIsLoadingApiTools] = useState<boolean>(false);
   const [apiToolsError, setApiToolsError] = useState<string | null>(null);
@@ -31,10 +33,13 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
     setApiToolsError(null);
 
     try {
+      const token = await getToken();
+
       const response = await fetch('/api/api-tools', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -109,7 +114,7 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
     } finally {
       setIsLoadingApiTools(false);
     }
-  }, [activeOrgId, handleLogout]);
+  }, [activeOrgId, handleLogout, getToken]);
 
   // --- Effect to Poll for API Tools Every 5 Seconds ---
   useEffect(() => {
