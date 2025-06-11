@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agent-base/api-client": "^0.42.0",
+    "@agent-base/api-client": "^0.44.0",
     "@agent-base/secret-client": "^0.14.0",
     "@agent-base/types": "^0.43.0",
     "@ai-sdk/anthropic": "^1.2.11",

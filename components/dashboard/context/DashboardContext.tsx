@@ -17,6 +17,7 @@ import { useOrganizations } from '../../../hooks/useOrganizations';
 
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
+import { useMessagePolling } from '../../../hooks/polling/useMessagePolling';
 import { useMessages } from '../../../hooks/useMessages';
 
 import { SearchWebhookResultItem } from '@agent-base/types';
@@ -312,6 +313,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
+  
+  // Poll for messages in the middle panel's active conversation
+  useMessagePolling({
+    fetchMessages: fetchMessagesFromConversationsHook, // Using the fetcher from the conversations hook
+    currentConversationIdMiddlePanel,
+    pollingInterval: POLLING_INTERVAL,
+    isSignedIn,
+    activeAgentView,
+    activeOrgId,
+  });
 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
     selectAgentMiddlePanel(agentId);
@@ -323,11 +334,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [selectAgentMiddlePanel, setActiveAgentView, selectWebhook, setSelectedTool]);
 
   const selectConversationAndSetView = useCallback((conversationId: string | null) => {
-    selectConversationIdMiddlePanel(conversationId);
     if (conversationId) {
+      const conversation = conversationList.find(c => c.conversationId === conversationId);
+      if (conversation && conversation.agentId) {
+        // Also select the agent to whom this conversation belongs for the middle panel
+        selectAgentMiddlePanel(conversation.agentId); 
+      } else {
+        // Fallback or error if conversation/agentId not found - might clear agent or log
+        // For now, it will proceed without changing the agent, which might be acceptable
+        // if the conversation can't be matched to an agent in the current list.
+        console.warn(`[DashboardContext] AgentId not found for conversationId: ${conversationId}. Agent selection will not change.`);
+      }
+      selectConversationIdMiddlePanel(conversationId);
       setActiveAgentView('chat');
+    } else {
+      // If conversationId is null, clear the selection
+      selectConversationIdMiddlePanel(null);
+      // Optionally, change view if no conversation is selected, e.g., back to conversation list
+      // if (selectedAgentIdMiddlePanel) setActiveAgentView('conversations');
     }
-  }, [selectConversationIdMiddlePanel, setActiveAgentView]);
+  }, [selectConversationIdMiddlePanel, setActiveAgentView, selectAgentMiddlePanel, conversationList]);
 
   const createNewChatAndSetView = useCallback(async () => {
     const newConvId = await handleCreateNewChatRightPanel();

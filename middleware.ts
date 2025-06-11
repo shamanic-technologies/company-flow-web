@@ -18,77 +18,62 @@ const isPublicRoute = createRouteMatcher([
   // e.g., '/pricing', '/about', '/api/public-data'
 ]);
 
-// Define routes that should always be protected
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)', // All dashboard routes
-  // Add other routes that strictly require authentication
-]);
+/**
+ * Ensures a "Personal" organization exists for the given user.
+ * If it doesn't exist, it creates one.
+ * @param userId - The ID of the user to check for.
+ */
+async function ensurePersonalOrgExists(userId: string) {
+  try {
+    const client = await clerkClient();
+    
+    const orgName = "Personal";
+    
+    // Check if the user is already a member of a "Personal" organization they created
+    const membershipsResponse = await client.users.getOrganizationMembershipList({ userId });
+    const personalOrg = membershipsResponse.data.find(
+      (mem: any) => mem.organization.name === orgName && mem.organization.createdBy === userId
+    );
+
+    if (!personalOrg) {
+      console.log(`[Middleware] "Personal" organization not found for user ${userId}. Creating it...`);
+      await client.organizations.createOrganization({
+        name: orgName,
+        createdBy: userId,
+      });
+      console.log(`[Middleware] "Personal" organization created for user ${userId}.`);
+    }
+  } catch (error) {
+    console.error(`[Middleware] Error in ensurePersonalOrgExists for user ${userId}:`, error);
+  }
+}
 
 // Clerk middleware configuration
 export default clerkMiddleware(async (auth, req) => {
-  // Get the initial auth state by calling and awaiting auth()
-  // Note: This call to auth() is for read-only purposes to get the state.
-  // The `auth.protect()` call later is what enforces authentication.
-  const initialAuthState = await auth();
+  // If the route is public, allow the request to proceed.
+  if (isPublicRoute(req)) {
+    return NextResponse.next();
+  }
 
-  console.log(`[Middleware] Request URL: ${req.nextUrl.pathname}${req.nextUrl.search}`);
-  console.log(`[Middleware] Is public route? ${isPublicRoute(req)}`);
-  console.log(`[Middleware] Auth state before protect: userId=${initialAuthState.userId}, sessionId=${initialAuthState.sessionId}, orgId=${initialAuthState.orgId}, actor=${JSON.stringify(initialAuthState.actor)}, claims=${JSON.stringify(initialAuthState.sessionClaims)}`);
+  // Get the complete auth state from the session
+  const authState = await auth();
 
-  // Protect routes that are not public
-  if (!isPublicRoute(req)) {
-    console.log(`[Middleware] Path ${req.nextUrl.pathname} is NOT public. Attempting to protect.`);
-    try {
-      // Call protect() on the auth object. If it redirects, this won't proceed further for this request.
-      // After protect() resolves successfully, auth.userId etc. on the `auth` object itself will be populated.
-      const { userId, orgId, sessionClaims, actor } = await auth.protect();
-      // If protect() does not redirect, it means the user is authenticated.
-      console.log(`[Middleware] Path ${req.nextUrl.pathname} - Successfully protected. userId: ${userId}, orgId: ${orgId}, actor: ${JSON.stringify(actor)}, claims: ${JSON.stringify(sessionClaims)} (from protect result)`);
-
-      if (userId) { // This userId is from the successfully resolved protect()
-        try {
-          const client = await clerkClient(); // Corrected: Call clerkClient() to get the instance
-
-          const orgName = "Personal";
-          let personalOrgId: string | null = null; // To store the ID of the personal org
-          let personalOrgExistsAndWasCreatedByUser = false;
-
-          const membershipsResponse = await client.users.getOrganizationMembershipList({ userId });
-          const organizationMemberships = membershipsResponse.data;
-
-          for (const membership of organizationMemberships) {
-            if (membership.organization &&
-                membership.organization.name === orgName &&
-                membership.organization.createdBy === userId) {
-              personalOrgId = membership.organization.id;
-              personalOrgExistsAndWasCreatedByUser = true;
-              console.log(`[Middleware] "Personal" organization already exists for user ${userId}. Org ID: ${personalOrgId}`);
-              break;
-            }
-          }
-
-          if (!personalOrgExistsAndWasCreatedByUser) {
-            console.log(`[Middleware] "Personal" organization not found for user ${userId}. Creating it...`);
-            const newOrg = await client.organizations.createOrganization({
-              name: orgName,
-              createdBy: userId,
-            });
-            personalOrgId = newOrg.id;
-            console.log(`[Middleware] "Personal" organization created for user ${userId}. New Org ID: ${personalOrgId}`);
-          }
-          
-          // Note: Activating the organization is typically handled client-side in the DashboardContext
-          // or by Clerk's default behavior when a user has only one org or based on last active.
-          // The middleware's primary role here is to ensure the org exists.
-
-        } catch (error) {
-          console.error(`[Middleware] Error ensuring "Personal" organization for user ${userId} for path ${req.nextUrl.pathname}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error(`[Middleware] Error protecting route ${req.nextUrl.pathname}:`, error);
+  // If the user is not authenticated, decide what to do based on the route type.
+  if (!authState.userId) {
+    const isApiRoute = req.nextUrl.pathname.startsWith('/api');
+    if (isApiRoute) {
+      // For API routes, return a 401 Unauthorized response. This fixes the 404 error.
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    } else {
+      // For page routes, redirect the user to the sign-in page.
+      return authState.redirectToSignIn({ returnBackUrl: req.url });
     }
   }
+
+  // If the user is authenticated, ensure their "Personal" organization exists.
+  await ensurePersonalOrgExists(authState.userId);
+
+  // Allow all other authenticated requests to proceed.
   return NextResponse.next();
 });
 

@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
             console.error('[API /webhook-tools/get-events] Failed to fetch webhooks' + webhooksResponse.error);
             return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Failed to fetch webhooks');
         }
-        console.log('Successfully fetched webhook events:', JSON.stringify(webhooksResponse, null, 2));
         // 6. Return the response
         return createSuccessResponse(webhooksResponse, 200);
 

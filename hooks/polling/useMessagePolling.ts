@@ -50,7 +50,6 @@ export function useMessagePolling({
     if (isSignedIn && activeOrgId && currentConversationIdMiddlePanel && activeAgentView === 'chat') {
       performFetch(); // Initial fetch
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useMessagePolling: Started polling for messages every ${pollingInterval}ms for conversation ${currentConversationIdMiddlePanel} in org ${activeOrgId}.`);
     } else {
       let reason = "unknown";
       if (!isSignedIn) reason = "user not signed in";

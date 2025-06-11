@@ -35,9 +35,6 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
       return;
     }
 
-    console.log(`useMessages: Fetching messages for conversation ${convId} in org ${activeOrgId}...`);
-    setIsLoadingMessages(true);
-    setCurrentMessages([]);
     setMessageError(null);
 
     try {
@@ -64,7 +61,13 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
         throw new Error('Invalid message data received from API');
       }
       
-      setCurrentMessages(messagesData); // Directly set, removed compare logic for simplicity with orgId changes
+      // Use functional update to avoid dependency on currentMessages in useCallback
+      setCurrentMessages(prevMessages => {
+        if (JSON.stringify(messagesData) !== JSON.stringify(prevMessages)) {
+          return messagesData;
+        }
+        return prevMessages;
+      });
 
     } catch (error: any) {
       console.error(`useMessages: Error loading messages for ${convId}:`, error);
@@ -73,10 +76,12 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeOrgId, handleLogout]); // Added activeOrgId. Removed currentMessages from deps.
+  }, [activeOrgId, handleLogout]); // REMOVED currentMessages from dependency array
 
   useEffect(() => {
     if (activeOrgId && conversationId) { // Check for activeOrgId here too
+      setIsLoadingMessages(true);
+      setCurrentMessages([]);
       fetchMessages(conversationId);
     } else {
       setCurrentMessages([]);

@@ -12,7 +12,7 @@
 
 import { marked } from 'marked';
 import { memo, useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
@@ -26,6 +26,16 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
 }
 
 /**
+ * Custom components to override default markdown rendering.
+ * Ensures that <pre> blocks have horizontal scrolling for overflow.
+ */
+const customMarkdownComponents: Components = {
+  pre: ({ node, ...props }) => (
+    <pre {...props} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }} />
+  ),
+};
+
+/**
  * Memoized component that renders a single markdown block
  * Only re-renders if the content actually changes
  */
@@ -33,7 +43,9 @@ const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => {
     return (
       <div className="prose prose-invert prose-sm max-w-none text-xs">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={customMarkdownComponents}>
+          {content}
+        </ReactMarkdown>
       </div>
     );
   },

@@ -49,7 +49,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
     >
       {/* Avatar Re-added and placed inline */}
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-w-0">
         {/* Flex container for Avatar and Sender Name */}
         <div className="flex items-center gap-2 mb-1">
             {/* Small Avatar */}

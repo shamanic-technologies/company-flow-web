@@ -55,10 +55,17 @@ export async function GET(req: NextRequest) {
       credentials
     );
 
-    // If the backend call was successful, transform the response
+    // If the backend call was NOT successful, handle the error properly
     if (!getMessagesFromConversationResponse.success) {
-      console.error('[API /messages/list] Failed to fetch messages' + getMessagesFromConversationResponse.error);
-      return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Failed to fetch messages');
+      // Explicitly type as ErrorResponse to access statusCode and error
+      const errorDetails = getMessagesFromConversationResponse as import('@agent-base/types').ErrorResponse;
+      const statusCode = errorDetails.statusCode || 500; // Default to 500 if statusCode is missing
+      const errorMessage = errorDetails.error || 'Failed to fetch messages from backend service';
+      // Generate an errorCode based on the status for client-side handling if needed
+      const errorCode = statusCode === 404 ? 'CONVERSATION_NOT_FOUND' : 'BACKEND_SERVICE_ERROR';
+
+      console.error(`[API /messages/list] Backend service failed. Status: ${statusCode}, Error: ${errorMessage}, Details: ${errorDetails.details}`);
+      return createErrorResponse(statusCode, errorCode, errorMessage, errorDetails.details);
     }
 
     const messages = getMessagesFromConversationResponse.data;
