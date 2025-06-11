@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Webhook, ServiceResponse, SearchWebhookResultItem, SearchWebhookResult } from '@agent-base/types';
+import { useAuth } from '@clerk/nextjs';
 
 interface UseWebhooksProps {
   handleLogout: () => void;
@@ -14,6 +15,7 @@ interface UseWebhooksProps {
  * @returns An object containing user webhooks, selected webhook, loading/error states, and related functions.
  */
 export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
+  const { getToken } = useAuth();
   const [userWebhooks, setUserWebhooks] = useState<SearchWebhookResultItem[]>([]);
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
@@ -34,10 +36,12 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
     // setUserWebhooks([]); // Clear previous webhooks while fetching? Let's clear on success/fail.
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/webhook-tools/get-created', {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json' // Explicitly set content type
+          'Content-Type': 'application/json', // Explicitly set content type
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -65,7 +69,7 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
     } finally {
       setIsLoadingWebhooks(false);
     }
-  }, [activeOrgId, handleLogout]); // Added activeOrgId to dependencies
+  }, [activeOrgId, handleLogout, getToken]); // Added activeOrgId to dependencies
 
   // --- Effect to Poll for Webhooks Every 5 Seconds --- 
   useEffect(() => {
