@@ -33,6 +33,9 @@ const customMarkdownComponents: Components = {
   pre: ({ node, ...props }) => (
     <pre {...props} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }} />
   ),
+  a: ({ node, ...props }) => (
+    <a {...props} target="_blank" rel="noopener noreferrer" />
+  ),
 };
 
 /**
