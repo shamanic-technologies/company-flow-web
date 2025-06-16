@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { UseChatHelpers, Message } from 'ai/react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   SetupNeeded,
   UtilityInputSecret,
@@ -29,7 +30,6 @@ interface UseSetupStepsProps {
   // Use the minimal interface or any, and rely on runtime checks + ts-ignore
   toolInvocation: any | undefined | null; 
   addToolResult: (args: { toolCallId: string; result: any }) => void;
-  token: string | null;
 }
 
 interface UseSetupStepsReturn {
@@ -43,9 +43,9 @@ interface UseSetupStepsReturn {
 export function useSetupSteps({
   toolInvocation,
   addToolResult,
-  token
 }: UseSetupStepsProps): UseSetupStepsReturn {
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const [requiredSteps, setRequiredSteps] = useState<SetupStep[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentSetupData, setCurrentSetupData] = useState<SetupNeeded | null>(null);
@@ -146,6 +146,7 @@ export function useSetupSteps({
         console.log('[useSetupSteps] currentSetupData:', currentSetupData);
         console.log('[useSetupSteps] stepData.secrets:', stepData.secrets);
 
+        const token = await getToken();
         const response = await fetch('/api/secrets/store-secret', { 
             method: 'POST',
             headers: {
@@ -190,7 +191,7 @@ export function useSetupSteps({
     } finally {
         setIsLoading(false);
     }
-  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, token]);
+  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, getToken]);
 
   const currentStep = requiredSteps.length > 0 && currentIndex < requiredSteps.length ? requiredSteps[currentIndex] : null;
   const isHandlingSetup = currentStep !== null;

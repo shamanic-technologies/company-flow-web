@@ -4,6 +4,7 @@
  */
 import { PlanInfo } from '@/types/credit';
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
 interface UsePlanInfoProps {
   activeOrgId: string | null | undefined; // Added activeOrgId
@@ -17,6 +18,7 @@ interface UsePlanInfoReturn {
 }
 
 export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoReturn {
+  const { getToken } = useAuth();
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,10 +34,12 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
     setError(null); // Clear previous errors
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/credits/plan-info', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -53,7 +57,7 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
     } finally {
       setIsLoading(false);
     }
-  }, [activeOrgId]); // Added activeOrgId to dependencies
+  }, [activeOrgId, getToken]); // Added activeOrgId to dependencies
 
   // Fetch on mount or when activeOrgId changes
   useEffect(() => {

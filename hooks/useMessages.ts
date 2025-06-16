@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Message as VercelMessage } from 'ai/react';
+import { useAuth } from '@clerk/nextjs';
 
 interface UseMessagesProps {
   conversationId: string | null;
   handleLogout: () => void;
   activeOrgId: string | null | undefined;
-  token: string | null;
 }
 
 /**
@@ -15,7 +15,8 @@ interface UseMessagesProps {
  * @param {UseMessagesProps} props - Conversation ID, logout handler, and activeOrgId.
  * @returns An object containing messages, loading/error states, and fetch function for messages.
  */
-export function useMessages({ conversationId, handleLogout, activeOrgId, token }: UseMessagesProps) {
+export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMessagesProps) {
+  const { getToken } = useAuth();
   const [currentMessages, setCurrentMessages] = useState<VercelMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export function useMessages({ conversationId, handleLogout, activeOrgId, token }
     setMessageError(null);
 
     try {
+      const token = await getToken();
       const messagesResponse = await fetch(`/api/messages/list?conversationId=${convId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -81,10 +83,10 @@ export function useMessages({ conversationId, handleLogout, activeOrgId, token }
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeOrgId, handleLogout, token]); // REMOVED currentMessages from dependency array
+  }, [activeOrgId, handleLogout, getToken]); // REMOVED currentMessages from dependency array
 
   useEffect(() => {
-    if (activeOrgId && conversationId && token) { // Check for activeOrgId here too
+    if (activeOrgId && conversationId) { // Check for activeOrgId here too
       setIsLoadingMessages(true);
       setCurrentMessages([]);
       fetchMessages(conversationId);
@@ -95,7 +97,7 @@ export function useMessages({ conversationId, handleLogout, activeOrgId, token }
       if (!activeOrgId) console.log("useMessages: No activeOrgId, clearing messages.");
       if (!conversationId) console.log("useMessages: No conversationId, clearing messages.");
     }
-  }, [activeOrgId, conversationId, fetchMessages, token]); // Added activeOrgId
+  }, [activeOrgId, conversationId, fetchMessages]); // Added activeOrgId
 
   return {
     currentMessages,

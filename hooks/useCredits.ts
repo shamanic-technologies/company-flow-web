@@ -5,10 +5,10 @@
 import { ConsumeCreditsResponse, CreditBalance } from '@/types/credit';
 import { ServiceResponse } from '@agent-base/types';
 import { useState, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
 interface UseCreditsProps {
   activeOrgId: string | null | undefined; // Added activeOrgId
-  token: string | null;
 }
 
 interface UseCreditsReturn {
@@ -24,7 +24,8 @@ interface UseCreditsReturn {
   clearError: () => void;
 }
 
-export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsReturn {
+export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
+  const { getToken } = useAuth();
   const [isValidating, setIsValidating] = useState(false);
   const [isConsuming, setIsConsuming] = useState(false);
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -44,6 +45,7 @@ export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsR
     setError(null);
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/credits/validate', {
         method: 'POST',
         headers: {
@@ -79,7 +81,7 @@ export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsR
     } finally {
       setIsValidating(false);
     }
-  }, [activeOrgId, token]); // Added activeOrgId
+  }, [activeOrgId, getToken]); // Added activeOrgId
 
   /**
    * Consume credits after operation completion
@@ -98,6 +100,7 @@ export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsR
     setError(null);
 
     try {
+      const token = await getToken();
       const response = await fetch('/api/credits/consume', {
         method: 'POST',
         headers: {
@@ -139,7 +142,7 @@ export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsR
     } finally {
       setIsConsuming(false);
     }
-  }, [activeOrgId, token]); // Added activeOrgId. Removed creditBalance from deps as we use functional update for setCreditBalance.
+  }, [activeOrgId, getToken]); // Added activeOrgId. Removed creditBalance from deps as we use functional update for setCreditBalance.
 
   /**
    * Clear error state

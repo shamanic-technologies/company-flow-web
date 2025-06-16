@@ -32,7 +32,6 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
 }) => {
   const { toolInvocation } = part;
   const { toast } = useToast(); // Keep toast if needed for other errors
-  const { token } = useDashboard();
 
   // Use the custom hook to manage setup steps
   const { 
@@ -44,7 +43,6 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
   } = useSetupSteps({ 
     toolInvocation, 
     addToolResult,
-    token
   });
   // --- Render Logic --- 
 

@@ -13,7 +13,6 @@ interface UseConversationsProps {
   user: UserResource | null | undefined;
   handleLogout: () => void;
   activeOrgId: string | null | undefined;
-  token: string | null;
 }
 
 /**
@@ -28,8 +27,7 @@ export function useConversations({
   selectedAgentIdRightPanel, 
   user, 
   handleLogout, 
-  activeOrgId,
-  token
+  activeOrgId
 }: UseConversationsProps) {
   const { getToken, isLoaded } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
@@ -49,7 +47,7 @@ export function useConversations({
     isLoadingMessages,
     messageError,
     fetchMessages, // This is fetchMessages from useMessages
-  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId, token }); // Pass activeOrgId
+  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId }); // Pass activeOrgId
 
   const apiRef = useRef({
     createConversation: async (agentId: string) => {
@@ -64,6 +62,7 @@ export function useConversations({
       setIsCreatingConversationRightPanel(true);
       setConversationError(null);
       try {
+        const token = await getToken();
         const response = await fetch('/api/conversations/create', {
           method: 'POST',
           headers: { 
@@ -107,6 +106,7 @@ export function useConversations({
       }
       setIsLoadingConversationsRightPanel(true);
       try {
+        const token = await getToken();
         const response = await fetch(`/api/conversations/list?agentId=${selectedAgentIdRightPanel}&orgId=${activeOrgId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -311,12 +311,12 @@ export function useConversations({
 
   // --- Fetching logic using useEffect ---
   useEffect(() => {
-    if (user && selectedAgentIdMiddlePanel && activeOrgId && token) {
+    if (user && selectedAgentIdMiddlePanel && activeOrgId) {
       apiRef.current.listConversations();
     } else {
       setConversationList([]); // Clear list if no agent is selected
     }
-  }, [user, selectedAgentIdMiddlePanel, activeOrgId, token]);
+  }, [user, selectedAgentIdMiddlePanel, activeOrgId]);
 
   return {
     // Conversation list related
