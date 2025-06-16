@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   '/', // Home page
   '/sign-in(.*)', // Clerk Sign In page
   '/sign-up(.*)', // Clerk Sign Up page
+  '/dashboard/settings/billing(.*)', // Stripe Billing Page
   '/api/auth(.*)', // Clerk auth routes (catch-all handles specifics)
   '/api/health', // Health check endpoint
   '/api/contact', // Contact form endpoint (assuming public)
