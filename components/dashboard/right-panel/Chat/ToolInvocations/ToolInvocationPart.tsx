@@ -12,6 +12,7 @@ import type { MessagePart } from '@/components/dashboard/right-panel/Chat/types'
 import { hasToolError } from './utils';
 import { useSetupSteps } from '@/hooks/useSetupSteps'; // Import the custom hook
 import { SetupStepRenderer } from './SetupStepRenderer'; // Import the renderer
+import { useDashboard } from '../../../context/DashboardContext';
 
 interface ToolInvocationPartProps {
   part: MessagePart;
@@ -29,19 +30,21 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
   onToggle, 
   addToolResult,
 }) => {
-  const toolInvocation = part.toolInvocation;
+  const { toolInvocation } = part;
   const { toast } = useToast(); // Keep toast if needed for other errors
+  const { token } = useDashboard();
 
   // Use the custom hook to manage setup steps
   const { 
     currentStep, 
-    isLoading: isStepLoading, // Rename to avoid clash if needed
-    error: stepError, 
+    isLoading: isSubmitting, // Rename to avoid clash if needed
+    error: submissionError, 
     handleStepSubmit, 
     isHandlingSetup 
   } = useSetupSteps({ 
     toolInvocation, 
-    addToolResult 
+    addToolResult,
+    token
   });
   // --- Render Logic --- 
 
@@ -50,9 +53,9 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
   // 1. Render Setup Step Card if the hook is handling it
   if (isHandlingSetup && currentStep) {
     // Potentially add loading/error display around the renderer
-    if (stepError) {
+    if (submissionError) {
       // Optionally display the step error prominently
-       return <div className="text-red-500 text-xs p-2">Error during setup: {stepError}</div>;
+       return <div className="text-red-500 text-xs p-2">Error during setup: {submissionError}</div>;
     }
      return (
        <SetupStepRenderer 
@@ -62,7 +65,7 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
          toolCallId={toolInvocation.toolCallId || `step-${index}`} // Pass toolCallId
        />
      );
-    // We might want a loading indicator here as well based on isStepLoading
+    // We might want a loading indicator here as well based on isSubmitting
   }
 
   // 2. Render Standard Tool Invocation States (if not handling setup)

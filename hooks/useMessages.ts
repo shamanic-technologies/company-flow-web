@@ -7,6 +7,7 @@ interface UseMessagesProps {
   conversationId: string | null;
   handleLogout: () => void;
   activeOrgId: string | null | undefined;
+  token: string | null;
 }
 
 /**
@@ -14,7 +15,7 @@ interface UseMessagesProps {
  * @param {UseMessagesProps} props - Conversation ID, logout handler, and activeOrgId.
  * @returns An object containing messages, loading/error states, and fetch function for messages.
  */
-export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMessagesProps) {
+export function useMessages({ conversationId, handleLogout, activeOrgId, token }: UseMessagesProps) {
   const [currentMessages, setCurrentMessages] = useState<VercelMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -38,7 +39,11 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
     setMessageError(null);
 
     try {
-      const messagesResponse = await fetch(`/api/messages/list?conversationId=${convId}`);
+      const messagesResponse = await fetch(`/api/messages/list?conversationId=${convId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
       if (messagesResponse.status === 401) {
         console.error('🚫 useMessages - Unauthorized loading messages');
@@ -76,10 +81,10 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeOrgId, handleLogout]); // REMOVED currentMessages from dependency array
+  }, [activeOrgId, handleLogout, token]); // REMOVED currentMessages from dependency array
 
   useEffect(() => {
-    if (activeOrgId && conversationId) { // Check for activeOrgId here too
+    if (activeOrgId && conversationId && token) { // Check for activeOrgId here too
       setIsLoadingMessages(true);
       setCurrentMessages([]);
       fetchMessages(conversationId);
@@ -90,7 +95,7 @@ export function useMessages({ conversationId, handleLogout, activeOrgId }: UseMe
       if (!activeOrgId) console.log("useMessages: No activeOrgId, clearing messages.");
       if (!conversationId) console.log("useMessages: No conversationId, clearing messages.");
     }
-  }, [activeOrgId, conversationId, fetchMessages]); // Added activeOrgId
+  }, [activeOrgId, conversationId, fetchMessages, token]); // Added activeOrgId
 
   return {
     currentMessages,

@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface UsePlanInfoProps {
   activeOrgId: string | null | undefined; // Added activeOrgId
+  token: string | null;
 }
 
 interface UsePlanInfoReturn {
@@ -16,7 +17,7 @@ interface UsePlanInfoReturn {
   fetch: () => Promise<void>;
 }
 
-export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoReturn {
+export function usePlanInfo({ activeOrgId, token }: UsePlanInfoProps): UsePlanInfoReturn {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -54,7 +56,7 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
     } finally {
       setIsLoading(false);
     }
-  }, [activeOrgId]); // Added activeOrgId to dependencies
+  }, [activeOrgId, token]); // Added activeOrgId to dependencies
 
   // Fetch on mount or when activeOrgId changes
   useEffect(() => {

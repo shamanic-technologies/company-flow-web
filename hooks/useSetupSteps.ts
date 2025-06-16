@@ -29,6 +29,7 @@ interface UseSetupStepsProps {
   // Use the minimal interface or any, and rely on runtime checks + ts-ignore
   toolInvocation: any | undefined | null; 
   addToolResult: (args: { toolCallId: string; result: any }) => void;
+  token: string | null;
 }
 
 interface UseSetupStepsReturn {
@@ -42,6 +43,7 @@ interface UseSetupStepsReturn {
 export function useSetupSteps({
   toolInvocation,
   addToolResult,
+  token
 }: UseSetupStepsProps): UseSetupStepsReturn {
   const { toast } = useToast();
   const [requiredSteps, setRequiredSteps] = useState<SetupStep[]>([]);
@@ -148,7 +150,7 @@ export function useSetupSteps({
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // 'Authorization': `Bearer ${authToken}`, // REMOVED
+                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
                 secrets: stepData.secrets, 
@@ -188,7 +190,7 @@ export function useSetupSteps({
     } finally {
         setIsLoading(false);
     }
-  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast]);
+  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, token]);
 
   const currentStep = requiredSteps.length > 0 && currentIndex < requiredSteps.length ? requiredSteps[currentIndex] : null;
   const isHandlingSetup = currentStep !== null;

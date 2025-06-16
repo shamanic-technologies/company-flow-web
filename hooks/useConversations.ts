@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Conversation, CreateConversationInput, ServiceResponse } from '@agent-base/types';
 // import { Message as VercelMessage } from 'ai/react'; // No longer directly used here
 import { UserResource } from '@clerk/types';
@@ -12,7 +12,8 @@ interface UseConversationsProps {
   selectedAgentIdRightPanel: string | null;
   user: UserResource | null | undefined;
   handleLogout: () => void;
-  activeOrgId: string | null | undefined; // Added activeOrgId
+  activeOrgId: string | null | undefined;
+  token: string | null;
 }
 
 /**
@@ -27,7 +28,8 @@ export function useConversations({
   selectedAgentIdRightPanel, 
   user, 
   handleLogout, 
-  activeOrgId 
+  activeOrgId,
+  token
 }: UseConversationsProps) {
   const { getToken, isLoaded } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
@@ -47,7 +49,101 @@ export function useConversations({
     isLoadingMessages,
     messageError,
     fetchMessages, // This is fetchMessages from useMessages
-  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId }); // Pass activeOrgId
+  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId, token }); // Pass activeOrgId
+
+  const apiRef = useRef({
+    createConversation: async (agentId: string) => {
+      if (!user) {
+        console.error("useConversations.createConversation: User not available.");
+        return null;
+      }
+      if (!activeOrgId) {
+        console.error("useConversations.createConversation: activeOrgId not available.");
+        return null;
+      }
+      setIsCreatingConversationRightPanel(true);
+      setConversationError(null);
+      try {
+        const response = await fetch('/api/conversations/create', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ agentId, orgId: activeOrgId }),
+        });
+        if (response.status === 401) {
+          console.error('🚫 useConversations - Unauthorized creating conversation');
+          handleLogout();
+          return null;
+        }
+        const responseDataUntyped = await response.json();
+        if (!response.ok) {
+          console.error('🚫 useConversations - API error creating conversation:', responseDataUntyped);
+          throw new Error(responseDataUntyped.error || `Failed to create conversation (HTTP ${response.status})`);
+        }
+        const responseData = responseDataUntyped as Conversation;
+        if (!responseData || !responseData.conversationId) {
+          console.error('🚫 useConversations - Invalid conversation data received from API after create');
+          throw new Error('Invalid conversation data received from API');
+        }
+        console.log("useConversations: New chat created successfully, fetching all user conversations to update list.");
+        await fetchUserConversations();
+        setCurrentConversationIdRightPanel(responseData.conversationId);
+        return responseData.conversationId;
+      } catch (error: any) {
+        console.error("useConversations: Error creating new chat:", error);
+        setConversationError(`Error creating chat: ${error.message}`);
+        return null;
+      } finally {
+        setIsCreatingConversationRightPanel(false);
+      }
+    },
+    listConversations: async () => {
+      if (!user) return;
+      if (!activeOrgId) {
+        setConversationList([]);
+        return;
+      }
+      setIsLoadingConversationsRightPanel(true);
+      try {
+        const response = await fetch(`/api/conversations/list?agentId=${selectedAgentIdRightPanel}&orgId=${activeOrgId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+        if (response.status === 401) {
+          console.error('🚫 useConversations - Unauthorized loading conversations');
+          handleLogout();
+          return;
+        }
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(`Failed to list conversations: ${errData.error || response.statusText} (${response.status})`);
+        }
+        const serviceResponse: ServiceResponse<Conversation[]> = await response.json();
+        if (serviceResponse.success && serviceResponse.data) {
+          const sortedConversations = serviceResponse.data.sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          if (JSON.stringify(sortedConversations) !== JSON.stringify(conversationList)) {
+              setConversationList(sortedConversations);
+          }
+        } else {
+          const errorMsg = serviceResponse.error || 'API error listing conversations: Invalid data format';
+          console.error(`useConversations: ${errorMsg}`);
+          setConversationError(errorMsg);
+          setConversationList([]); 
+        }
+      } catch (error: any) {
+        console.error(`useConversations: Error fetching conversations:`, error);
+        setConversationError(`Failed to load conversations: ${error.message}`);
+        setConversationList([]);
+      } finally {
+        setIsLoadingConversationsRightPanel(false);
+      }
+    }
+  });
 
   // --- Function to fetch ALL conversations for the user ---
   const fetchUserConversations = useCallback(async () => {
@@ -167,64 +263,20 @@ export function useConversations({
   }, [activeOrgId, fetchUserConversations]); // Added activeOrgId
 
   // --- Handler to Create New Chat --- 
-  const handleCreateNewChatRightPanel = useCallback(async (): Promise<string | null> => {
-    if (!activeOrgId) {
-      console.warn("useConversations: activeOrgId is missing. Cannot create chat.");
-      setConversationError("Organization context not available. Cannot create chat.");
+  const handleCreateNewChatRightPanel = useCallback(async () => {
+    if (!selectedAgentIdRightPanel) {
+      console.error("No agent selected in the right panel to create a chat for.");
       return null;
     }
-    if (!selectedAgentIdRightPanel || !user) {
-      console.warn("useConversations: Agent ID or user info missing for creating chat.");
-      setConversationError("Cannot create chat: missing required information.");
-      return null;
+    const newConvId = await apiRef.current.createConversation(selectedAgentIdRightPanel);
+    if (newConvId) {
+      // This automatically sets the new conversation as active for the right panel
+      setCurrentConversationIdRightPanel(newConvId);
+      // We might not want to automatically switch the view, just prepare the new chat.
+      // setActiveAgentView('chat'); // This line could be removed if view switching is handled elsewhere.
     }
-    console.log(`useConversations: Creating new chat for org ${activeOrgId}, agent ${selectedAgentIdRightPanel}`);
-    setIsCreatingConversationRightPanel(true);
-    setConversationError(null);
-    try {
-      const token = await getToken();
-      const newConversationId = crypto.randomUUID();
-      const channelId = 'web';
-      const requestBody: CreateConversationInput = {
-        agentId: selectedAgentIdRightPanel,
-        channelId: channelId,
-        conversationId: newConversationId,
-      };
-      const response = await fetch('/api/conversations/create', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody)
-      });
-      if (response.status === 401) {
-        console.error('🚫 useConversations - Unauthorized creating conversation');
-        handleLogout();
-        return null;
-      }
-      const responseDataUntyped = await response.json();
-      if (!response.ok) {
-        console.error('🚫 useConversations - API error creating conversation:', responseDataUntyped);
-        throw new Error(responseDataUntyped.error || `Failed to create conversation (HTTP ${response.status})`);
-      }
-      const responseData = responseDataUntyped as Conversation;
-      if (!responseData || !responseData.conversationId) {
-        console.error('🚫 useConversations - Invalid conversation data received from API after create');
-        throw new Error('Invalid conversation data received from API');
-      }
-      console.log("useConversations: New chat created successfully, fetching all user conversations to update list.");
-      await fetchUserConversations();
-      setCurrentConversationIdRightPanel(responseData.conversationId);
-      return responseData.conversationId;
-    } catch (error: any) {
-      console.error("useConversations: Error creating new chat:", error);
-      setConversationError(`Error creating chat: ${error.message}`);
-      return null;
-    } finally {
-      setIsCreatingConversationRightPanel(false);
-    }
-  }, [activeOrgId, selectedAgentIdRightPanel, user, handleLogout, fetchUserConversations, getToken]); // Added activeOrgId
+    return newConvId; // Return the new ID
+  }, [selectedAgentIdRightPanel, apiRef]);
 
   // --- Simple setter for selecting a conversation ID --- 
   const selectConversationIdMiddlePanel = useCallback((conversationId: string | null) => {
@@ -256,6 +308,15 @@ export function useConversations({
       setConversationError(null);
     }
   }, [isLoaded, activeOrgId, fetchUserConversations]);
+
+  // --- Fetching logic using useEffect ---
+  useEffect(() => {
+    if (user && selectedAgentIdMiddlePanel && activeOrgId && token) {
+      apiRef.current.listConversations();
+    } else {
+      setConversationList([]); // Clear list if no agent is selected
+    }
+  }, [user, selectedAgentIdMiddlePanel, activeOrgId, token]);
 
   return {
     // Conversation list related

@@ -8,6 +8,7 @@ import { useState, useCallback } from 'react';
 
 interface UseCreditsProps {
   activeOrgId: string | null | undefined; // Added activeOrgId
+  token: string | null;
 }
 
 interface UseCreditsReturn {
@@ -23,7 +24,7 @@ interface UseCreditsReturn {
   clearError: () => void;
 }
 
-export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
+export function useCredits({ activeOrgId, token }: UseCreditsProps): UseCreditsReturn {
   const [isValidating, setIsValidating] = useState(false);
   const [isConsuming, setIsConsuming] = useState(false);
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -47,6 +48,7 @@ export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ estimatedCredits }),
       });
@@ -77,7 +79,7 @@ export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
     } finally {
       setIsValidating(false);
     }
-  }, [activeOrgId]); // Added activeOrgId
+  }, [activeOrgId, token]); // Added activeOrgId
 
   /**
    * Consume credits after operation completion
@@ -100,6 +102,7 @@ export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ totalAmountInUSDCents, conversationId }),
       });
@@ -136,7 +139,7 @@ export function useCredits({ activeOrgId }: UseCreditsProps): UseCreditsReturn {
     } finally {
       setIsConsuming(false);
     }
-  }, [activeOrgId]); // Added activeOrgId. Removed creditBalance from deps as we use functional update for setCreditBalance.
+  }, [activeOrgId, token]); // Added activeOrgId. Removed creditBalance from deps as we use functional update for setCreditBalance.
 
   /**
    * Clear error state

@@ -133,6 +133,7 @@ interface DashboardContextType {
   refreshApiTools?: () => Promise<void>; // Added optional for completeness
   fetchMessagesMiddlePanel?: (conversationId: string) => Promise<void>; // Expects no arguments
   fetchMessagesRightPanel?: (conversationId: string) => Promise<void>;  // Expects no arguments
+  token: string | null;
 }
 
 export const DashboardContext = createContext<DashboardContextType>({
@@ -205,13 +206,30 @@ export const DashboardContext = createContext<DashboardContextType>({
   refreshApiTools: async () => { console.warn("refreshApiTools called on default context"); },
   fetchMessagesMiddlePanel: async (conversationId: string) => { console.warn("fetchMessagesMiddlePanel called on default context with", conversationId); },
   fetchMessagesRightPanel: async (conversationId: string) => { console.warn("fetchMessagesRightPanel called on default context with", conversationId); },
+  token: null,
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
-  const { isSignedIn, orgId: activeOrgIdFromClerkAuth, isLoaded: authIsLoaded } = useClerkAuth();
+  const { isSignedIn, orgId: activeOrgIdFromClerkAuth, isLoaded: authIsLoaded, getToken } = useClerkAuth();
   const { signOut } = useClerk();
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const fetchedToken = await getToken();
+        setToken(fetchedToken);
+      } catch (error) {
+        console.error("Error fetching token:", error);
+      }
+    };
+    if (isSignedIn) {
+      fetchToken();
+    }
+  }, [isSignedIn, getToken]);
 
   const {
     organizations,
@@ -273,7 +291,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectedAgentIdRightPanel, 
     user: clerkUser, 
     handleLogout: handleClerkLogout, 
-    activeOrgId // Pass activeOrgId
+    activeOrgId, // Pass activeOrgId
+    token
   });
 
   const currentMessagesMiddlePanel = currentMessagesForMiddlePanelHook;
@@ -301,7 +320,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoading: isLoadingPlanInfoFromHook,
     error: planInfoErrorFromHook,
     fetch: fetchPlanInfoFromHook
-  } = usePlanInfo({ activeOrgId });
+  } = usePlanInfo({ activeOrgId, token });
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
@@ -383,7 +402,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const isClerkLoading = !clerkIsLoaded || !authIsLoaded;
 
-  const creditsHook = useCredits({ activeOrgId });
+  const creditsHook = useCredits({ activeOrgId, token });
   const { 
     currentMessages: currentMessagesRightPanelData,
     isLoadingMessages: isLoadingMessagesRightPanelData,
@@ -392,7 +411,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   } = useMessages({ 
     conversationId: currentConversationIdRightPanel, 
     handleLogout: handleClerkLogout, 
-    activeOrgId
+    activeOrgId,
+    token
   });
   
   const fetchMessagesForMiddlePanel = useCallback(async () => {
@@ -490,6 +510,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     refreshApiTools: fetchApiTools, 
     fetchMessagesMiddlePanel: fetchMessagesForMiddlePanel,
     fetchMessagesRightPanel: fetchMessagesForRightPanel,
+    token,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     organizations, currentOrganization, activeOrgId, isLoadingOrganizations, organizationError, switchOrganization,
@@ -507,7 +528,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     creditsHook, 
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
     selectToolAndSetView,
-    fetchMessagesForMiddlePanel, fetchMessagesForRightPanel
+    fetchMessagesForMiddlePanel, fetchMessagesForRightPanel,
+    token,
   ]);
   
   useEffect(() => {
