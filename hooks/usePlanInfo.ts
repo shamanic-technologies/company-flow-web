@@ -30,7 +30,6 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
       return;
     }
     setError(null); // Clear previous errors
-    console.log(`usePlanInfo: Fetching plan info for org: ${activeOrgId}`);
 
     try {
       const response = await fetch('/api/credits/plan-info', {
@@ -75,4 +74,4 @@ export function usePlanInfo({ activeOrgId }: UsePlanInfoProps): UsePlanInfoRetur
     error,
     fetch: fetchPlanInfo,
   };
-}
+} 

@@ -320,7 +320,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoading: isLoadingPlanInfoFromHook,
     error: planInfoErrorFromHook,
     fetch: fetchPlanInfoFromHook
-  } = usePlanInfo({ activeOrgId, token });
+  } = usePlanInfo({ activeOrgId });
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
