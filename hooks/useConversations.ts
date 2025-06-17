@@ -41,13 +41,21 @@ export function useConversations({
   // conversationError is for errors related to fetching/creating conversation LIST
   const [conversationError, setConversationError] = useState<string | null>(null);
 
-  // --- Instantiate useMessages hook ---
+  // --- Instantiate useMessages hook for Middle Panel ---
   const {
-    currentMessages,
-    isLoadingMessages,
-    messageError,
-    fetchMessages, // This is fetchMessages from useMessages
-  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId }); // Pass activeOrgId
+    currentMessages: currentMessagesMiddlePanel,
+    isLoadingMessages: isLoadingMessagesMiddlePanel,
+    messageError: messageErrorMiddlePanel,
+    fetchMessages: fetchMessagesMiddlePanel,
+  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId });
+
+  // --- Instantiate useMessages hook for Right Panel ---
+  const {
+    currentMessages: currentMessagesRightPanel,
+    isLoadingMessages: isLoadingMessagesRightPanel,
+    messageError: messageErrorRightPanel,
+    fetchMessages: fetchMessagesRightPanel,
+  } = useMessages({ conversationId: currentConversationIdRightPanel, handleLogout, activeOrgId });
 
   const apiRef = useRef({
     createConversation: async (agentId: string) => {
@@ -332,10 +340,16 @@ export function useConversations({
     handleCreateNewChatRightPanel,
     refreshConversationList, // Function to refresh the conversation list
 
-    // Message related (from useMessages hook)
-    currentMessages, // Renamed from currentMessagesMiddlePanel
-    isLoadingMessages,
-    messageError, // Error specific to messages
-    fetchMessages, // Function to fetch/refresh messages for currentConversationId
+    // --- Messages for Middle Panel ---
+    currentMessagesMiddlePanel,
+    isLoadingMessagesMiddlePanel,
+    messageErrorMiddlePanel,
+    fetchMessagesMiddlePanel,
+
+    // --- Messages for Right Panel ---
+    currentMessagesRightPanel,
+    isLoadingMessagesRightPanel,
+    messageErrorRightPanel,
+    fetchMessagesRightPanel,
   };
 } 

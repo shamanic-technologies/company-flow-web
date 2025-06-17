@@ -67,7 +67,7 @@ interface DashboardContextType {
   // Middle Panel Messages
   currentMessagesMiddlePanel: VercelMessage[]; // Messages for the middle panel's active conversation
   isLoadingMessagesMiddlePanel: boolean; // Loading state for these messages
-  messageError: string | null; // Errors related to fetching these messages
+  messageErrorMiddlePanel: string | null; // Errors related to fetching these messages
 
   // Right Panel specific states (sourced from useConversations)
   currentConversationIdRightPanel: string | null;
@@ -165,7 +165,7 @@ export const DashboardContext = createContext<DashboardContextType>({
   conversationError: null,
   currentMessagesMiddlePanel: [],
   isLoadingMessagesMiddlePanel: false,
-  messageError: null,
+  messageErrorMiddlePanel: null,
   currentConversationIdRightPanel: null,
   isLoadingConversationsRightPanel: false,
   isCreatingConversationRightPanel: false,
@@ -270,10 +270,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     conversationError, 
     handleCreateNewChatRightPanel,
     refreshConversationList,
-    currentMessages: currentMessagesForMiddlePanelHook,
-    isLoadingMessages: isLoadingMessagesForMiddlePanelHook,
-    messageError: messageErrorForMiddlePanelHook,
-    fetchMessages: fetchMessagesFromConversationsHook,
+    currentMessagesMiddlePanel,
+    isLoadingMessagesMiddlePanel,
+    messageErrorMiddlePanel,
+    fetchMessagesMiddlePanel,
   } = useConversations({ 
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
@@ -281,10 +281,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleLogout: handleClerkLogout, 
     activeOrgId // Pass activeOrgId
   });
-
-  const currentMessagesMiddlePanel = currentMessagesForMiddlePanelHook;
-  const isLoadingMessagesMiddlePanel = isLoadingMessagesForMiddlePanelHook;
-  const messageError = messageErrorForMiddlePanelHook;
 
   const { 
     userWebhooks, 
@@ -323,7 +319,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   
   // Poll for messages in the middle panel's active conversation
   useMessagePolling({
-    fetchMessages: fetchMessagesFromConversationsHook, // Using the fetcher from the conversations hook
+    fetchMessages: fetchMessagesMiddlePanel, // Using the fetcher from the conversations hook
     currentConversationIdMiddlePanel,
     pollingInterval: POLLING_INTERVAL,
     isSignedIn,
@@ -404,11 +400,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   
   const fetchMessagesForMiddlePanel = useCallback(async () => {
     if (currentConversationIdMiddlePanel) {
-        await fetchMessagesFromConversationsHook(currentConversationIdMiddlePanel);
+        await fetchMessagesMiddlePanel(currentConversationIdMiddlePanel);
     } else {
         console.warn("[DashboardContext] fetchMessagesForMiddlePanel called without a selected middle panel conversation.");
     }
-  }, [currentConversationIdMiddlePanel, fetchMessagesFromConversationsHook]);
+  }, [currentConversationIdMiddlePanel, fetchMessagesMiddlePanel]);
 
   const fetchMessagesForRightPanel = useCallback(async () => {
     if (currentConversationIdRightPanel) {
@@ -447,7 +443,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     conversationError, 
     currentMessagesMiddlePanel, 
     isLoadingMessagesMiddlePanel, 
-    messageError, 
+    messageErrorMiddlePanel, 
     currentConversationIdRightPanel, 
     isLoadingConversationsRightPanel, 
     isCreatingConversationRightPanel, 
@@ -504,7 +500,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     organizations, currentOrganization, activeOrgId, isLoadingOrganizations, organizationError, switchOrganization,
     agents, selectedAgentIdMiddlePanel, selectedAgentIdRightPanel, selectAgentMiddlePanel, selectAgentRightPanel, isLoadingAgents, agentError, fetchAgents,
     conversationList, currentConversationIdMiddlePanel, isLoadingConversationsMiddlePanel, conversationError, 
-    currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageError, 
+    currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageErrorMiddlePanel, 
     currentConversationIdRightPanel, isLoadingConversationsRightPanel, isCreatingConversationRightPanel, 
     currentMessagesRightPanelData, isLoadingMessagesRightPanelData, messageErrorRightPanelData,
     selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel, refreshConversationList,
