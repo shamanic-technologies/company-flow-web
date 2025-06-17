@@ -10,7 +10,7 @@ import {
   createSuccessResponse,
   handleApiError
 } from '../../utils';
-import { CreateConversationInput, AgentBaseCredentials } from '@agent-base/types';
+import { CreateConversationInput, AgentBaseCredentials, ServiceResponse, ConversationId } from '@agent-base/types';
 // Import the specific API client function
 import { createConversationExternalApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
@@ -66,7 +66,7 @@ export const POST = async (req: NextRequest) => {
     };
 
     // Call API client function
-    const createResponse = await createConversationExternalApiService(
+    const createResponse: ServiceResponse<ConversationId> = await createConversationExternalApiService(
       body, // Pass the validated request body
       credentials // Pass the credentials object
     );
@@ -78,9 +78,7 @@ export const POST = async (req: NextRequest) => {
       return createErrorResponse(500, 'API_CLIENT_ERROR', createResponse.error || 'Failed to create conversation via API client', createResponse.error);
     }
 
-    const conversation = createResponse.data;
-
-    return createSuccessResponse(conversation, 201);
+    return createSuccessResponse(createResponse.data, 201);
 
   } catch (error: any) {
     console.log('Error in /conversations/create:', error);

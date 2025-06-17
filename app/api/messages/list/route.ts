@@ -12,6 +12,7 @@ import {
   handleApiError 
 } from '../../utils';
 import { AgentBaseCredentials, Conversation, ServiceResponse } from '@agent-base/types';
+import { Message } from 'ai/react';
 import { auth } from '@clerk/nextjs/server';
 import { getMessagesFromConversationExternalApiService } from '@agent-base/api-client';
 

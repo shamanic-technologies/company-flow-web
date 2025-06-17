@@ -8,11 +8,16 @@
  * currently selected agent and conversation, using data from DashboardContext.
  */
 
-import { useDashboard } from '@/components/dashboard/context/DashboardContext';
-import ChatInterface from './Chat/ChatInterface';
+import { useAgentContext } from '../context/AgentProvider';
+import { useConversationContext } from '../context/ConversationProvider';
+import { useChatContext } from '../context/ChatProvider';
+import { useViewContext } from '../context/ViewProvider';
+import { useUserContext } from '../context/UserProvider';
+import ChatInterface from '../chat/ChatInterface';
 import AgentHeader from './AgentHeader'; // Assuming AgentHeader is in the same directory
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Agent } from '@agent-base/types';
 
 /**
  * RightPanel Component
@@ -20,31 +25,27 @@ import { MessageCircle, Loader2, AlertTriangle } from 'lucide-react';
  * and conversation data from the DashboardContext.
  */
 export default function RightPanel() {
-    const {
-        // Agent related
-        agents,
-        selectedAgentIdRightPanel: selectedAgentId,
-        isLoadingAgents,
+    const { 
+        agents, 
+        selectedAgentIdRightPanel: selectedAgentId, 
+        isLoadingAgents 
+    } = useAgentContext();
+    
+    const { 
+        currentConversationIdRightPanel: currentConversationId 
+    } = useConversationContext();
+    
+    const { getClerkUserInitials } = useUserContext();
+    const { createNewChatAndSetView } = useViewContext();
+    const { chatRightPanel } = useChatContext();
 
-        // Conversation/Message related
-        currentConversationIdRightPanel: currentConversationId,
-        currentMessagesRightPanel: currentMessages,
-        isLoadingMessagesRightPanel: isLoadingMessages,
-        messageErrorRightPanel,
-        isCreatingConversationRightPanel: isCreatingConversation,
-
-        // Auth/User related
-        getClerkUserInitials,
-
-        // Actions
-        createNewChatAndSetView,
-        // selectConversationAndSetView, // This is for middle panel. Right panel might need its own or none.
-        // For now, assume selecting a conversation for the right panel is handled differently,
-        // e.g., only via "CreateNewChat" or if a separate "selectConversationRightPanelAndSetView" existed.
-    } = useDashboard();
-
-    // Find the full agent object based on the selected ID
-    const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
+    const { 
+        messages, 
+        isLoading: isLoadingMessages, 
+        error: chatError 
+    } = chatRightPanel;
+    
+    const selectedAgent = agents.find((agent: Agent) => agent.id === selectedAgentId);
 
     /**
      * Renders the content of the right panel based on loading states and selections.
@@ -65,10 +66,7 @@ export default function RightPanel() {
                         </div>
                     </div>
                     {/* Skeleton for Chat Area */}
-                    <div className="flex-1 flex items-center justify-center">
-                        <p className="text-sm text-gray-500">Loading agent...</p>
-                        <p className="text-xs text-gray-500">Loading agent...</p>
-                    </div>
+                    <div className="flex-1" />
                     <Skeleton className="h-10 w-full bg-gray-700" />
                 </div>
             );
@@ -79,7 +77,7 @@ export default function RightPanel() {
             return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4 text-center">
                     <MessageCircle className="h-12 w-12 mb-4 text-gray-600" />
-                    <p className="text-xs">Select an agent from the list to view details and chat.</p>
+                    <p className="text-xs">Select an agent to start a new conversation.</p>
                 </div>
             );
         }
@@ -90,8 +88,8 @@ export default function RightPanel() {
                 {/* Always render header once agent is selected */}
                 <AgentHeader
                     agent={selectedAgent}
-                    onCreateNewChat={createNewChatAndSetView} // Use context's view setting create chat
-                    isCreatingChat={isCreatingConversation} // Use context's loading state
+                    onCreateNewChat={createNewChatAndSetView}
+                    isCreatingChat={chatRightPanel.isLoading && messages.length === 0}
                  />
 
                  {/* --- Chat Area Content --- */}
@@ -103,18 +101,18 @@ export default function RightPanel() {
                                 <MessageCircle className="h-10 w-10 mb-3 text-gray-600" />
                                 <p className="text-xs">No conversation selected.</p>
                                 <button
-                                    onClick={createNewChatAndSetView} // Use context's view setting create chat
-                                    disabled={isCreatingConversation}
+                                    onClick={createNewChatAndSetView}
+                                    disabled={chatRightPanel.isLoading}
                                     className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50 mt-1"
                                 >
-                                    {isCreatingConversation ? 'Creating...' : 'Start a new chat.'}
+                                    {chatRightPanel.isLoading ? 'Creating...' : 'Start a new chat.'}
                                 </button>
                             </div>
                          );
                     }
 
                     // Sub-state 3b: Conversation selected, but messages are loading
-                    if (isLoadingMessages) {
+                    if (isLoadingMessages && messages.length === 0) {
                          return (
                             <div className="flex flex-1 items-center justify-center text-gray-400 p-4">
                                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -124,12 +122,12 @@ export default function RightPanel() {
                     }
 
                     // Sub-state 3c: Error loading messages for the selected conversation
-                    if (messageErrorRightPanel) {
+                    if (chatError) {
                          return (
                             <div className="flex flex-col flex-1 items-center justify-center text-red-400 p-4 text-center">
                                <AlertTriangle className="h-10 w-10 mb-3 text-red-500" />
                                <p className="font-medium text-xs">Error loading messages</p>
-                               <p className="text-xs text-red-300/80 mt-1 max-w-xs">{messageErrorRightPanel}</p>
+                               <p className="text-xs text-red-300/80 mt-1 max-w-xs">{chatError.message}</p>
                                {/* Optionally add a retry mechanism later */}
                             </div>
                          );
@@ -138,13 +136,11 @@ export default function RightPanel() {
                     // Sub-state 3d: Conversation selected, messages loaded (or empty) - Render ChatInterface
                     return (
                         <ChatInterface
-                            key={`${selectedAgentId}-${currentConversationId || 'new'}`} // Force re-mount on change, handle null currentConversationId for new chats
+                            key={`${selectedAgentId}-${currentConversationId || 'new'}`}
                             userInitials={getClerkUserInitials()}
-                            agentId={selectedAgentId} // Already checked selectedAgent exists
                             agentFirstName={selectedAgent.firstName}
                             agentLastName={selectedAgent.lastName}
-                            conversationId={currentConversationId} // Pass the selected ID for the right panel
-                            initialMessages={currentMessages} // Pass the messages array directly
+                            chat={chatRightPanel}
                         />
                     );
                  })()}

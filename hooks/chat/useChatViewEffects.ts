@@ -1,19 +1,13 @@
-import { useEffect, RefObject } from 'react';
+import { useEffect, RefObject, useState, useCallback } from 'react';
 import { Message } from 'ai/react';
-import { MessageInputRef } from '../MessageInput'; // Corrected path
+import { MessageInputRef } from '@/components/dashboard/chat/MessageInput';
 
 interface UseChatViewEffectsParams {
   messages: Message[];
   messagesEndRef: RefObject<HTMLDivElement>;
   inputRef: RefObject<MessageInputRef>;
   scrollAreaRef: RefObject<HTMLDivElement>;
-  prevChatIsLoading: boolean;
   chatIsLoading: boolean;
-  propIsLoading?: boolean;
-  propError?: string | null;
-  userHasScrolledUp: boolean;
-  setUserHasScrolledUp: (value: boolean) => void;
-  scrollToBottom: () => void;
 }
 
 /**
@@ -24,14 +18,10 @@ export function useChatViewEffects({
   messagesEndRef,
   inputRef,
   scrollAreaRef,
-  prevChatIsLoading,
   chatIsLoading,
-  propIsLoading,
-  propError,
-  userHasScrolledUp,
-  setUserHasScrolledUp,
-  scrollToBottom,
 }: UseChatViewEffectsParams) {
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const [prevChatIsLoading, setPrevChatIsLoading] = useState(false);
 
   // Effect to imperatively attach scroll listener to the viewport inside ScrollArea
   useEffect(() => {
@@ -54,6 +44,12 @@ export function useChatViewEffects({
     }
   }, [scrollAreaRef, setUserHasScrolledUp]);
 
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }, []);
+
   // Scroll to bottom automatically only if the user hasn't scrolled up manually
   useEffect(() => {
     if (!userHasScrolledUp) {
@@ -69,13 +65,15 @@ export function useChatViewEffects({
       }, 100);
     }
   }, [chatIsLoading, prevChatIsLoading, inputRef]);
-  
-  // Auto-focus input on first load 
+
   useEffect(() => {
-    if (!propIsLoading && !propError) {
-        setTimeout(() => {
-            inputRef.current?.focus();
-        }, 500); 
-    }
-  }, [propIsLoading, propError, inputRef]);
+    setPrevChatIsLoading(chatIsLoading);
+  }, [chatIsLoading]);
+  
+  // Auto-focus input on first load
+  useEffect(() => {
+    setTimeout(() => {
+        inputRef.current?.focus();
+    }, 500); 
+  }, [inputRef]);
 } 

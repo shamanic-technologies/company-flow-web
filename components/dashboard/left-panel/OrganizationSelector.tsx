@@ -20,12 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CreateOrganizationDialog } from './CreateOrganizationDialog'
 import { toast } from "@/hooks/use-toast"
-import { useDashboard } from '../context/DashboardContext'
+import { useOrganizationContext } from '../context/OrganizationProvider';
 import { ClientOrganization } from '@agent-base/types'
 
 interface OrganizationSelectorProps {
   onOrganizationChange?: (organization: ClientOrganization) => void;
-  onCreateOrganization?: () => void;
 }
 
 /**
@@ -42,8 +41,7 @@ interface OrganizationSelectorProps {
  * - Integration with DashboardContext for real organization management
  */
 export function OrganizationSelector({ 
-  onOrganizationChange, 
-  onCreateOrganization 
+  onOrganizationChange
 }: OrganizationSelectorProps) {
   const {
     organizations,
@@ -51,7 +49,7 @@ export function OrganizationSelector({
     isLoadingOrganizations,
     organizationError,
     switchOrganization,
-  } = useDashboard();
+  } = useOrganizationContext();
 
   const [isOpen, setIsOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -59,21 +57,6 @@ export function OrganizationSelector({
   const handleCreateOrganization = () => {
     setIsOpen(false)
     setIsCreateDialogOpen(true)
-  }
-
-  const handleOrganizationCreated = (newlyCreatedClerkOrg: any) => {
-    // The CreateOrganizationDialog now handles its own success toast and closes itself.
-    // The useOrganizations hook will update the organization list based on Clerk state changes.
-    
-    console.log('[OrganizationSelector] Organization creation process signaled by dialog. Clerk org:', newlyCreatedClerkOrg);
-
-    // If a parent component needs to know about this event, call the prop.
-    if (onCreateOrganization) {
-      onCreateOrganization(); // This prop might not need the org data anymore, just the event signal.
-    }
-
-    // Optional: If a specific action is needed in OrganizationSelector after creation, handle here.
-    // For now, we assume the primary UI updates (list refresh, current org update) are handled by useOrganizations.
   }
 
   const handleSwitchOrganization = async (org: ClientOrganization) => {
@@ -172,7 +155,7 @@ export function OrganizationSelector({
           <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
             Organizations
           </DropdownMenuLabel>
-          {organizations.map((org) => (
+          {organizations.map((org: ClientOrganization) => (
             <DropdownMenuItem
               key={org.id}
               onClick={() => handleSwitchOrganization(org)}
@@ -203,7 +186,6 @@ export function OrganizationSelector({
       <CreateOrganizationDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
-        onOrganizationCreated={handleOrganizationCreated}
       />
     </>
   )

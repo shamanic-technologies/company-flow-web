@@ -20,7 +20,7 @@ export default function LandingPage() {
   const { isLoaded } = useAuth();
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background via-background/95 to-blue-950/20">
+    <div className="flex flex-1 flex-col items-center justify-center w-full bg-gradient-to-br from-background via-background/95 to-blue-950/20">
       <BackgroundGradients />
       
       <div className="fixed top-4 right-4 z-50 h-10 flex items-center">
@@ -62,6 +62,6 @@ export default function LandingPage() {
       
       <WordFlowContainer />
       <LeftWordFlowContainer />
-    </main>
+    </div>
   );
 } 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Conversation, CreateConversationInput, ServiceResponse } from '@agent-base/types';
+import { Conversation, ConversationId, CreateConversationInput, ServiceResponse } from '@agent-base/types';
 // import { Message as VercelMessage } from 'ai/react'; // No longer directly used here
 import { UserResource } from '@clerk/types';
 import { useConversationMessages } from './useConversationMessages'; // Import the new hook
@@ -90,7 +90,7 @@ export function useConversations({
       }
       const serviceResponse: ServiceResponse<Conversation[]> = await response.json();
       if (serviceResponse.success && serviceResponse.data) {
-        const sortedConversations = serviceResponse.data.sort((a, b) =>
+        const sortedConversations = serviceResponse.data.sort((a: Conversation, b: Conversation) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setConversationList(prevList => {
@@ -100,10 +100,11 @@ export function useConversations({
           return prevList;
         });
       } else {
-        const errorMsg = serviceResponse.error || 'API error listing all user conversations: Invalid data format';
+        // If success is false, there should be a message property
+        const errorMsg = (serviceResponse as any).message || 'API error listing all user conversations: Invalid data format';
         console.error(`useConversations: ${errorMsg}`);
         setConversationError(errorMsg);
-        setConversationList([]); 
+        setConversationList([]);
       }
     } catch (error: any) {
       console.error(`useConversations: Error fetching all user conversations:`, error);
@@ -125,34 +126,50 @@ export function useConversations({
     }
     setIsCreatingConversationRightPanel(true);
     setConversationError(null);
+
+    const newConversationId = crypto.randomUUID();
+    const body = {
+        agentId: agentId,
+        channelId: 'web',
+        conversationId: newConversationId,
+    };
+
     try {
       const token = await getToken();
-      const response = await fetch(`/api/conversations/list-or-create?agent_id=${agentId}`, {
-        method: 'GET',
+      const response = await fetch('/api/conversations/create', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify(body),
       });
+
       if (response.status === 401) {
         console.error('🚫 useConversations - Unauthorized creating conversation');
         handleLogout();
         return null;
       }
-      const responseDataUntyped = await response.json();
       if (!response.ok) {
-        console.error('🚫 useConversations - API error creating conversation:', responseDataUntyped);
-        throw new Error(responseDataUntyped.error || `Failed to create conversation (HTTP ${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('🚫 useConversations - API error creating conversation:', errorData);
+        throw new Error(errorData.error || `Failed to create conversation (HTTP ${response.status})`);
       }
-      const responseData = responseDataUntyped as Conversation;
-      if (!responseData || !responseData.conversationId) {
-        console.error('🚫 useConversations - Invalid conversation data received from API after create');
+      
+      // Since the API returns the ID on success, we can use it.
+      const responseData: ConversationId = await response.json();
+      const createdConversationId = responseData.conversationId;
+      
+      if (!createdConversationId) {
+        console.error('🚫 useConversations - Invalid data received from API after create');
         throw new Error('Invalid conversation data received from API');
       }
+
       console.log("useConversations: New chat created successfully, fetching all user conversations to update list.");
       await fetchUserConversations();
-      setCurrentConversationIdRightPanel(responseData.conversationId);
-      return responseData.conversationId;
+      
+      setCurrentConversationIdRightPanel(createdConversationId);
+      return createdConversationId;
     } catch (error: any) {
       console.error("useConversations: Error creating new chat:", error);
       setConversationError(`Error creating chat: ${error.message}`);

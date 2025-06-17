@@ -5,14 +5,15 @@
  * Handles different tool invocation states and displays appropriate UI,
  * using useSetupSteps hook and SetupStepRenderer for sequential setup.
  */
-import React from 'react'; // Use React directly
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle, WrenchIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { MessagePart } from '@/components/dashboard/right-panel/Chat/types';
+import type { MessagePart } from '../types';
 import { hasToolError } from './utils';
 import { useSetupSteps } from '@/hooks/useSetupSteps'; // Import the custom hook
 import { SetupStepRenderer } from './SetupStepRenderer'; // Import the renderer
-import { useDashboard } from '../../../context/DashboardContext';
 
 interface ToolInvocationPartProps {
   part: MessagePart;

@@ -2,7 +2,7 @@
  * Sidebar Credit Balance Component
  * Compact version of credit balance display for sidebar usage
  */
-import { useDashboard } from '@/components/dashboard/context/DashboardContext';
+import { useBillingContext } from '@/components/dashboard/context/BillingProvider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard, AlertTriangle, Loader2, Zap } from 'lucide-react';
@@ -13,7 +13,7 @@ interface SidebarCreditBalanceProps {
 }
 
 export function SidebarCreditBalance({ className = '' }: SidebarCreditBalanceProps) {
-  const { planInfo, isLoadingPlanInfo, planInfoError } = useDashboard();
+  const { planInfo, isLoadingPlanInfo, planInfoError } = useBillingContext();
 
   if (planInfoError) {
     return (

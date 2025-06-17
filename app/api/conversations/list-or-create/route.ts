@@ -11,7 +11,7 @@ import {
   createSuccessResponse, 
   handleApiError
 } from '../../utils';
-import { Conversation, AgentBaseCredentials } from '@agent-base/types';
+import { Conversation, AgentBaseCredentials, ServiceResponse } from '@agent-base/types';
 import { getOrCreateConversationsPlatformUserApiService } from '@agent-base/api-client';
 import { auth } from '@clerk/nextjs/server';
 
@@ -51,7 +51,7 @@ export const GET = async (req: NextRequest) => {
 
     // --- Call API client function ---
     // Replace callApiService with the specific client function
-    const getResponse = await getOrCreateConversationsPlatformUserApiService(
+    const getResponse: ServiceResponse<Conversation[]> = await getOrCreateConversationsPlatformUserApiService(
         { agentId }, // Pass agentId in the params object
         credentials // Pass the credentials object
     );

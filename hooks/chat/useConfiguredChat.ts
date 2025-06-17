@@ -1,8 +1,7 @@
+import { useChat, type CreateMessage, type Message, type UseChatOptions } from 'ai/react';
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { useChat, Message, CreateMessage, UseChatOptions } from 'ai/react';
 import { type JSONValue } from 'ai';
-import { useDashboard } from '@/components/dashboard/context/DashboardContext';
-import { CreditInfo, CreditDataMessagePayload, isCreditDataMessage, CustomChatRequestOptions } from './chatUtils';
+import { CreditInfo, CreditDataMessagePayload, isCreditDataMessage } from '@/components/dashboard/chat/utils/chatUtils';
 import { createIdGenerator } from 'ai';
 import { 
   AgentBaseCreditStreamPayload, 
@@ -10,6 +9,7 @@ import {
   AgentBaseCreditConsumptionItem
 } from '@agent-base/types';
 import { CreditBalance } from '@/types/credit';
+import { usePlanInfo } from '@/hooks/usePlanInfo';
 
 /**
  * @file useConfiguredChat.ts
@@ -24,12 +24,19 @@ interface CreditFunctionsAndState {
   creditBalance: CreditBalance | null;
   creditHookError: string | null;
   clearCreditHookError: () => void;
+  fetchPlanInfo: () => Promise<void>;
 }
 
 // Extend UseChatOptions to include activeOrgId and credit functions/state
 interface ConfiguredChatOptions extends UseChatOptions {
   activeOrgId: string | null | undefined;
   creditOps: CreditFunctionsAndState;
+}
+
+// --- Type Definitions ---
+export interface CustomChatRequestOptions extends UseChatOptions {
+  agentId?: string;
+  activeOrgId?: string;
 }
 
 /**
@@ -56,10 +63,10 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     isValidatingCredits, 
     creditBalance,
     creditHookError,
-    clearCreditHookError 
+    clearCreditHookError,
+    fetchPlanInfo,
   } = creditOps;
 
-  const { fetchPlanInfo } = useDashboard();
   const [lastProcessedTransactionId, setLastProcessedTransactionId] = useState<string | null>(null);
 
   // State for chat-specific errors that might occur during send/receive
