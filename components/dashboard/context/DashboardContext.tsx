@@ -133,6 +133,10 @@ interface DashboardContextType {
   refreshApiTools?: () => Promise<void>; // Added optional for completeness
   fetchMessagesMiddlePanel?: (conversationId: string) => Promise<void>; // Expects no arguments
   fetchMessagesRightPanel?: (conversationId: string) => Promise<void>;  // Expects no arguments
+
+  // For handling the initial prompt from the landing page
+  initialPrompt: string | null;
+  setInitialPrompt: (prompt: string | null) => void;
 }
 
 export const DashboardContext = createContext<DashboardContextType>({
@@ -205,6 +209,8 @@ export const DashboardContext = createContext<DashboardContextType>({
   refreshApiTools: async () => { console.warn("refreshApiTools called on default context"); },
   fetchMessagesMiddlePanel: async (conversationId: string) => { console.warn("fetchMessagesMiddlePanel called on default context with", conversationId); },
   fetchMessagesRightPanel: async (conversationId: string) => { console.warn("fetchMessagesRightPanel called on default context with", conversationId); },
+  initialPrompt: null,
+  setInitialPrompt: () => {},
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
@@ -305,6 +311,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
+  const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
   const POLLING_INTERVAL = 5000;
 
   const fetchPlanInfo = useCallback(async () => {
@@ -490,6 +497,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     refreshApiTools: fetchApiTools, 
     fetchMessagesMiddlePanel: fetchMessagesForMiddlePanel,
     fetchMessagesRightPanel: fetchMessagesForRightPanel,
+    initialPrompt,
+    setInitialPrompt,
   }), [
     clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials,
     organizations, currentOrganization, activeOrgId, isLoadingOrganizations, organizationError, switchOrganization,
@@ -508,6 +517,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     selectAgentAndSetView, selectConversationAndSetView, createNewChatAndSetView, selectWebhookAndSetView, 
     selectToolAndSetView,
     fetchMessagesForMiddlePanel, fetchMessagesForRightPanel,
+    initialPrompt, setInitialPrompt,
   ]);
   
   useEffect(() => {

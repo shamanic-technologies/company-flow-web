@@ -54,6 +54,8 @@ export const ChatInterface = ({
     creditBalance,
     error: directErrorFromCreditsHook,
     clearError: directClearErrorFromCreditsHook,
+    initialPrompt,
+    setInitialPrompt,
   } = useDashboard();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -96,6 +98,16 @@ export const ChatInterface = ({
     activeOrgId: activeOrgId,
     creditOps: creditOpsForChat,
   });
+
+  useEffect(() => {
+    if (initialPrompt && conversationId && append) {
+      append({
+        role: 'user',
+        content: initialPrompt,
+      });
+      setInitialPrompt(null);
+    }
+  }, [initialPrompt, conversationId, append, setInitialPrompt]);
 
   useEffect(() => {
     setPrevChatHookIsLoading(isLoading);

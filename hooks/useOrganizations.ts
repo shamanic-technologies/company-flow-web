@@ -14,6 +14,7 @@ interface UseOrganizationsReturn {
   isLoadingOrganizations: boolean;
   organizationError: string | null;
   switchOrganization: (organizationId: string) => Promise<void>;
+  createOrganization: (name: string) => Promise<void>;
   activeOrgId: string | null | undefined;
   // Potentially add a function to explicitly reload organizations if needed later
   // refreshOrganizations: () => Promise<void>; 
@@ -29,7 +30,7 @@ interface UseOrganizationsReturn {
 export function useOrganizations(): UseOrganizationsReturn {
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
   const { orgId: activeOrgIdFromClerk, isLoaded: authIsLoaded } = useAuth();
-  const { setActive } = useClerk();
+  const { setActive, createOrganization: createClerkOrganization } = useClerk();
 
   const [organizations, setOrganizations] = useState<ClientOrganization[]>([]);
   const [currentOrganization, setCurrentOrganization] = useState<ClientOrganization | null>(null);
@@ -108,6 +109,40 @@ export function useOrganizations(): UseOrganizationsReturn {
     }
   }, [clerkUser, clerkIsLoaded, authIsLoaded, activeOrgIdFromClerk, setActive]);
 
+  const createOrganization = useCallback(async (name: string) => {
+    if (!createClerkOrganization || !setActive || !clerkUser) {
+      const error = new Error('Clerk is not ready to create an organization.');
+      console.error('[useOrganizations]', error);
+      setOrganizationError(error.message);
+      throw error;
+    }
+    
+    try {
+      // Create the organization via Clerk
+      const newClerkOrg = await createClerkOrganization({ name });
+      if (!newClerkOrg || !newClerkOrg.id) {
+        throw new Error("Organization creation failed or returned no ID.");
+      }
+      
+      // Set the newly created organization as active
+      await setActive({ organization: newClerkOrg.id });
+      
+      // Manually refresh the user object to get the latest memberships
+      await clerkUser.reload();
+      
+      // The user object is now updated, so we can re-process the organizations list.
+      // The useEffect listening to `activeOrgIdFromClerk` will handle setting the `currentOrganization`.
+      await loadAndProcessOrganizations();
+      
+      console.log(`[useOrganizations] Successfully created and switched to organization: ${name}`);
+
+    } catch (error: any) {
+      console.error('[useOrganizations] Error creating organization:', error);
+      setOrganizationError('Failed to create organization.');
+      throw error; // Re-throw for the component to handle UI feedback
+    }
+  }, [createClerkOrganization, setActive, clerkUser, loadAndProcessOrganizations]);
+
   const switchOrganization = useCallback(async (organizationId: string) => {
     if (!setActive) {
       console.error('[useOrganizations] setActive not available from Clerk.');
@@ -158,6 +193,7 @@ export function useOrganizations(): UseOrganizationsReturn {
     isLoadingOrganizations,
     organizationError,
     switchOrganization,
+    createOrganization,
     activeOrgId: activeOrgIdFromClerk, // Directly return the activeOrgId from Clerk Auth
   };
 } 

@@ -25,15 +25,18 @@ function ChatLandingInterface() {
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    handleRedirect();
+  };
+
+  const handleRedirect = () => {
     if (message.trim().length >= 1 && isLoaded) {
       setIsLoading(true);
-      localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
-      
+      const redirectUrl = `/dashboard?prompt=${encodeURIComponent(message)}`;
       if (userId) { 
-        router.push('/dashboard');
+        router.push(redirectUrl);
       } else { 
-        openSignIn();
-        setIsLoading(false);
+        // After sign-in, Clerk will redirect to the provided URL.
+        openSignIn({ redirectUrl });
       }
     }
   };
@@ -43,18 +46,7 @@ function ChatLandingInterface() {
    * Provides an additional way to submit the form
    */
   const handleButtonClick = () => {
-    console.log("Button clicked!");
-    if (message.trim().length >= 1 && isLoaded) {
-      setIsLoading(true);
-      localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
-
-      if (userId) { 
-        router.push('/dashboard');
-      } else { 
-        openSignIn();
-        setIsLoading(false);
-      }
-    }
+    handleRedirect();
   };
 
   return (

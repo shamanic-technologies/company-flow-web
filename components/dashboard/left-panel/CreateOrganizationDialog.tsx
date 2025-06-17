@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { useState } from 'react';
-import { useClerk } from '@clerk/nextjs';
 import { Building2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,12 +15,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast";
-import { ClientOrganization } from "@agent-base/types";
+import { useOrganizations } from "@/hooks/useOrganizations";
 
 interface CreateOrganizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOrganizationCreated?: (organization: any) => void;
 }
 
 /**
@@ -32,14 +30,13 @@ interface CreateOrganizationDialogProps {
  * - Form validation and loading states
  * - Responsive design
  * - Accessibility compliant
- * - Uses Clerk to create organizations
+ * - Uses the centralized `useOrganizations` hook for creation logic
  */
 export function CreateOrganizationDialog({ 
   open, 
   onOpenChange, 
-  onOrganizationCreated 
 }: CreateOrganizationDialogProps) {
-  const { createOrganization, setActive } = useClerk();
+  const { createOrganization } = useOrganizations();
   const [formData, setFormData] = useState({
     name: '',
   })
@@ -70,35 +67,10 @@ export function CreateOrganizationDialog({
     setErrors({});
     
     try {
-      if (!createOrganization || !setActive) {
-        toast({
-          title: "Error",
-          description: "Clerk is not ready. Please try again shortly.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const organizationName = formData.name.trim();
 
-      // Create organization using Clerk
-      const newClerkOrg = await createOrganization({ name: organizationName });
-
-      if (!newClerkOrg || !newClerkOrg.id) {
-        throw new Error("Organization creation failed or returned no ID.");
-      }
-
-      console.log('Clerk: Organization created:', newClerkOrg);
-
-      // Set the new organization as active
-      await setActive({ organization: newClerkOrg.id });
-      console.log('Clerk: Set new organization as active:', newClerkOrg.id);
-      
-      // Call the callback with the new organization data from Clerk
-      if (onOrganizationCreated) {
-        onOrganizationCreated(newClerkOrg);
-      }
+      // Use the centralized hook to create the organization
+      await createOrganization(organizationName);
 
       toast({
         title: "Organization Created",
@@ -110,7 +82,7 @@ export function CreateOrganizationDialog({
       onOpenChange(false)
       
     } catch (error: any) {
-      console.error('Error creating organization with Clerk:', error);
+      console.error('Error creating organization from dialog:', error);
       const errorMessage = error.errors?.[0]?.message || error.message || 'Failed to create organization. Please try again.';
       setErrors({ general: errorMessage });
       toast({
