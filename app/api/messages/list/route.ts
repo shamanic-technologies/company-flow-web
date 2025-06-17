@@ -11,7 +11,7 @@ import {
   createSuccessResponse,
   handleApiError 
 } from '../../utils';
-import { AgentBaseCredentials } from '@agent-base/types';
+import { AgentBaseCredentials, Conversation, ServiceResponse } from '@agent-base/types';
 import { auth } from '@clerk/nextjs/server';
 import { getMessagesFromConversationExternalApiService } from '@agent-base/api-client';
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         platformApiKey: agentBaseApiKey // Assuming the fetched apiKey is the platformApiKey
     };
 
-    const getMessagesFromConversationResponse = await getMessagesFromConversationExternalApiService(
+    const getMessagesFromConversationResponse: ServiceResponse<Conversation> = await getMessagesFromConversationExternalApiService(
       { conversationId },
       credentials
     );
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       return createErrorResponse(statusCode, errorCode, errorMessage, errorDetails.details);
     }
 
-    const messages = getMessagesFromConversationResponse.data;
+    const messages = getMessagesFromConversationResponse.data.messages;
 
     return createSuccessResponse(messages, 200);
     

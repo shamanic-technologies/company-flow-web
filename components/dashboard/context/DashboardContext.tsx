@@ -274,6 +274,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isLoadingMessagesMiddlePanel,
     messageErrorMiddlePanel,
     fetchMessagesMiddlePanel,
+    currentMessagesRightPanel,
+    isLoadingMessagesRightPanel,
+    messageErrorRightPanel,
+    fetchMessagesRightPanel,
   } = useConversations({ 
     selectedAgentIdMiddlePanel, 
     selectedAgentIdRightPanel, 
@@ -387,32 +391,22 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const isClerkLoading = !clerkIsLoaded || !authIsLoaded;
 
   const creditsHook = useCredits({ activeOrgId });
-  const { 
-    currentConversationMessages: currentMessagesRightPanelData,
-    isLoadingConversationMessages: isLoadingMessagesRightPanelData,
-    conversationMessagesError: messageErrorRightPanelData,
-    fetchConversationMessages: fetchMessagesForRightPanelFromHook,
-  } = useConversationMessages({ 
-    conversationId: currentConversationIdRightPanel, 
-    handleLogout: handleClerkLogout, 
-    activeOrgId
-  });
   
   const fetchMessagesForMiddlePanel = useCallback(async () => {
-    if (currentConversationIdMiddlePanel) {
+    if (currentConversationIdMiddlePanel && fetchMessagesMiddlePanel) {
         await fetchMessagesMiddlePanel(currentConversationIdMiddlePanel);
     } else {
-        console.warn("[DashboardContext] fetchMessagesForMiddlePanel called without a selected middle panel conversation.");
+        console.warn("[DashboardContext] fetchMessagesForMiddlePanel called without a selected middle panel conversation or fetcher.");
     }
   }, [currentConversationIdMiddlePanel, fetchMessagesMiddlePanel]);
 
   const fetchMessagesForRightPanel = useCallback(async () => {
-    if (currentConversationIdRightPanel) {
-      await fetchMessagesForRightPanelFromHook(currentConversationIdRightPanel);
+    if (currentConversationIdRightPanel && fetchMessagesRightPanel) {
+      await fetchMessagesRightPanel(currentConversationIdRightPanel);
     } else {
-      console.warn("[DashboardContext] fetchMessagesForRightPanel called without a selected right panel conversation.");
+      console.warn("[DashboardContext] fetchMessagesForRightPanel called without a selected right panel conversation or fetcher.");
     }
-  }, [currentConversationIdRightPanel, fetchMessagesForRightPanelFromHook]);
+  }, [currentConversationIdRightPanel, fetchMessagesRightPanel]);
 
   const contextValue = useMemo(() => ({
     clerkUser,
@@ -447,9 +441,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     currentConversationIdRightPanel, 
     isLoadingConversationsRightPanel, 
     isCreatingConversationRightPanel, 
-    currentMessagesRightPanel: currentMessagesRightPanelData, 
-    isLoadingMessagesRightPanel: isLoadingMessagesRightPanelData, 
-    messageErrorRightPanel: messageErrorRightPanelData,
+    currentMessagesRightPanel, 
+    isLoadingMessagesRightPanel, 
+    messageErrorRightPanel,
     selectConversationIdMiddlePanel,  
     selectConversationIdRightPanel,   
     handleCreateNewChatRightPanel, 
@@ -502,7 +496,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     conversationList, currentConversationIdMiddlePanel, isLoadingConversationsMiddlePanel, conversationError, 
     currentMessagesMiddlePanel, isLoadingMessagesMiddlePanel, messageErrorMiddlePanel, 
     currentConversationIdRightPanel, isLoadingConversationsRightPanel, isCreatingConversationRightPanel, 
-    currentMessagesRightPanelData, isLoadingMessagesRightPanelData, messageErrorRightPanelData,
+    currentMessagesRightPanel, isLoadingMessagesRightPanel, messageErrorRightPanel,
     selectConversationIdMiddlePanel, selectConversationIdRightPanel, handleCreateNewChatRightPanel, refreshConversationList,
     userWebhooks, selectedWebhook, selectWebhook, isLoadingWebhooks, webhookError, fetchUserWebhooks,
     activeAgentView, setActiveAgentView,

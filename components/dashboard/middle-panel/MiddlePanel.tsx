@@ -135,8 +135,7 @@ export default function MiddlePanel() {
             agentFirstName={selectedAgent.firstName} 
             agentLastName={selectedAgent.lastName}   
             conversationId={currentConversationId ?? ''}
-            // @ts-ignore - We know from logs currentMessages is an object with a .messages array
-            initialMessages={currentMessages?.messages} 
+            initialMessages={currentMessages} 
             userInitials={getClerkUserInitials()}
             isLoading={isLoadingMessages} 
             error={conversationError} // Pass conversationError which might be message specific by now

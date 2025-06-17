@@ -30,7 +30,7 @@ export default function RightPanel() {
         currentConversationIdRightPanel: currentConversationId,
         currentMessagesRightPanel: currentMessages,
         isLoadingMessagesRightPanel: isLoadingMessages,
-        conversationError,
+        messageErrorRightPanel,
         isCreatingConversationRightPanel: isCreatingConversation,
 
         // Auth/User related
@@ -124,12 +124,12 @@ export default function RightPanel() {
                     }
 
                     // Sub-state 3c: Error loading messages for the selected conversation
-                    if (conversationError) {
+                    if (messageErrorRightPanel) {
                          return (
                             <div className="flex flex-col flex-1 items-center justify-center text-red-400 p-4 text-center">
                                <AlertTriangle className="h-10 w-10 mb-3 text-red-500" />
                                <p className="font-medium text-xs">Error loading messages</p>
-                               <p className="text-xs text-red-300/80 mt-1 max-w-xs">{conversationError}</p>
+                               <p className="text-xs text-red-300/80 mt-1 max-w-xs">{messageErrorRightPanel}</p>
                                {/* Optionally add a retry mechanism later */}
                             </div>
                          );
@@ -144,8 +144,7 @@ export default function RightPanel() {
                             agentFirstName={selectedAgent.firstName}
                             agentLastName={selectedAgent.lastName}
                             conversationId={currentConversationId} // Pass the selected ID for the right panel
-                            // @ts-ignore - We know from logs currentMessages is an object with a .messages array
-                            initialMessages={currentMessages?.messages} // Pass the nested messages array
+                            initialMessages={currentMessages} // Pass the messages array directly
                         />
                     );
                  })()}
