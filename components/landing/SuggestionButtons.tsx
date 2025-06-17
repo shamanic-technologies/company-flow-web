@@ -14,21 +14,23 @@ const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
  */
 export function SuggestionButtons() {
   const router = useRouter();
-  const { isSignedIn } = useAuth(); // Get authentication status
-  const { openSignIn } = useClerk(); // Get function to open sign-in modal
+  const { isLoaded, isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Helper function to handle the logic for a suggestion button click
   const handleSuggestion = (text: string) => {
-    localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, text);
-    if (isSignedIn) {
-      router.push("/dashboard");
-    } else {
-      openSignIn(); // Open sign-in modal if not signed in
+    if (isLoaded) {
+      localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, text);
+      const redirectUrl = `/dashboard`;
+      if (isSignedIn) {
+        router.push(redirectUrl);
+      } else {
+        openSignIn({ redirectUrl });
+      }
     }
   };
 
