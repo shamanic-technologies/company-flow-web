@@ -24,13 +24,13 @@ import { triggerAgentRunPlatformUserApiServiceStream } from '@agent-base/api-cli
  */
 export async function POST(req: NextRequest) {
   try {
-    // 1. Receive Correct Body { message: object, id: string } from useChat
-    const { message, id: conversationId } = await req.json();
+    // 1. Receive Correct Body { messages: Message[], id: string } from useChat
+    const { messages, id: conversationId } = await req.json();
 
     // Validate incoming payload
-    if (!message || typeof message !== 'object' || !message.content) {
-      console.error('[API /agents/run] Invalid message object received: ' + JSON.stringify(message));
-      return createErrorResponse(400, 'INVALID_REQUEST', 'Invalid message object received');
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('[API /agents/run] Invalid or empty messages array received: ' + JSON.stringify(messages));
+      return createErrorResponse(400, 'INVALID_REQUEST', 'Invalid or empty messages array received');
     }
     if (!conversationId) {
       console.error('[API /agents/run] Missing required field: id (conversationId): ' + JSON.stringify(conversationId));
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
     const response = await triggerAgentRunPlatformUserApiServiceStream(
         conversationId,
-        message as Message,
+        messages,
         platformUserApiServiceCredentials
     );
 

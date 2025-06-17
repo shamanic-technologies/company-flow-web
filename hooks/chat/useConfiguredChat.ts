@@ -10,6 +10,7 @@ import {
 } from '@agent-base/types';
 import { CreditBalance } from '@/types/credit';
 import { usePlanInfo } from '@/hooks/usePlanInfo';
+import { useOrganization } from '@clerk/nextjs';
 
 /**
  * @file useConfiguredChat.ts
@@ -57,6 +58,8 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     ...restOfParams 
   } = params;
 
+  const { organization } = useOrganization();
+
   const { 
     validateCredits, 
     consumeCredits,
@@ -90,7 +93,8 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     if (messages.length === 0) {
       throw new Error("Attempted to send a request with no messages.");
     }
-    return { message: messages[messages.length - 1], id, ...data }; 
+    // Send the entire message history, not just the last message.
+    return { messages, id, ...data }; 
   };
 
   const chatHelpers = useChat({
@@ -99,6 +103,28 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     api: apiFromParams,
     streamProtocol: streamProtocolFromParams, 
     experimental_prepareRequestBody: prepareRequestBody,
+    onToolCall: ({ toolCall }) => {
+      if (toolCall.toolName === 'get_active_organization') {
+        if (organization) {
+          return {
+            toolCallId: toolCall.toolCallId,
+            result: {
+              id: organization.id,
+              name: organization.name,
+              slug: organization.slug,
+              imageUrl: organization.imageUrl,
+              createdAt: organization.createdAt,
+              updatedAt: organization.updatedAt,
+            },
+          };
+        } else {
+          return {
+            toolCallId: toolCall.toolCallId,
+            result: { error: "User is not currently in an active organization." },
+          };
+        }
+      }
+    },
     onFinish: callerOnFinish, // Pass through original onFinish
     onError: (err) => { 
       console.error("[useConfiguredChat Error]:", err);

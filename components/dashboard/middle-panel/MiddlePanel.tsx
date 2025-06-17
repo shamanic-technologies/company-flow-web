@@ -34,7 +34,7 @@ export default function MiddlePanel() {
   const { getClerkUserInitials } = useUserContext();
   const { activeAgentView, selectedWebhook, selectedTool, selectConversationAndSetView } = useViewContext();
   const { chatMiddlePanel } = useChatContext();
-  const { conversationList, isLoadingConversationsMiddlePanel, conversationError, currentConversationIdMiddlePanel } = useConversationContext();
+  const { conversationList, isLoadingConversationList, conversationError, currentConversationIdMiddlePanel } = useConversationContext();
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
 
@@ -60,7 +60,7 @@ export default function MiddlePanel() {
       case 'conversations':
         return <ConversationListPanel 
             conversationList={conversationList}
-            isLoadingConversations={isLoadingConversationsMiddlePanel}
+            isLoadingConversations={isLoadingConversationList}
             historyError={conversationError}
             currentConversationIdMiddlePanel={currentConversationIdMiddlePanel}
             onConversationSelect={selectConversationAndSetView}
