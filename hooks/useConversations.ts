@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Conversation, CreateConversationInput, ServiceResponse } from '@agent-base/types';
 // import { Message as VercelMessage } from 'ai/react'; // No longer directly used here
 import { UserResource } from '@clerk/types';
-import { useMessages } from './useMessages'; // Import the new hook
+import { useConversationMessages } from './useConversationMessages'; // Import the new hook
 import { useAuth } from '@clerk/nextjs';
 
 interface UseConversationsProps {
@@ -43,19 +43,19 @@ export function useConversations({
 
   // --- Instantiate useMessages hook for Middle Panel ---
   const {
-    currentMessages: currentMessagesMiddlePanel,
-    isLoadingMessages: isLoadingMessagesMiddlePanel,
-    messageError: messageErrorMiddlePanel,
-    fetchMessages: fetchMessagesMiddlePanel,
-  } = useMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId });
+    currentConversationMessages: currentMessagesMiddlePanel,
+    isLoadingConversationMessages: isLoadingMessagesMiddlePanel,
+    conversationMessagesError: messageErrorMiddlePanel,
+    fetchConversationMessages: fetchMessagesMiddlePanel,
+  } = useConversationMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId });
 
   // --- Instantiate useMessages hook for Right Panel ---
   const {
-    currentMessages: currentMessagesRightPanel,
-    isLoadingMessages: isLoadingMessagesRightPanel,
-    messageError: messageErrorRightPanel,
-    fetchMessages: fetchMessagesRightPanel,
-  } = useMessages({ conversationId: currentConversationIdRightPanel, handleLogout, activeOrgId });
+    currentConversationMessages: currentMessagesRightPanel,
+    isLoadingConversationMessages: isLoadingMessagesRightPanel,
+    conversationMessagesError: messageErrorRightPanel,
+    fetchConversationMessages: fetchMessagesRightPanel,
+  } = useConversationMessages({ conversationId: currentConversationIdRightPanel, handleLogout, activeOrgId });
 
   const apiRef = useRef({
     createConversation: async (agentId: string) => {

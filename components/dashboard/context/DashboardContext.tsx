@@ -18,7 +18,7 @@ import { useOrganizations } from '../../../hooks/useOrganizations';
 import { useAgentPolling } from '../../../hooks/polling/useAgentPolling';
 import { useConversationPolling } from '../../../hooks/polling/useConversationPolling';
 import { useMessagePolling } from '../../../hooks/polling/useMessagePolling';
-import { useMessages } from '../../../hooks/useMessages';
+import { useConversationMessages } from '../../../hooks/useConversationMessages';
 
 import { SearchWebhookResultItem } from '@agent-base/types';
 import { useCredits } from '../../../hooks/useCredits';
@@ -388,11 +388,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const creditsHook = useCredits({ activeOrgId });
   const { 
-    currentMessages: currentMessagesRightPanelData,
-    isLoadingMessages: isLoadingMessagesRightPanelData,
-    messageError: messageErrorRightPanelData,
-    fetchMessages: fetchMessagesForRightPanelFromHook,
-  } = useMessages({ 
+    currentConversationMessages: currentMessagesRightPanelData,
+    isLoadingConversationMessages: isLoadingMessagesRightPanelData,
+    conversationMessagesError: messageErrorRightPanelData,
+    fetchConversationMessages: fetchMessagesForRightPanelFromHook,
+  } = useConversationMessages({ 
     conversationId: currentConversationIdRightPanel, 
     handleLogout: handleClerkLogout, 
     activeOrgId
