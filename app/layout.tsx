@@ -16,6 +16,7 @@ import { BillingProvider } from '@/components/dashboard/context/BillingProvider'
 import { ViewProvider } from '@/components/dashboard/context/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ReadinessProvider } from '@/components/dashboard/context/ReadinessProvider';
+import { LandingPromptProvider } from '@/components/dashboard/context/LandingPromptProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -63,7 +64,9 @@ export default function RootLayout({
                           <ViewProvider>
                             <SidebarProvider>
                               <ReadinessProvider>
-                                {children}
+                                <LandingPromptProvider>
+                                  {children}
+                                </LandingPromptProvider>
                               </ReadinessProvider>
                             </SidebarProvider>
                           </ViewProvider>
