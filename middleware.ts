@@ -3,7 +3,7 @@
  * Protects routes based on Clerk authentication status.
  */
 import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // Define routes that should be publicly accessible
 // Includes home, auth callbacks, public API endpoints, and health checks
@@ -18,36 +18,6 @@ const isPublicRoute = createRouteMatcher([
   // Add any other specific public pages or API routes here
   // e.g., '/pricing', '/about', '/api/public-data'
 ]);
-
-/**
- * Ensures a "Personal" organization exists for the given user.
- * If it doesn't exist, it creates one.
- * @param userId - The ID of the user to check for.
- */
-async function ensurePersonalOrgExists(userId: string) {
-  try {
-    const client = await clerkClient();
-    
-    const orgName = "Personal";
-    
-    // Check if the user is already a member of a "Personal" organization they created
-    const membershipsResponse = await client.users.getOrganizationMembershipList({ userId });
-    const personalOrg = membershipsResponse.data.find(
-      (mem: any) => mem.organization.name === orgName && mem.organization.createdBy === userId
-    );
-
-    if (!personalOrg) {
-      console.log(`[Middleware] "Personal" organization not found for user ${userId}. Creating it...`);
-      await client.organizations.createOrganization({
-        name: orgName,
-        createdBy: userId,
-      });
-      console.log(`[Middleware] "Personal" organization created for user ${userId}.`);
-    }
-  } catch (error) {
-    console.error(`[Middleware] Error in ensurePersonalOrgExists for user ${userId}:`, error);
-  }
-}
 
 // Clerk middleware configuration
 export default clerkMiddleware(async (auth, req) => {
@@ -71,10 +41,8 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // If the user is authenticated, ensure their "Personal" organization exists.
-  await ensurePersonalOrgExists(authState.userId);
-
   // Allow all other authenticated requests to proceed.
+  // The client-side useOrganizations hook now handles ensuring a personal org exists.
   return NextResponse.next();
 });
 

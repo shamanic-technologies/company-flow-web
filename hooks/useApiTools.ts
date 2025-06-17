@@ -20,6 +20,8 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
   const [isLoadingApiTools, setIsLoadingApiTools] = useState<boolean>(false);
   const [apiToolsError, setApiToolsError] = useState<string | null>(null);
 
+  const isApiToolsReady = isLoaded && !!activeOrgId && !isLoadingApiTools;
+
   // --- Fetch API Tools ---
   const fetchApiTools = useCallback(async () => {
     if (!activeOrgId) {
@@ -153,5 +155,6 @@ export function useApiTools({ handleLogout, activeOrgId }: UseApiToolsProps) {
     isLoadingApiTools,
     apiToolsError,
     fetchApiTools, 
+    isApiToolsReady,
   };
 } 

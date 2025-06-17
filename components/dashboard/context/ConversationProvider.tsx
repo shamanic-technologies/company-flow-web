@@ -10,7 +10,7 @@ import { useOrganizationContext } from './OrganizationProvider';
 interface ConversationContextType {
   conversationList: Conversation[]; 
   currentConversationIdMiddlePanel: string | null;
-  isLoadingConversationsMiddlePanel: boolean;
+  isLoadingConversationList: boolean;
   conversationError: string | null;
   currentConversationIdRightPanel: string | null;
   isCreatingConversationRightPanel: boolean;
@@ -18,12 +18,13 @@ interface ConversationContextType {
   selectConversationIdRightPanel: (conversationId: string | null) => void;
   handleCreateNewChatRightPanel: () => Promise<string | null>;
   refreshConversationList: () => Promise<void>;
+  isConversationReadyRightPanel: boolean;
 }
 
 export const ConversationContext = createContext<ConversationContextType>({
   conversationList: [],
   currentConversationIdMiddlePanel: null,
-  isLoadingConversationsMiddlePanel: false,
+  isLoadingConversationList: false,
   conversationError: null,
   currentConversationIdRightPanel: null,
   isCreatingConversationRightPanel: false,
@@ -31,6 +32,7 @@ export const ConversationContext = createContext<ConversationContextType>({
   selectConversationIdRightPanel: () => {},
   handleCreateNewChatRightPanel: async () => null,
   refreshConversationList: async () => {},
+  isConversationReadyRightPanel: false,
 });
 
 export function ConversationProvider({ children }: { children: ReactNode }) {
@@ -44,11 +46,12 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     currentConversationIdRightPanel,
     selectConversationIdMiddlePanel,
     selectConversationIdRightPanel,
-    isLoadingConversationsMiddlePanel,
+    isLoadingConversationList,
     isCreatingConversationRightPanel,
     conversationError,
     handleCreateNewChatRightPanel,
     refreshConversationList,
+    isConversationReadyRightPanel,
   } = useConversations({
     selectedAgentIdMiddlePanel,
     selectedAgentIdRightPanel,
@@ -63,22 +66,24 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     currentConversationIdRightPanel,
     selectConversationIdMiddlePanel,
     selectConversationIdRightPanel,
-    isLoadingConversationsMiddlePanel,
+    isLoadingConversationList,
     isCreatingConversationRightPanel,
     conversationError,
     handleCreateNewChatRightPanel,
     refreshConversationList,
+    isConversationReadyRightPanel,
   }), [
     conversationList,
     currentConversationIdMiddlePanel,
     currentConversationIdRightPanel,
     selectConversationIdMiddlePanel,
     selectConversationIdRightPanel,
-    isLoadingConversationsMiddlePanel,
+    isLoadingConversationList,
     isCreatingConversationRightPanel,
     conversationError,
     handleCreateNewChatRightPanel,
     refreshConversationList,
+    isConversationReadyRightPanel,
   ]);
 
   return (

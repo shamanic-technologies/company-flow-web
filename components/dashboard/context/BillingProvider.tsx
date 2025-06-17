@@ -18,6 +18,7 @@ interface BillingContextType {
   consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
   clearError: () => void;
   fetchPlanInfo: () => Promise<void>;
+  isBillingReady: boolean;
 }
 
 export const BillingContext = createContext<BillingContextType>({
@@ -32,6 +33,7 @@ export const BillingContext = createContext<BillingContextType>({
   consumeCredits: async () => false,
   clearError: () => {},
   fetchPlanInfo: async () => {},
+  isBillingReady: false,
 });
 
 export function BillingProvider({ children }: { children: ReactNode }) {
@@ -54,6 +56,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     clearError,
   } = useCredits({ activeOrgId });
 
+  const isBillingReady = !isLoadingPlanInfo && !isValidating && !isConsuming;
+
   const contextValue = useMemo(() => ({
     planInfo,
     isLoadingPlanInfo,
@@ -66,6 +70,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     validateCredits,
     consumeCredits,
     clearError,
+    isBillingReady,
   }), [
     planInfo,
     isLoadingPlanInfo,
@@ -78,6 +83,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     validateCredits,
     consumeCredits,
     clearError,
+    isBillingReady,
   ]);
 
   return (

@@ -11,6 +11,7 @@ interface ApiToolsContextType {
   isLoadingApiTools: boolean;
   apiToolsError: string | null;
   fetchApiTools: () => Promise<void>;
+  isApiToolsReady: boolean;
 }
 
 export const ApiToolsContext = createContext<ApiToolsContextType>({
@@ -18,6 +19,7 @@ export const ApiToolsContext = createContext<ApiToolsContextType>({
   isLoadingApiTools: false,
   apiToolsError: null,
   fetchApiTools: async () => {},
+  isApiToolsReady: false,
 });
 
 export function ApiToolsProvider({ children }: { children: ReactNode }) {
@@ -29,6 +31,7 @@ export function ApiToolsProvider({ children }: { children: ReactNode }) {
     isLoadingApiTools,
     apiToolsError,
     fetchApiTools,
+    isApiToolsReady,
   } = useApiTools({ handleLogout: handleClerkLogout, activeOrgId });
 
   const contextValue = useMemo(() => ({
@@ -36,11 +39,13 @@ export function ApiToolsProvider({ children }: { children: ReactNode }) {
     isLoadingApiTools,
     apiToolsError,
     fetchApiTools,
+    isApiToolsReady,
   }), [
     apiTools,
     isLoadingApiTools,
     apiToolsError,
     fetchApiTools,
+    isApiToolsReady,
   ]);
 
   return (

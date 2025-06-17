@@ -11,6 +11,7 @@ interface WebhookContextType {
   isLoadingWebhooks: boolean;
   webhookError: string | null;
   fetchUserWebhooks: () => Promise<void>;
+  isWebhooksReady: boolean;
 }
 
 export const WebhookContext = createContext<WebhookContextType>({
@@ -18,6 +19,7 @@ export const WebhookContext = createContext<WebhookContextType>({
   isLoadingWebhooks: false,
   webhookError: null,
   fetchUserWebhooks: async () => {},
+  isWebhooksReady: false,
 });
 
 export function WebhookProvider({ children }: { children: ReactNode }) {
@@ -28,19 +30,22 @@ export function WebhookProvider({ children }: { children: ReactNode }) {
     userWebhooks, 
     isLoadingWebhooks, 
     webhookError, 
-    fetchUserWebhooks 
+    fetchUserWebhooks,
+    isWebhooksReady
   } = useWebhooks({ handleLogout: handleClerkLogout, activeOrgId });
 
   const contextValue = useMemo(() => ({
     userWebhooks, 
     isLoadingWebhooks, 
     webhookError, 
-    fetchUserWebhooks 
+    fetchUserWebhooks,
+    isWebhooksReady
   }), [
     userWebhooks, 
     isLoadingWebhooks, 
     webhookError, 
-    fetchUserWebhooks 
+    fetchUserWebhooks,
+    isWebhooksReady
   ]);
 
   return (

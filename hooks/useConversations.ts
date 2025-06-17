@@ -15,6 +15,28 @@ interface UseConversationsProps {
   activeOrgId: string | null | undefined;
 }
 
+interface UseConversationsReturn {
+  conversationList: Conversation[];
+  currentConversationIdMiddlePanel: string | null;
+  currentConversationIdRightPanel: string | null;
+  selectConversationIdMiddlePanel: (conversationId: string | null) => void;
+  selectConversationIdRightPanel: (conversationId: string | null) => void;
+  isLoadingConversationList: boolean;
+  isCreatingConversationRightPanel: boolean;
+  isConversationReadyRightPanel: boolean;
+  conversationError: string | null;
+  handleCreateNewChatRightPanel: () => Promise<string | null>;
+  refreshConversationList: () => Promise<void>;
+  currentMessagesMiddlePanel: any[]; // Consider using a more specific type
+  isLoadingMessagesMiddlePanel: boolean;
+  messageErrorMiddlePanel: string | null;
+  fetchMessagesMiddlePanel: (conversationId: string) => Promise<void>;
+  currentMessagesRightPanel: any[]; // Consider using a more specific type
+  isLoadingMessagesRightPanel: boolean;
+  messageErrorRightPanel: string | null;
+  fetchMessagesRightPanel: (conversationId: string) => Promise<void>;
+}
+
 /**
  * @description Hook to manage all user conversations.
  * Message-related logic is handled by the useMessages hook.
@@ -28,18 +50,24 @@ export function useConversations({
   user, 
   handleLogout, 
   activeOrgId
-}: UseConversationsProps) {
+}: UseConversationsProps): UseConversationsReturn {
   const { getToken, isLoaded } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
   const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
-  // isLoadingConversationsMiddlePanel is for the conversation LIST
-  const [isLoadingConversationsMiddlePanel, setIsLoadingConversationsMiddlePanel] = useState<boolean>(false);
-  const [isLoadingConversationsRightPanel, setIsLoadingConversationsRightPanel] = useState<boolean>(false);
+  // A single loading state for the conversation LIST
+  const [isLoadingConversationList, setIsLoadingConversationList] = useState<boolean>(false);
   // isCreatingConversationRightPanel is for creating a NEW conversation
   const [isCreatingConversationRightPanel, setIsCreatingConversationRightPanel] = useState<boolean>(false);
   // conversationError is for errors related to fetching/creating conversation LIST
   const [conversationError, setConversationError] = useState<string | null>(null);
+
+  // The right panel conversation is "ready" when an agent is selected, a conversation has been
+  // successfully selected or created for it, and no creation process is ongoing.
+  const isConversationReadyRightPanel = 
+    !!selectedAgentIdRightPanel &&
+    !!currentConversationIdRightPanel &&
+    !isCreatingConversationRightPanel;
 
   // --- Instantiate useMessages hook for Middle Panel ---
   const {
@@ -62,7 +90,7 @@ export function useConversations({
     if (!activeOrgId) {
       console.log("useConversations: Waiting for activeOrgId to fetch conversations...");
       setConversationList([]);
-      setIsLoadingConversationsMiddlePanel(false);
+      setIsLoadingConversationList(false);
       // setConversationError("Organization not selected. Cannot fetch conversations.");
       return;
     }
@@ -111,7 +139,7 @@ export function useConversations({
       setConversationError(`Failed to load conversations: ${error.message}`);
       setConversationList([]);
     } finally {
-      setIsLoadingConversationsMiddlePanel(false);
+      setIsLoadingConversationList(false);
     }
   }, [activeOrgId, handleLogout, getToken]);
 
@@ -184,17 +212,20 @@ export function useConversations({
     if (!activeOrgId) { // If org changes, selection logic might need to reset or re-evaluate
       setCurrentConversationIdMiddlePanel(null);
       setCurrentConversationIdRightPanel(null);
+      return; // Exit early if no org
     }
     if (selectedAgentIdMiddlePanel) {
       const agentConversations = conversationList
         .filter(convo => convo.agentId === selectedAgentIdMiddlePanel)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
       if (agentConversations.length > 0) {
         const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdMiddlePanel);
         if (!currentConvoStillValid || currentConversationIdMiddlePanel === null) {
           setCurrentConversationIdMiddlePanel(agentConversations[0].conversationId);
         }
       } else {
+        // If an agent is selected but has no conversations, do not create one for the middle panel.
         if (currentConversationIdMiddlePanel !== null) {
             setCurrentConversationIdMiddlePanel(null);
         }
@@ -204,34 +235,39 @@ export function useConversations({
         setCurrentConversationIdMiddlePanel(null);
       }
     }
-  }, [selectedAgentIdMiddlePanel, conversationList, currentConversationIdMiddlePanel, activeOrgId]); // Added activeOrgId
+  }, [selectedAgentIdMiddlePanel, conversationList, currentConversationIdMiddlePanel, activeOrgId]); // createConversation removed
 
   // --- Effect to update currentConversationIdRightPanel based on selectedAgentIdRightPanel and conversationList ---
   useEffect(() => {
-    if (!activeOrgId) {
-        setCurrentConversationIdRightPanel(null);
+    // Guard against running this logic too early.
+    // Wait for the initial conversation list to load, and ensure we're not already creating one.
+    if (!activeOrgId || !selectedAgentIdRightPanel || isLoadingConversationList || isCreatingConversationRightPanel) {
         return;
     }
-    if (selectedAgentIdRightPanel) {
-      const agentConversations = conversationList
-          .filter(convo => convo.agentId === selectedAgentIdRightPanel)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        if (agentConversations.length > 0) {
-          const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdRightPanel);
-          if (!currentConvoStillValid || currentConversationIdRightPanel === null) {
-               setCurrentConversationIdRightPanel(agentConversations[0].conversationId);
-          }
-        } else {
-          if (currentConversationIdRightPanel !== null) {
-              setCurrentConversationIdRightPanel(null);
-          }
-        }
-      } else {
-        if (currentConversationIdRightPanel !== null) { // Corrected from currentConversationIdMiddlePanel
-          setCurrentConversationIdRightPanel(null);
-        }
+
+    const agentConversations = conversationList
+        .filter(convo => convo.agentId === selectedAgentIdRightPanel)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    if (agentConversations.length > 0) {
+      const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdRightPanel);
+      if (!currentConvoStillValid || currentConversationIdRightPanel === null) {
+            setCurrentConversationIdRightPanel(agentConversations[0].conversationId);
       }
-    }, [selectedAgentIdRightPanel, conversationList, currentConversationIdRightPanel, activeOrgId]); // Added activeOrgId
+    } else {
+      // If we have finished loading and there are still no conversations, create one.
+      console.log(`useConversations: No conversations found for agent ${selectedAgentIdRightPanel} in right panel. Creating one.`);
+      createConversation(selectedAgentIdRightPanel);
+    }
+  }, [
+    selectedAgentIdRightPanel, 
+    conversationList, 
+    currentConversationIdRightPanel, 
+    activeOrgId, 
+    createConversation, 
+    isLoadingConversationList,
+    isCreatingConversationRightPanel
+  ]);
 
   // --- Refresh all user conversations (used by polling for conversation list) ---
   const refreshConversationList = useCallback(async () => {
@@ -276,7 +312,7 @@ export function useConversations({
   useEffect(() => {
     // Only fetch if Clerk is loaded and an active organization is selected
     if (isLoaded && activeOrgId) {
-      setIsLoadingConversationsMiddlePanel(true);
+      setIsLoadingConversationList(true);
       setConversationError(null);  
       fetchUserConversations();
     } else {
@@ -284,7 +320,7 @@ export function useConversations({
       setConversationList([]);
       setCurrentConversationIdMiddlePanel(null);
       setCurrentConversationIdRightPanel(null);
-      setIsLoadingConversationsMiddlePanel(false);
+      setIsLoadingConversationList(false);
       setConversationError(null);
     }
   }, [isLoaded, activeOrgId, fetchUserConversations]);
@@ -296,9 +332,9 @@ export function useConversations({
     currentConversationIdRightPanel, // Renamed for clarity in return
     selectConversationIdMiddlePanel,
     selectConversationIdRightPanel,
-    isLoadingConversationsMiddlePanel,
-    isLoadingConversationsRightPanel,
+    isLoadingConversationList,
     isCreatingConversationRightPanel,
+    isConversationReadyRightPanel,
     conversationError, // Error related to conversation list/creation
     handleCreateNewChatRightPanel,
     refreshConversationList, // Function to refresh the conversation list

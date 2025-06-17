@@ -15,6 +15,7 @@ interface AgentContextType {
   selectAgentMiddlePanel: (agentId: string | null) => void;
   selectAgentRightPanel: (agentId: string | null) => void;
   fetchAgents: () => Promise<void>;
+  isAgentsReady: boolean;
 }
 
 export const AgentContext = createContext<AgentContextType>({
@@ -26,6 +27,7 @@ export const AgentContext = createContext<AgentContextType>({
   selectAgentMiddlePanel: () => {},
   selectAgentRightPanel: () => {},
   fetchAgents: async () => {},
+  isAgentsReady: false,
 });
 
 export function AgentProvider({ children }: { children: ReactNode }) {
@@ -40,7 +42,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     selectAgentRightPanel,     
     isLoadingAgents, 
     agentError, 
-    fetchAgents 
+    fetchAgents,
+    isAgentsReady
   } = useAgents({ handleLogout: handleClerkLogout, activeOrgId });
 
   const contextValue = useMemo(() => ({
@@ -51,7 +54,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     selectAgentRightPanel,     
     isLoadingAgents, 
     agentError, 
-    fetchAgents 
+    fetchAgents,
+    isAgentsReady
   }), [
     agents, 
     selectedAgentIdMiddlePanel, 
@@ -60,7 +64,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     selectAgentRightPanel,     
     isLoadingAgents, 
     agentError, 
-    fetchAgents 
+    fetchAgents,
+    isAgentsReady
   ]);
 
   return (

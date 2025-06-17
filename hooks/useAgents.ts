@@ -9,18 +9,34 @@ interface UseAgentsProps {
   activeOrgId: string | null | undefined;
 }
 
+interface UseAgentsReturn {
+  agents: Agent[];
+  selectedAgentIdMiddlePanel: string | null;
+  selectedAgentIdRightPanel: string | null;
+  selectAgentMiddlePanel: (agentId: string | null) => void;
+  selectAgentRightPanel: (agentId: string | null) => void;
+  isLoadingAgents: boolean;
+  isAgentsReady: boolean;
+  agentError: string | null;
+  fetchAgents: () => Promise<void>;
+}
+
 /**
  * @description Hook to manage agent data fetching, selection, and state.
  * @param {UseAgentsProps} props - The logout handler and activeOrgId.
  * @returns An object containing agents list, selected agent ID, loading/error states, and related functions.
  */
-export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
+export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps): UseAgentsReturn {
   const { getToken, isLoaded } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentIdMiddlePanel, setSelectedAgentIdMiddlePanel] = useState<string | null>(null);
   const [selectedAgentIdRightPanel, setSelectedAgentIdRightPanel] = useState<string | null>(null);
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(false);
   const [agentError, setAgentError] = useState<string | null>(null);
+
+  // The right panel is considered "ready" when Clerk is loaded, an org is active,
+  // loading is finished, and an agent has been successfully selected for it.
+  const isAgentsReady = isLoaded && !!activeOrgId && !isLoadingAgents && !!selectedAgentIdRightPanel;
 
   // --- Fetch Agents Logic --- 
   const fetchAgents = useCallback(async () => {
@@ -140,6 +156,7 @@ export function useAgents({ handleLogout, activeOrgId }: UseAgentsProps) {
     selectAgentMiddlePanel,
     selectAgentRightPanel,
     isLoadingAgents,
+    isAgentsReady,
     agentError,
     fetchAgents,
   };

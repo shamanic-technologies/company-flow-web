@@ -21,6 +21,8 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState<boolean>(false);
   const [webhookError, setWebhookError] = useState<string | null>(null);
 
+  const isWebhooksReady = isLoaded && !!activeOrgId && !isLoadingWebhooks;
+
   // --- Fetch User Webhooks --- 
   const fetchUserWebhooks = useCallback(async () => {
     if (!activeOrgId) {
@@ -114,5 +116,6 @@ export function useWebhooks({ handleLogout, activeOrgId }: UseWebhooksProps) {
     isLoadingWebhooks,
     webhookError,
     fetchUserWebhooks, // Expose for potential manual refresh
+    isWebhooksReady,
   };
 } 

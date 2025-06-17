@@ -15,6 +15,7 @@ import { WebhookProvider } from '@/components/dashboard/context/WebhookProvider'
 import { BillingProvider } from '@/components/dashboard/context/BillingProvider';
 import { ViewProvider } from '@/components/dashboard/context/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { ReadinessProvider } from '@/components/dashboard/context/ReadinessProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -61,7 +62,9 @@ export default function RootLayout({
                         <ChatProvider>
                           <ViewProvider>
                             <SidebarProvider>
-                              {children}
+                              <ReadinessProvider>
+                                {children}
+                              </ReadinessProvider>
                             </SidebarProvider>
                           </ViewProvider>
                         </ChatProvider>

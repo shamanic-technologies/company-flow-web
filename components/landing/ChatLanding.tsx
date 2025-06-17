@@ -31,7 +31,9 @@ function ChatLandingInterface() {
   const handleRedirect = () => {
     if (message.trim().length >= 1 && isLoaded) {
       setIsLoading(true);
-      const redirectUrl = `/dashboard?prompt=${encodeURIComponent(message)}`;
+      // Use localStorage to pass the prompt to the dashboard
+      localStorage.setItem(LANDING_PAGE_MESSAGE_KEY, message);
+      const redirectUrl = `/dashboard`;
       if (userId) { 
         router.push(redirectUrl);
       } else { 
