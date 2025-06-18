@@ -49,50 +49,6 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
 
   if (!toolInvocation) return null;
 
-  // Handle get_active_organization specifically
-  if (toolInvocation.toolName === 'get_active_organization') {
-    switch (toolInvocation.state) {
-      case 'call':
-        return (
-          <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800 rounded-md">
-            <WrenchIcon size={14} className="text-yellow-400" />
-            <div className="text-xs text-yellow-400">
-              Récupération de l'organisation active...
-            </div>
-            <div className="flex space-x-1 ml-2">
-              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-            </div>
-          </div>
-        );
-      case 'result':
-        const org = toolInvocation.result;
-        // @ts-ignore
-        if (org.error) {
-          return (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800 rounded-md">
-              <XCircle size={14} className="text-red-400" />
-              {/* @ts-ignore */}
-              <div className="text-xs text-red-400">{org.error}</div>
-            </div>
-          );
-        }
-        return (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800 rounded-md">
-                <CheckCircle size={14} className="text-green-400" />
-                <div className="text-xs text-gray-300">
-                    Organisation active : 
-                    {/* @ts-ignore */}
-                    <img src={org.imageUrl} alt={org.name} className="inline-block w-4 h-4 rounded-full ml-2 mr-1" />
-                    {/* @ts-ignore */}
-                    <strong>{org.name}</strong>
-                </div>
-            </div>
-        );
-    }
-  }
-
   // 1. Render Setup Step Card if the hook is handling it
   if (isHandlingSetup && currentStep) {
     // Potentially add loading/error display around the renderer
