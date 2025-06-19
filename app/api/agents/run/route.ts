@@ -26,12 +26,14 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Receive Correct Body { messages: Message[], id: string } from useChat
     const { messages, id: conversationId } = await req.json();
+    // console.debug('🤍 [CompanyFlow API /agents/run] messages', messages, null, 2);
 
     // Validate incoming payload
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       console.error('[API /agents/run] Invalid or empty messages array received: ' + JSON.stringify(messages));
       return createErrorResponse(400, 'INVALID_REQUEST', 'Invalid or empty messages array received');
     }
+
     if (!conversationId) {
       console.error('[API /agents/run] Missing required field: id (conversationId): ' + JSON.stringify(conversationId));
       return createErrorResponse(400, 'INVALID_REQUEST', 'Missing required field: id (conversationId)');

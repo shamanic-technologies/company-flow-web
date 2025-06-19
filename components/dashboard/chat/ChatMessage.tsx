@@ -88,11 +88,17 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
                   isExpanded={expandedTools.has(index)}
                   onToggle={() => toggleToolExpansion(index)}
                   addToolResult={addToolResult}
+                  append={append}
                 />;
               }
               
               // Handle reasoning parts
               else if (part.type === 'reasoning') {
+                // return (
+                //   <div key={`reasoning-${index}`} className="text-xs text-gray-200">
+                //     <MemoizedMarkdown content={part.reasoning || ''} id={`${message.id}-part-${index}`} />
+                //   </div>
+                // );
                 return (
                   <div key={`reasoning-${index}`} className="mt-2 p-2 bg-gray-800/50 rounded-md border border-gray-700">
                     <div className="flex items-center gap-2 mb-1">

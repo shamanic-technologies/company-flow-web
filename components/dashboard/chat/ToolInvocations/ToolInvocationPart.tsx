@@ -20,8 +20,8 @@ interface ToolInvocationPartProps {
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
-  // Correct the type for addToolResult - it's a function
-  addToolResult: (args: { toolCallId: string; result: any }) => void; 
+  addToolResult: (args: { toolCallId: string; result: any }) => void;
+  append: (message: any, options?: any) => Promise<string | null | undefined>;
 }
 
 export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({ 
@@ -30,6 +30,7 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
   isExpanded, 
   onToggle, 
   addToolResult,
+  append,
 }) => {
   const { toolInvocation } = part;
   const { toast } = useToast(); // Keep toast if needed for other errors
@@ -44,6 +45,7 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
   } = useSetupSteps({ 
     toolInvocation, 
     addToolResult,
+    append,
   });
   // --- Render Logic --- 
 

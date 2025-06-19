@@ -21,7 +21,9 @@ import remarkGfm from 'remark-gfm';
  * @returns Array of raw markdown blocks
  */
 function parseMarkdownIntoBlocks(markdown: string): string[] {
+  console.debug(`🟠 [MemoizedMarkdown] markdown:`, markdown, null, 2);
   const tokens = marked.lexer(markdown);
+  console.debug(`🟠 [MemoizedMarkdown] tokens:`, tokens, null, 2);
   return tokens.map(token => token.raw);
 }
 

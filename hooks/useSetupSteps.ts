@@ -30,6 +30,7 @@ interface UseSetupStepsProps {
   // Use the minimal interface or any, and rely on runtime checks + ts-ignore
   toolInvocation: any | undefined | null; 
   addToolResult: (args: { toolCallId: string; result: any }) => void;
+  append: (message: Message | any, options?: any) => Promise<string | null | undefined>;
 }
 
 interface UseSetupStepsReturn {
@@ -43,6 +44,7 @@ interface UseSetupStepsReturn {
 export function useSetupSteps({
   toolInvocation,
   addToolResult,
+  append,
 }: UseSetupStepsProps): UseSetupStepsReturn {
   const { toast } = useToast();
   const { getToken } = useAuth();
@@ -170,10 +172,11 @@ export function useSetupSteps({
         // Check if last step
         if (currentIndex >= requiredSteps.length - 1) {
             console.log("[useSetupSteps] Last step completed. Sending result to AI.");
-            addToolResult({
-                // @ts-ignore - Suppress error due to uncertain toolInvocation type
-                toolCallId: toolInvocation.toolCallId,
-                result: { success: true, message: "Setup complete." }
+            append({
+                role: 'tool',
+                tool_call_id: toolInvocation.toolCallId,
+                tool_name: toolInvocation.toolName,
+                content: JSON.stringify({ success: true, message: "Setup complete." }),
             });
             // Reset state after finishing
             setRequiredSteps([]);
@@ -191,7 +194,7 @@ export function useSetupSteps({
     } finally {
         setIsLoading(false);
     }
-  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, getToken]);
+  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, getToken, append]);
 
   const currentStep = requiredSteps.length > 0 && currentIndex < requiredSteps.length ? requiredSteps[currentIndex] : null;
   const isHandlingSetup = currentStep !== null;

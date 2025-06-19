@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     
     // Check if the user is authenticated
     if (!userId) {
-      console.error('[API /agents/get-or-create] User not authenticated via Clerk');
+      console.error('[API /messages/list] User not authenticated via Clerk');
       return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required', 'User must be logged in.');
     }
     if (!orgId) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     }
     // Check if the API key is configured
     if (!agentBaseApiKey) {
-      console.error('[API /agents/get-or-create] AGENT_BASE_API_KEY environment variable not set');
+      console.error('[API /messages/list] AGENT_BASE_API_KEY environment variable not set');
       return createErrorResponse(500, 'CONFIG_ERROR', 'Server configuration error', 'Required API key is missing.');
     }
 
@@ -70,6 +70,8 @@ export async function GET(req: NextRequest) {
     }
 
     const messages = getMessagesFromConversationResponse.data.messages;
+    console.dir(getMessagesFromConversationResponse.data, { depth: null });
+    console.dir(messages, { depth: null });
 
     return createSuccessResponse(messages, 200);
     

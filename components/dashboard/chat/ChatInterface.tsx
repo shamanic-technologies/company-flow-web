@@ -98,10 +98,10 @@ export default function ChatInterface({
               ))}
               
               {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-                <ThinkingIndicator />
+                <ThinkingIndicator key="thinking-indicator" />
               )}
               
-              <div ref={messagesEndRef} />
+              <div key="messages-end" ref={messagesEndRef} />
             </div>
           </ScrollArea>
         </div>

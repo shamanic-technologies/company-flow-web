@@ -40,6 +40,16 @@ export interface CustomChatRequestOptions extends UseChatOptions {
   activeOrgId?: string;
 }
 
+interface UpdateOrganizationArgs {
+  client_organization_id: string;
+  name?: string;
+  slug?: string;
+}
+
+interface DeleteOrganizationArgs {
+  client_organization_id: string;
+}
+
 /**
  * A custom hook that configures and wraps the Vercel AI SDK's useChat hook 
  * with upfront credit validation and downstream credit consumption.
@@ -58,8 +68,6 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     ...restOfParams 
   } = params;
 
-  const { organization } = useOrganization();
-
   const { 
     validateCredits, 
     consumeCredits,
@@ -77,52 +85,45 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
   const [rawError, setRawError] = useState<any>(null); // To store raw error object
   const [errorInfo, setErrorInfo] = useState<{code: string, details?: string} | null>(null);
 
-  /**
-   * Prepares the request body for the chat API.
-   * @param {object} params - Parameters including messages, id, and data.
-   * @param {Message[]} params.messages - Array of messages.
-   * @param {string} [params.id] - Conversation ID.
-   * @param {Record<string, string>} [params.data] - Additional data.
-   * @returns {object} The request body.
-   */
-  const prepareRequestBody = ({ messages, id, data }: {
-    messages: Message[]; 
-    id?: string; 
-    data?: Record<string, string>; 
-  }) => {
-    if (messages.length === 0) {
-      throw new Error("Attempted to send a request with no messages.");
-    }
-    // Send the entire message history, not just the last message.
-    return { messages, id, ...data }; 
-  };
-
   const chatHelpers = useChat({
     ...restOfParams, 
     id: conversationIdFromParams, 
     api: apiFromParams,
-    streamProtocol: streamProtocolFromParams, 
-    experimental_prepareRequestBody: prepareRequestBody,
-    onToolCall: ({ toolCall }) => {
+    streamProtocol: streamProtocolFromParams,
+    sendExtraMessageFields: true, // send id and createdAt for each message
+    // id format for client-side messages:
+    generateId: createIdGenerator({
+      prefix: 'msgc',
+      size: 16,
+    }),
+    // experimental_prepareRequestBody: prepareRequestBody, // Temporarily commented out
+    onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === 'get_active_organization') {
-        if (organization) {
-          return {
-            toolCallId: toolCall.toolCallId,
-            result: {
-              id: organization.id,
-              name: organization.name,
-              slug: organization.slug,
-              imageUrl: organization.imageUrl,
-              createdAt: organization.createdAt,
-              updatedAt: organization.updatedAt,
-            },
-          };
-        } else {
-          return {
-            toolCallId: toolCall.toolCallId,
-            result: { error: "User is not currently in an active organization." },
-          };
-        }
+        const response = await fetch('/api/organizations/get-active');
+        const json = await response.json();
+        return json;
+      }
+      if (toolCall.toolName === 'update_organization') {
+        const { client_organization_id, ...updates } = toolCall.args as UpdateOrganizationArgs;
+        const response = await fetch('/api/organizations/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientOrganizationId: client_organization_id, ...updates }),
+        });
+        const json = await response.json();
+        console.debug(`[useConfiguredChat] update_organization response:`, json, null, 2);
+        return json;
+      }
+      if (toolCall.toolName === 'delete_organization') {
+        const { client_organization_id } = toolCall.args as DeleteOrganizationArgs;
+        const response = await fetch('/api/organizations/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientOrganizationId: client_organization_id }),
+        });
+        const json = await response.json();
+        console.debug(`[useConfiguredChat] delete_organization response:`, json, null, 2);
+        return json;
       }
     },
     onFinish: callerOnFinish, // Pass through original onFinish
@@ -136,6 +137,7 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
       }
     },
   });
+
 
   /**
    * useEffect hook to process credit consumption based on data streamed from the backend.
@@ -205,11 +207,11 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
   ): Promise<void> => {
     event?.preventDefault();
     // Validate for a nominal amount, actual cost determined by backend stream
-    const hasSufficientCredits = await validateCredits(1); 
-    if (!hasSufficientCredits) {
-      setChatError('Insufficient credits. Please upgrade your plan.'); 
-      return;
-    }
+    // const hasSufficientCredits = await validateCredits(1); 
+    // if (!hasSufficientCredits) {
+    //   setChatError('Insufficient credits. Please upgrade your plan.'); 
+    //   return;
+    // }
     setChatError(null); 
     chatHelpers.handleSubmit(event, chatRequestOptions as any); 
   }, [chatHelpers.handleSubmit, validateCredits, setChatError]);
@@ -225,11 +227,11 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     chatRequestOptions?: CustomChatRequestOptions
   ): Promise<string | null | undefined> => {
     // Validate for a nominal amount, actual cost determined by backend stream
-    const hasSufficientCredits = await validateCredits(1); 
-    if (!hasSufficientCredits) {
-      setChatError('Insufficient credits. Please upgrade your plan.'); 
-      return null;
-    }
+    // const hasSufficientCredits = await validateCredits(1); 
+    // if (!hasSufficientCredits) {
+    //   setChatError('Insufficient credits. Please upgrade your plan.'); 
+    //   return null;
+    // }
     setChatError(null); 
     const result = chatHelpers.append(message, chatRequestOptions as any); 
     return result;
