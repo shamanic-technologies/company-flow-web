@@ -84,22 +84,36 @@ export default function ChatInterface({
         <div className="flex-1 overflow-hidden">
           <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-2">
             <div className="space-y-4">
-              {messages.map((msg: Message) => (
-                <ChatMessage 
-                  key={msg.id} 
-                  message={msg} 
-                  userInitials={userInitials} 
-                  agentFirstName={agentFirstName}
-                  agentLastName={agentLastName}
-                  append={append} 
-                  addToolResult={addToolResult}
-                  messages={messages}
-                />
-              ))}
+              {messages.map((msg: Message, index: number) => {
+                const isLastMessage = index === messages.length - 1;
+                // A message is streaming if it's the last one, from the assistant, and we are in a loading state.
+                const isStreaming = isLastMessage && msg.role === 'assistant' && isLoading;
+
+                return (
+                  <ChatMessage 
+                    key={msg.id} 
+                    message={msg} 
+                    userInitials={userInitials} 
+                    agentFirstName={agentFirstName}
+                    agentLastName={agentLastName}
+                    append={append} 
+                    addToolResult={addToolResult}
+                    messages={messages}
+                    isStreaming={isStreaming}
+                  />
+                );
+              })}
               
-              {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-                <ThinkingIndicator key="thinking-indicator" />
-              )}
+              {(() => {
+                const shouldShowThinking = isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user';
+                console.log('ThinkingIndicator condition:', {
+                  isLoading,
+                  messagesLength: messages.length,
+                  lastMessageRole: messages[messages.length - 1]?.role,
+                  shouldShowThinking
+                });
+                return shouldShowThinking ? <ThinkingIndicator key="thinking-indicator" /> : null;
+              })()}
               
               <div key="messages-end" ref={messagesEndRef} />
             </div>

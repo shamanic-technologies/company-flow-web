@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useState } from 'react';
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 import {
   ChevronRight,
   File,
@@ -46,14 +47,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
 import {
   Sidebar,
   SidebarContent,
@@ -77,6 +71,7 @@ const agentSubMenuItems = [
 
 // Main Sidebar Component
 export default function SidebarComponent({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const router = useRouter();
   const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
   const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
   const { agents, isLoadingAgents, agentError, selectedAgentIdMiddlePanel } = useAgentContext();
@@ -149,7 +144,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 <PlusCircle className="mr-2 h-4 w-4" /> Create Organization
               </Button>
               <div className="border-t border-gray-700 my-1" />
-              <Button variant="ghost" className="w-full justify-start p-2 text-sm">
+              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => router.push('/dashboard/settings/billing')}>
                 <Settings className="mr-2 h-4 w-4" /> Settings
               </Button>
               <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={handleClerkLogout}>
