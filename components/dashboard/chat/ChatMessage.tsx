@@ -1,5 +1,5 @@
 /**
- * ChatMessage Component - Version simplifiée avec collapse et tool calls
+ * ChatMessage Component - Simplified version with collapse and tool calls
  */
 
 import { useState, useEffect } from 'react';
@@ -9,6 +9,7 @@ import MemoizedMarkdown from './MemoizedMarkdown';
 import { ToolInvocationPart } from './ToolInvocations/ToolInvocationPart';
 import { Message } from 'ai';
 import { UseChatHelpers, useChat } from 'ai/react';
+import { ShimmeringIndicator } from './utils/ShimmeringIndicator';
 
 interface ChatMessageProps {
   message: Message;
@@ -30,8 +31,10 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
   const [isHoveringReasoning, setIsHoveringReasoning] = useState(false);
 
   const reasoningPart = message.parts?.find(p => p.type === 'reasoning');
-  const textParts = message.parts?.filter(p => p.type === 'text');
-  const toolParts = message.parts?.filter(p => p.type === 'tool-invocation');
+  const contentParts = message.parts?.filter(
+    p => p.type === 'text' || p.type === 'tool-invocation'
+  );
+  const textParts = contentParts?.filter(p => p.type === 'text');
   const hasStartedAnswer = textParts && textParts.length > 0;
 
   // Timer logic
@@ -48,7 +51,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
       setThinkingDuration(String(durationInSeconds));
     }
   }, [isStreaming, reasoningPart, hasStartedAnswer, thinkingStartTime, thinkingDuration]);
-
+  
   // Toggle a tool's expanded state
   const toggleToolExpansion = (index: number) => {
     setExpandedTools(prev => {
@@ -64,24 +67,24 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
 
   const isCurrentlyThinking = reasoningPart && !hasStartedAnswer && isStreaming;
   const isDoneThinking = reasoningPart && (hasStartedAnswer || !isStreaming);
-
+  
   return (
     <div className={`flex items-start gap-3 px-2 py-3 rounded-lg ${message.role === 'user' ? "bg-gray-800/50" : "bg-gray-850/30"}`}>
       <div className="flex-1 overflow-hidden min-w-0">
         {/* Avatar and Name */}
         <div className="flex items-center gap-2 mb-1">
-          <Avatar className={`h-4 w-4 text-xs ${message.role === 'user' ? "border border-blue-600" : "bg-gradient-to-br from-indigo-600 to-purple-600"}`}>
-            {message.role === 'user' ? (
-              <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
-            ) : (
-              <AvatarFallback className="text-[10px] bg-gradient-to-br from-indigo-600 to-purple-600 text-white">AI</AvatarFallback>
-            )}
-          </Avatar>
-          <div className="text-xs font-medium text-gray-300">
-            {message.role === 'user' ? 'You' : `${agentFirstName} ${agentLastName}`}
-          </div>
+            <Avatar className={`h-4 w-4 text-xs ${message.role === 'user' ? "border border-blue-600" : "bg-gradient-to-br from-indigo-600 to-purple-600"}`}>
+                {message.role === 'user' ? (
+                <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
+                ) : (
+                <AvatarFallback className="text-[10px] bg-gradient-to-br from-indigo-600 to-purple-600 text-white">AI</AvatarFallback>
+                )}
+            </Avatar>
+            <div className="text-xs font-medium text-gray-300">
+              {message.role === 'user' ? 'You' : `${agentFirstName} ${agentLastName}`}
+            </div>
         </div>
-
+        
         {/* Reasoning Block */}
         {reasoningPart && (
           <div 
@@ -93,13 +96,8 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
           >
             {isCurrentlyThinking ? (
               <>
-                <div className="flex items-center gap-2 mb-1">
-                  <Brain size={12} className="animate-pulse" />
-                  <span className="inline-block bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 bg-[length:200%_100%] animate-[shimmer_2s_infinite] bg-clip-text text-transparent will-change-[background-position]">
-                    Planning next moves
-                  </span>
-                </div>
-                <div className="font-mono whitespace-pre-wrap pl-5 text-gray-500">
+                <ShimmeringIndicator text="Planning next moves" />
+                <div className="whitespace-pre-wrap pl-5 text-gray-500">
                   {reasoningPart.reasoning}
                 </div>
               </>
@@ -109,7 +107,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
                   {isHoveringReasoning ? (
                     isReasoningExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />
                   ) : (
-                    <Brain size={12} />
+                    <Brain size={12} className="text-gray-400" />
                   )}
                   <span>
                     {thinkingDuration !== null
@@ -119,7 +117,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
                   </span>
                 </div>
                 {isReasoningExpanded && (
-                  <div className="font-mono whitespace-pre-wrap pl-5 text-gray-500 pt-1">
+                  <div className="whitespace-pre-wrap pl-5 text-gray-500 pt-1">
                     {reasoningPart.reasoning}
                   </div>
                 )}
@@ -128,33 +126,31 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
           </div>
         )}
         
-        {/* Tool calls */}
-        {toolParts && toolParts.length > 0 && (
-          <div className="space-y-2 mt-2">
-            {toolParts.map((part, index) => (
-              <ToolInvocationPart 
-                key={`${message.id}-tool-${index}`} 
-                part={part} 
-                index={index} 
-                isExpanded={expandedTools.has(index)}
-                onToggle={() => toggleToolExpansion(index)}
-                addToolResult={addToolResult}
-                append={append}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Text parts */}
-        {textParts && textParts.length > 0 && (
-          <div className="space-y-2 mt-2">
-            {textParts.map((part, index) => (
-              <div key={`text-${index}`} className="text-xs text-gray-200">
-                <MemoizedMarkdown content={part.text || ''} id={`${message.id}-part-${index}`} />
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Render content parts in order */}
+        <div className="space-y-2 mt-2">
+          {contentParts?.map((part, index) => {
+            if (part.type === 'tool-invocation') {
+              return (
+                <ToolInvocationPart 
+                  key={part.toolInvocation.toolCallId || `tool-${index}`} 
+                  part={part} 
+                  index={index} 
+                  isExpanded={expandedTools.has(index)}
+                  onToggle={() => toggleToolExpansion(index)}
+                  addToolResult={addToolResult}
+                  append={append}
+                />
+              );
+            } else if (part.type === 'text') {
+              return (
+                <div key={`text-${index}`} className="text-xs text-gray-200">
+                  <MemoizedMarkdown content={part.text || ''} id={`${message.id}-part-${index}`} />
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
 
         {/* Fallback for user messages or messages without text parts */}
         {message.role === 'user' && (!textParts || textParts.length === 0) && (
@@ -167,4 +163,4 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
   );
 };
 
-export default ChatMessage;
+export default ChatMessage; 

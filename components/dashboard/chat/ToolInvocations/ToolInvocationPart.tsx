@@ -5,7 +5,7 @@
  * Handles different tool invocation states and displays appropriate UI,
  * using useSetupSteps hook and SetupStepRenderer for sequential setup.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle, WrenchIcon, ChevronDown, ChevronRight } from 'lucide-react';
@@ -14,6 +14,7 @@ import type { MessagePart } from '../types';
 import { hasToolError } from './utils';
 import { useSetupSteps } from '@/hooks/useSetupSteps'; // Import the custom hook
 import { SetupStepRenderer } from './SetupStepRenderer'; // Import the renderer
+import { ShimmeringIndicator } from '../utils/ShimmeringIndicator';
 
 interface ToolInvocationPartProps {
   part: MessagePart;
@@ -34,6 +35,7 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
 }) => {
   const { toolInvocation } = part;
   const { toast } = useToast(); // Keep toast if needed for other errors
+  const [isHovering, setIsHovering] = useState(false);
 
   // Use the custom hook to manage setup steps
   const { 
@@ -74,58 +76,43 @@ export const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({
     case 'partial-call':
     case 'call':
       return (
-        <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800 rounded-md">
-          <WrenchIcon size={14} className="text-yellow-400" />
-          <div className="text-xs text-yellow-400">
-            Calling tool: {toolInvocation.toolName}
-          </div>
-          <div className="flex space-x-1 ml-2">
-            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
+        <div className="mt-2 text-gray-400" style={{ fontSize: '11px' }}>
+          <ShimmeringIndicator text={`Calling tool: ${toolInvocation.toolName}`} />
         </div>
       );
     case 'result':
-      // If we got here, it means it wasn't SetupNeeded or setup is complete/not active
       const hasError = hasToolError(toolInvocation);
       
       return (
-        <div className="mt-2">
-          <div 
-            className="flex items-center gap-2 p-2 bg-gray-800 rounded-md cursor-pointer hover:bg-gray-750"
-            onClick={onToggle} // Keep toggle for expanding generic results
-          >
-            {hasError ? (
-              <XCircle size={14} className="text-red-400" />
+        <div 
+          className="mt-2 text-gray-400 cursor-pointer"
+          style={{ fontSize: '11px' }}
+          onClick={onToggle}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            {isHovering ? (
+              isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />
             ) : (
-              <CheckCircle size={14} className="text-green-400" />
+              hasError ? (
+                <XCircle size={12} className="text-red-400" />
+              ) : (
+                <WrenchIcon size={12} className="text-gray-400" />
+              )
             )}
-            <div className="text-xs text-gray-300">
-              {toolInvocation.toolName}
-              {/* @ts-ignore */}
-              {toolInvocation.args?.utility_id && 
-                /* @ts-ignore */
-                <span className="text-gray-500 ml-1">({toolInvocation.args.utility_id})</span>
-              }
-            </div>
-            {isExpanded ? (
-              <ChevronDown size={14} className="ml-auto text-gray-400" />
-            ) : (
-              <ChevronRight size={14} className="ml-auto text-gray-400" />
-            )}
+            <span className={hasError ? 'text-red-400' : ''}>
+              {hasError ? `Error using ${toolInvocation.toolName}` : `Used ${toolInvocation.toolName}`}
+            </span>
           </div>
           
           {isExpanded && (
-            <div className="mt-2 p-2 bg-gray-850 rounded-md border border-gray-700">
-              <div className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-all overflow-hidden w-full">
-                {/* @ts-ignore - Stringify the result, assuming it's not SetupNeeded */}
-                {toolInvocation.result !== undefined && toolInvocation.result !== null ? (
-                  JSON.stringify(toolInvocation.result, null, 2)
-                ) : (
-                  <span className="text-gray-500 italic">No result data</span>
-                )}
-              </div>
+            <div className="whitespace-pre-wrap pl-5 text-gray-500 pt-1">
+              {toolInvocation.result !== undefined && toolInvocation.result !== null ? (
+                JSON.stringify(toolInvocation.result, null, 2)
+              ) : (
+                <span className="italic">No result data</span>
+              )}
             </div>
           )}
         </div>

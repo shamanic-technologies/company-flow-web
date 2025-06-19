@@ -173,10 +173,8 @@ export function useSetupSteps({
         if (currentIndex >= requiredSteps.length - 1) {
             console.log("[useSetupSteps] Last step completed. Sending result to AI.");
             append({
-                role: 'tool',
-                tool_call_id: toolInvocation.toolCallId,
-                tool_name: toolInvocation.toolName,
-                content: JSON.stringify({ success: true, message: "Setup complete." }),
+                role: 'user',
+                content: "Secret inputed",
             });
             // Reset state after finishing
             setRequiredSteps([]);
@@ -194,7 +192,7 @@ export function useSetupSteps({
     } finally {
         setIsLoading(false);
     }
-  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, getToken, append]);
+  }, [currentIndex, requiredSteps, toolInvocation, currentSetupData, addToolResult, toast, getToken]);
 
   const currentStep = requiredSteps.length > 0 && currentIndex < requiredSteps.length ? requiredSteps[currentIndex] : null;
   const isHandlingSetup = currentStep !== null;
