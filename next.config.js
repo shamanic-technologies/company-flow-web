@@ -6,6 +6,27 @@ const nextConfig = {
   distDir: '.next',
   // Required for Vercel deployment
   output: 'standalone',
+
+  // These headers are required for SharedArrayBuffer, which is used by WebContainers.
+  // See: https://web.dev/coop-coep/
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
+          },
+        ],
+      },
+    ];
+  },
+
   // Allow images from external domains
   images: {
     domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],

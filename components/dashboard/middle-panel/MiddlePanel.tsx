@@ -10,7 +10,7 @@
 
 // Import shared types (Use monorepo package)
 // import { Agent, Conversation, CreateConversationInput } from '@agent-base/types'; // Types used via context
-
+import dynamic from 'next/dynamic';
 import { useAgentContext } from '../context/AgentProvider';
 import { useUserContext } from '../context/UserProvider';
 import { useViewContext } from '../context/ViewProvider';
@@ -23,6 +23,15 @@ import ConversationListPanel from './ConversationListPanel';
 import WebhookDetailPanel from './WebhookDetailPanel';
 import ToolDetailPanel from './ToolDetailPanel';
 import ActionsPanel from './ActionsPanel';
+// Dynamically import the AIDashboardPanel to prevent SSR issues
+const AIDashboardPanel = dynamic(() => import('./AIDashboardPanel'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      Loading Dashboard...
+    </div>
+  ),
+});
 
 /**
  * MiddlePanel Component
@@ -32,13 +41,19 @@ import ActionsPanel from './ActionsPanel';
 export default function MiddlePanel() {
   const { agents, selectedAgentIdMiddlePanel } = useAgentContext();
   const { getClerkUserInitials } = useUserContext();
-  const { activeAgentView, selectedWebhook, selectedTool, selectConversationAndSetView } = useViewContext();
+  const { activeAgentView, selectedWebhook, selectedTool, selectedDashboard, selectConversationAndSetView } = useViewContext();
   const { chatMiddlePanel } = useChatContext();
   const { conversationList, isLoadingConversationList, conversationError, currentConversationIdMiddlePanel } = useConversationContext();
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
 
+  // Render dashboard view if active, it doesn't need an agent
+  if (activeAgentView === 'dashboard') {
+    return <AIDashboardPanel selectedDashboard={selectedDashboard} />;
+  }
+
   if (!selectedAgent) {
+    // If not dashboard view and no agent, show placeholder
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500">
         Select an agent to get started

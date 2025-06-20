@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
-import { SearchApiToolResultItem, SearchWebhookResultItem } from '@agent-base/types';
+import { SearchApiToolResultItem, SearchWebhookResultItem, DashboardInfo } from '@agent-base/types';
 import { useAgentPolling } from '@/hooks/polling/useAgentPolling';
 import { useConversationPolling } from '@/hooks/polling/useConversationPolling';
 import { useAgentContext } from './AgentProvider';
@@ -10,19 +10,23 @@ import { useApiToolsContext } from './ApiToolsProvider';
 import { useWebhookContext } from './WebhookProvider';
 import { useUserContext } from './UserProvider';
 import { useOrganizationContext } from './OrganizationProvider';
+import { useDashboardPolling } from '@/hooks/polling/useDashboardPolling';
+import { useDashboardContext } from './DashboardProvider';
 
-type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail';
+type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail' | 'dashboard';
 
 interface ViewContextType {
   activeAgentView: ActiveAgentView;
   setActiveAgentView: (view: ActiveAgentView) => void;
   selectedTool: SearchApiToolResultItem | null;
   selectedWebhook: SearchWebhookResultItem | null;
+  selectedDashboard: DashboardInfo | null;
   selectAgentAndSetView: (agentId: string | null) => void;
   selectConversationAndSetView: (conversationId: string | null) => void;
   createNewChatAndSetView: () => Promise<void>;
   selectWebhookAndSetView: (webhook: SearchWebhookResultItem | null) => void;
   selectToolAndSetView: (tool: SearchApiToolResultItem | null) => void;
+  selectDashboardAndSetView: (dashboard: DashboardInfo | null) => void;
   initialPrompt: string | null;
   setInitialPrompt: (prompt: string | null) => void;
 }
@@ -32,11 +36,13 @@ export const ViewContext = createContext<ViewContextType>({
   setActiveAgentView: () => {},
   selectedTool: null,
   selectedWebhook: null,
+  selectedDashboard: null,
   selectAgentAndSetView: () => {},
   selectConversationAndSetView: () => {},
   createNewChatAndSetView: async () => {},
   selectWebhookAndSetView: () => {},
   selectToolAndSetView: () => {},
+  selectDashboardAndSetView: () => {},
   initialPrompt: null,
   setInitialPrompt: () => {},
 });
@@ -48,16 +54,19 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const { conversationList, selectConversationIdMiddlePanel, handleCreateNewChatRightPanel, refreshConversationList } = useConversationContext();
   const { fetchUserWebhooks } = useWebhookContext();
   const { fetchApiTools } = useApiToolsContext();
+  const { refetchDashboards } = useDashboardContext();
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
+  const [selectedDashboard, setSelectedDashboard] = useState<DashboardInfo | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
   
   const POLLING_INTERVAL = 5000;
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
+  useDashboardPolling({ fetchDashboards: refetchDashboards, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
     selectAgentMiddlePanel(agentId);
@@ -105,27 +114,39 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedAgentIdMiddlePanel]);
 
+  const selectDashboardAndSetView = useCallback((dashboard: DashboardInfo | null) => {
+    setSelectedDashboard(dashboard);
+    setActiveAgentView('dashboard'); 
+    selectAgentMiddlePanel(null);
+    setSelectedWebhook(null);
+    setSelectedTool(null);
+  }, [selectAgentMiddlePanel]);
+
   const contextValue = useMemo(() => ({
     activeAgentView,
     setActiveAgentView,
     selectedTool,
     selectedWebhook,
+    selectedDashboard,
     selectAgentAndSetView,
     selectConversationAndSetView,
     createNewChatAndSetView,
     selectWebhookAndSetView,
     selectToolAndSetView,
+    selectDashboardAndSetView,
     initialPrompt,
     setInitialPrompt,
   }), [
     activeAgentView,
     selectedTool,
     selectedWebhook,
+    selectedDashboard,
     selectAgentAndSetView,
     selectConversationAndSetView,
     createNewChatAndSetView,
     selectWebhookAndSetView,
     selectToolAndSetView,
+    selectDashboardAndSetView,
     initialPrompt,
   ]);
   

@@ -40,7 +40,8 @@ import { useApiToolsContext } from '../context/ApiToolsProvider';
 import { useWebhookContext } from '../context/WebhookProvider';
 import { useOrganizationContext } from '../context/OrganizationProvider';
 import { useUserContext } from '../context/UserProvider';
-import { Agent } from '@agent-base/types';
+import { useDashboardContext } from '../context/DashboardProvider';
+import { Agent, DashboardInfo } from '@agent-base/types';
 import CreateOrganizationDialog from './CreateOrganizationDialog';
 import {
   Collapsible,
@@ -82,10 +83,13 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
     selectedWebhook,
     selectWebhookAndSetView,
     selectedTool,
-    selectToolAndSetView 
+    selectToolAndSetView,
+    selectDashboardAndSetView,
+    selectedDashboard,
   } = useViewContext();
   const { apiTools, isLoadingApiTools, apiToolsError } = useApiToolsContext();
   const { userWebhooks, isLoadingWebhooks, webhookError } = useWebhookContext();
+  const { dashboards, isLoadingDashboards, dashboardError } = useDashboardContext();
 
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
 
@@ -156,7 +160,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
         <SidebarContent className="flex-1 overflow-y-auto p-2">
           <SidebarMenu>
-            {/* <SidebarMenuItem>
+            <SidebarMenuItem>
               <Collapsible open={isDashboardsOpen} onOpenChange={setIsDashboardsOpen}>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
@@ -166,11 +170,52 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub className="pl-1">
-                    <div className="p-1 text-xs text-muted-foreground">Dashboards coming soon...</div>
+                     {isLoadingDashboards ? (
+                       <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /></div>
+                     ) : dashboardError ? (
+                       <div className="p-1 text-xs text-red-400">Error: {dashboardError}</div>
+                     ) : dashboards.length === 0 ? (
+                       <SidebarMenuItem>
+                          <SidebarMenuButton
+                              data-active={activeAgentView === 'dashboard'}
+                              className={cn(
+                                  "w-full justify-start text-xs h-6 px-1 gap-1",
+                                  "hover:text-accent-foreground",
+                                  activeAgentView === 'dashboard'
+                                  ? "text-accent-foreground font-semibold"
+                                  : "font-normal text-muted-foreground"
+                              )}
+                              onClick={() => selectDashboardAndSetView(null)}
+                          >
+                              <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                              Welcome dashboard
+                          </SidebarMenuButton>
+                      </SidebarMenuItem>
+                     ) : (
+                       dashboards.map((dashboard: DashboardInfo) => (
+                         <SidebarMenuItem key={dashboard.id}>
+                           <SidebarMenuButton
+                               // Add active state logic if needed later
+                               data-active={activeAgentView === 'dashboard' && selectedDashboard?.id === dashboard.id}
+                               className={cn(
+                                   "w-full justify-start text-xs h-6 px-1 gap-1",
+                                   "hover:text-accent-foreground",
+                                   (activeAgentView === 'dashboard' && selectedDashboard?.id === dashboard.id)
+                                   ? "text-accent-foreground font-semibold"
+                                   : "font-normal text-muted-foreground"
+                               )}
+                               onClick={() => selectDashboardAndSetView(dashboard)}
+                           >
+                               <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                               <span className="truncate">{dashboard.name}</span>
+                           </SidebarMenuButton>
+                         </SidebarMenuItem>
+                       ))
+                     )}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </Collapsible>
-            </SidebarMenuItem> */}
+            </SidebarMenuItem>
 
             {/* Webhooks Section (renamed to Inbound) */}
             <SidebarMenuItem key="webhooks-section">
