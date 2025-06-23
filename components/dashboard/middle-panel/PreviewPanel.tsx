@@ -2,8 +2,7 @@
 
 import React, { forwardRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type Status = 'idle' | 'booting' | 'installing' | 'starting-server' | 'running' | 'error';
+import { Status } from '@/lib/dashboard-utils';
 
 interface PreviewPanelProps {
     status: Status;

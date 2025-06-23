@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       return createErrorResponse(500, 'API_ERROR', 'Failed to list dashboards', listResponse.error);
     }
 
-    return createSuccessResponse(listResponse.data, 200); 
+    return createSuccessResponse(listResponse.data, 200);
 
   } catch (error: any) {
     console.error('[API /dashboard/list] Error:', error);

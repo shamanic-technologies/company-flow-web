@@ -7,23 +7,20 @@ import { DashboardInfo, DashboardFileTree } from '@agent-base/types';
 import { useDashboardContext } from '@/components/dashboard/context/DashboardProvider';
 import { viteFiles, fetchInterceptorScript } from '@/lib/dashboard-container.config';
 import { useAuth } from '@clerk/nextjs';
-
-// Define Status type locally for the hook
-type Status = 'idle' | 'booting' | 'installing' | 'starting-server' | 'running' | 'error';
+import { Status } from '@/lib/dashboard-utils';
 
 // --- Singleton instance for WebContainer ---
 let webcontainerInstance: WebContainer | null = null;
 
+// This class is a workaround for a TypeScript configuration issue in this project.
+// It provides a compatible stream for piping process output to the terminal.
 class TerminalStream {
-    constructor(private terminal: Terminal) {}
-    write(chunk: string) {
-        this.terminal.write(chunk);
-    }
-    // Add dummy methods to satisfy WritableStream<string> type
-    close() {}
-    abort() {}
-    getWriter() { return this; }
-    get locked() { return false; }
+  constructor(private terminal: Terminal) {}
+  write(data: string) {
+    this.terminal.write(data);
+  }
+  close() {}
+  abort() {}
 }
 
 interface UseWebContainerProps {
@@ -40,26 +37,48 @@ export function useWebContainer({ selectedDashboard }: UseWebContainerProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [filesToMount, setFilesToMount] = useState<DashboardFileTree>(viteFiles);
 
-  // --- Effect for loading dashboard config ---
+  // This effect now handles the ENTIRE boot process when a dashboard is selected.
   useEffect(() => {
-    const loadDashboardConfig = async () => {
-        if (selectedDashboard) {
-            setStatus('booting');
-            const config = await getDashboardConfig(selectedDashboard.id);
-            if (config) {
-                setFilesToMount(config);
-            } else {
-                setError(`Failed to load configuration for ${selectedDashboard.name}`);
-                setStatus('error');
-            }
-        } else {
-            setFilesToMount(viteFiles);
+    // If a dashboard is selected, start the whole process.
+    // The `boot` function will be called internally by this effect.
+    if (selectedDashboard) {
+      const loadAndBoot = async () => {
+        // Prevent re-triggering if already running for the same dashboard
+        if (webcontainerInstance) {
+          // A simple teardown/reboot logic. Could be improved.
+          console.log("Tearing down existing container to boot a new one.");
+          teardown(); 
         }
-    };
-    loadDashboardConfig();
-  }, [selectedDashboard, getDashboardConfig]);
+
+        setStatus('loading-config');
+        const config = await getDashboardConfig(selectedDashboard.id);
+
+        if (config) {
+          // Now that we have the config, we can proceed to boot.
+          // We pass the config directly to avoid state update delays.
+          boot(config);
+        } else {
+          setError(`Failed to load configuration for ${selectedDashboard.name}`);
+          setStatus('error');
+        }
+      };
+
+      loadAndBoot();
+    } else {
+      // If we go back to the "Welcome" dashboard, reset everything.
+      teardown();
+      setFilesToMount(viteFiles);
+      setStatus('idle');
+    }
+
+    // The teardown logic for when the component unmounts
+    return () => {
+      teardown();
+    }
+  // We remove getDashboardConfig and boot from dependencies to control the flow manually
+  // This effect should ONLY re-run when the selectedDashboard changes.
+  }, [selectedDashboard]);
   
-  // --- Teardown Logic ---
   const teardown = useCallback(() => {
     if (webcontainerInstance) {
         webcontainerInstance.teardown();
@@ -69,19 +88,10 @@ export function useWebContainer({ selectedDashboard }: UseWebContainerProps) {
     setStatus('idle');
   }, []);
 
-  useEffect(() => {
-    const handleUnload = () => teardown();
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [teardown]);
-  
-  // --- Main Boot Logic ---
-  const boot = useCallback(async (terminal: Terminal) => {
+  // No longer needs to be a useCallback exposed to the component, it's now internal.
+  const boot = async (files: DashboardFileTree, terminal?: Terminal) => {
     try {
-      if (webcontainerInstance) {
-        console.log("WebContainer instance is already running.");
-        return;
-      }
+      // The check is now done in the useEffect
       setStatus('booting');
       
       const wc = await WebContainer.boot();
@@ -97,36 +107,51 @@ export function useWebContainer({ selectedDashboard }: UseWebContainerProps) {
 
       wc.on('error', (err) => { setError(err.message); setStatus('error'); });
 
-      await wc.mount(filesToMount);
+      await wc.mount(files);
 
-      // Install dependencies
+      // --- Manual Stream Piping ---
+      const pipeStreamToTerminal = async (stream: ReadableStream<string>) => {
+        const reader = stream.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          terminal?.write(value);
+        }
+      };
+
       setStatus('installing');
-      terminal.writeln('>>> npm install');
+      terminal?.writeln('>>> npm install');
       const installProcess = await wc.spawn('npm', ['install']);
-      installProcess.output.pipeTo(new TerminalStream(terminal) as any);
+      pipeStreamToTerminal(installProcess.output); // Manually pipe the stream
       if ((await installProcess.exit) !== 0) throw new Error('Installation failed');
 
-      // Start dev server
       setStatus('starting-server');
-      terminal.writeln('>>> npm run dev');
+      terminal?.writeln('>>> npm run dev');
       const startProcess = await wc.spawn('npm', ['run', 'dev']);
-      startProcess.output.pipeTo(new TerminalStream(terminal) as any);
+      pipeStreamToTerminal(startProcess.output); // Manually pipe the stream
 
     } catch (err: any) {
       setError(err.message);
       setStatus('error');
     }
-  }, [filesToMount]); // Re-run if files change
+  };
 
   const restart = useCallback(async (terminal: Terminal) => {
-    if (!webcontainerInstance) {
-        // boot(terminal); // This could be an option
-        return;
-    }
+    if (!webcontainerInstance) return;
     terminal.writeln('>>> Restarting server...');
     setStatus('starting-server');
+    
+    const pipeStreamToTerminal = async (stream: ReadableStream<string>) => {
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        terminal.write(value);
+      }
+    };
+    
     const startProcess = await webcontainerInstance.spawn('npm', ['run', 'dev']);
-    startProcess.output.pipeTo(new TerminalStream(terminal) as any);
+    pipeStreamToTerminal(startProcess.output);
   }, []);
 
   // --- PostMessage handler for fetch interception ---
@@ -139,7 +164,12 @@ export function useWebContainer({ selectedDashboard }: UseWebContainerProps) {
     // return () => window.removeEventListener('message', handleMessage);
   }, [getToken]);
 
-  return { status, error, previewUrl, terminalRef, boot, restart, teardown };
+  return { 
+    status, 
+    error, 
+    previewUrl, 
+    terminalRef 
+  };
 }
 
 // Dummy WritableStream for now, will be moved.

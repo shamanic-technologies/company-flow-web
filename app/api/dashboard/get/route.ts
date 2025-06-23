@@ -50,6 +50,8 @@ export async function GET(req: NextRequest) {
       return createErrorResponse(500, 'API_ERROR', 'Failed to get dashboard', getResponse.error);
     }
 
+    console.debug('🎉 [API /dashboard/get] Get response:', getResponse);
+    console.debug('🎉 [API /dashboard/get] Get response data:', getResponse.data.webContainerConfig.src.directory['main.tsx'].file.contents);
     return createSuccessResponse(getResponse.data, 200); 
 
   } catch (error: any) {

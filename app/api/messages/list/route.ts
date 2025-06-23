@@ -70,8 +70,6 @@ export async function GET(req: NextRequest) {
     }
 
     const messages = getMessagesFromConversationResponse.data.messages;
-    console.dir(getMessagesFromConversationResponse.data, { depth: null });
-    console.dir(messages, { depth: null });
 
     return createSuccessResponse(messages, 200);
     

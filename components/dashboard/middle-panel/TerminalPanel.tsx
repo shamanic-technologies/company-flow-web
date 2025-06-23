@@ -1,8 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
-
-type Status = 'idle' | 'booting' | 'installing' | 'starting-server' | 'running' | 'error';
+import { Status } from '@/lib/dashboard-utils';
 
 interface TerminalPanelProps {
     status: Status;

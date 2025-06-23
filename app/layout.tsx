@@ -62,17 +62,17 @@ export default function RootLayout({
                     <ApiToolsProvider>
                       <WebhookProvider>
                         <ChatProvider>
-                          <ViewProvider>
-                            <SidebarProvider>
-                              <ReadinessProvider>
-                                <LandingPromptProvider>
-                                  <DashboardProvider>
+                          <DashboardProvider>
+                            <ViewProvider>
+                              <SidebarProvider>
+                                <ReadinessProvider>
+                                  <LandingPromptProvider>
                                     {children}
-                                  </DashboardProvider>
-                                </LandingPromptProvider>
-                              </ReadinessProvider>
-                            </SidebarProvider>
-                          </ViewProvider>
+                                  </LandingPromptProvider>
+                                </ReadinessProvider>
+                              </SidebarProvider>
+                            </ViewProvider>
+                          </DashboardProvider>
                         </ChatProvider>
                       </WebhookProvider>
                     </ApiToolsProvider>
