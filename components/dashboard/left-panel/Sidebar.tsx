@@ -89,7 +89,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   } = useViewContext();
   const { apiTools, isLoadingApiTools, apiToolsError } = useApiToolsContext();
   const { userWebhooks, isLoadingWebhooks, webhookError } = useWebhookContext();
-  const { dashboards, isLoadingDashboards, dashboardError } = useDashboardContext();
+  const { dashboards, isLoading, error } = useDashboardContext();
 
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
 
@@ -170,10 +170,10 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub className="pl-1">
-                     {isLoadingDashboards ? (
+                     {isLoading ? (
                        <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /></div>
-                     ) : dashboardError ? (
-                       <div className="p-1 text-xs text-red-400">Error: {dashboardError}</div>
+                     ) : error ? (
+                       <div className="p-1 text-xs text-red-400">Error: {error}</div>
                      ) : dashboards.length === 0 ? (
                        <SidebarMenuItem>
                           <SidebarMenuButton

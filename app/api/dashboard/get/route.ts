@@ -10,7 +10,7 @@ import {
   handleApiError
 } from '../../utils';
 import { auth } from "@clerk/nextjs/server";
-import { getDashboard } from '@agent-base/api-client';
+import { getDashboardById } from '@agent-base/api-client';
 import { AgentBaseCredentials, Dashboard, ServiceResponse } from '@agent-base/types';
 
 export async function GET(req: NextRequest) {
@@ -43,15 +43,13 @@ export async function GET(req: NextRequest) {
       platformApiKey: agentBaseApiKey
     };
 
-    const getResponse: ServiceResponse<Dashboard> = await getDashboard(dashboardId, credentials);
+    const getResponse: ServiceResponse<Dashboard> = await getDashboardById(dashboardId, credentials);
 
     if (!getResponse.success) {
       console.error(`[API /dashboard/get] Error getting dashboard ${dashboardId}:`, getResponse.error);
       return createErrorResponse(500, 'API_ERROR', 'Failed to get dashboard', getResponse.error);
     }
 
-    console.debug('🎉 [API /dashboard/get] Get response:', getResponse);
-    console.debug('🎉 [API /dashboard/get] Get response data:', getResponse.data.webContainerConfig.src.directory['main.tsx'].file.contents);
     return createSuccessResponse(getResponse.data, 200); 
 
   } catch (error: any) {

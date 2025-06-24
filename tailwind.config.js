@@ -4,6 +4,7 @@ module.exports = {
     content: [
     './app/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@tremor/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
   	container: {
@@ -98,6 +99,7 @@ module.exports = {
   plugins: [
     require("@tailwindcss/typography"),
     require("@tailwindcss/forms"),
-      require("tailwindcss-animate")
+    require("tailwindcss-animate"),
+    // require('@tremor/react/tailwind'), // Temporarily removed to debug module resolution
 ],
 } 

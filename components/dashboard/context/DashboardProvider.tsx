@@ -2,37 +2,44 @@
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useDashboards } from '@/hooks/useDashboards';
-import { DashboardInfo, DashboardFileTree } from '@agent-base/types';
+import { Dashboard, DashboardInfo } from '@agent-base/types';
 
 interface DashboardContextType {
     dashboards: DashboardInfo[];
-    isLoadingDashboards: boolean;
-    dashboardError: string | null;
+    detailedDashboard: Dashboard | null;
+    isLoading: boolean;
+    error: string | null;
     refetchDashboards: () => Promise<void>;
-    getDashboardConfig: (dashboardId: string) => Promise<DashboardFileTree | null>;
+    fetchDashboardById: (id: string) => Promise<void>;
 }
 
 const DashboardContext = createContext<DashboardContextType>({
     dashboards: [],
-    isLoadingDashboards: true,
-    dashboardError: null,
+    detailedDashboard: null,
+    isLoading: true,
+    error: null,
     refetchDashboards: async () => { console.warn('refetchDashboards called outside of DashboardProvider') },
-    getDashboardConfig: async (dashboardId: string) => {
-        console.warn('getDashboardConfig called outside of DashboardProvider');
-        return null;
-    },
+    fetchDashboardById: async (id: string) => { console.warn('fetchDashboardById called outside of DashboardProvider') },
 });
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-    const { dashboards, isLoading, error, refetchDashboards, getDashboardConfig } = useDashboards();
+    const { 
+        dashboards, 
+        detailedDashboard, 
+        isLoading, 
+        error, 
+        refetchDashboards, 
+        fetchDashboardById 
+    } = useDashboards();
 
     const contextValue = useMemo(() => ({
         dashboards,
-        isLoadingDashboards: isLoading,
-        dashboardError: error,
+        detailedDashboard,
+        isLoading,
+        error,
         refetchDashboards,
-        getDashboardConfig,
-    }), [dashboards, isLoading, error, refetchDashboards, getDashboardConfig]);
+        fetchDashboardById,
+    }), [dashboards, detailedDashboard, isLoading, error, refetchDashboards, fetchDashboardById]);
 
     return (
         <DashboardContext.Provider value={contextValue}>

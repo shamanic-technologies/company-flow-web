@@ -10,7 +10,7 @@ import {
   handleApiError
 } from '../../utils';
 import { auth } from "@clerk/nextjs/server";
-import { listDashboards } from '@agent-base/api-client';
+import { getDashboardsInfo } from '@agent-base/api-client';
 import { AgentBaseCredentials, DashboardInfo, ServiceResponse } from '@agent-base/types';
 
 export async function GET(req: NextRequest) {
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       platformApiKey: agentBaseApiKey
     };
 
-    const listResponse : ServiceResponse<DashboardInfo[]> = await listDashboards(credentials);
+    const listResponse: ServiceResponse<DashboardInfo[]> = await getDashboardsInfo(credentials);
 
     if (!listResponse.success) {
       console.error('[API /dashboard/list] Error listing dashboards:', listResponse.error);
