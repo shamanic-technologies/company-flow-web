@@ -218,35 +218,38 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
             </SidebarMenuItem>
 
             {/* Webhooks Section (renamed to Inbound) */}
-            <SidebarMenuItem key="webhooks-section">
-              <Collapsible open={isWebhooksOpen} onOpenChange={setIsWebhooksOpen}>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isWebhooksOpen && "rotate-90")} />
-                    <span className="flex-1 text-left">Inbound</span> {/* Renamed from Webhooks */}
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="pl-1">
-                    {isLoadingWebhooks ? (
-                      <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
-                    ) : webhookError ? (
-                      <div className="p-1 text-xs text-red-400">Error: {webhookError}</div>
-                    ) : typedUserWebhooks.length === 0 ? (
-                      <div className="p-1 text-xs text-muted-foreground">No webhooks found.</div>
-                    ) : (
-                      <>
-                        <WebhookSubfolder key="active-webhooks" title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                        <WebhookSubfolder key="unset-webhooks" title="Unset" webhooks={unsetWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                        <WebhookSubfolder key="disabled-webhooks" title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                      </>
-                    )}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </Collapsible>
-            </SidebarMenuItem>
+            {typedUserWebhooks.length > 0 && (
+              <SidebarMenuItem key="webhooks-section">
+                <Collapsible open={isWebhooksOpen} onOpenChange={setIsWebhooksOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                      <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isWebhooksOpen && "rotate-90")} />
+                      <span className="flex-1 text-left">Inbound</span> {/* Renamed from Webhooks */}
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub className="pl-1">
+                      {isLoadingWebhooks ? (
+                        <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
+                      ) : webhookError ? (
+                        <div className="p-1 text-xs text-red-400">Error: {webhookError}</div>
+                      ) : typedUserWebhooks.length === 0 ? (
+                        <div className="p-1 text-xs text-muted-foreground">No webhooks found.</div>
+                      ) : (
+                        <>
+                          <WebhookSubfolder key="active-webhooks" title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                          <WebhookSubfolder key="unset-webhooks" title="Unset" webhooks={unsetWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                          <WebhookSubfolder key="disabled-webhooks" title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                        </>
+                      )}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+            )}
 
             {/* Agents Section (moved below Inbound) */}
+            {agents.length > 1 && (
             <SidebarMenuItem key="agents-section">
               <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
                 <CollapsibleTrigger asChild>
@@ -322,34 +325,37 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </CollapsibleContent>
               </Collapsible>
             </SidebarMenuItem>
+            )}
 
             {/* Tools Section (now last) */}
-            <SidebarMenuItem key="tools-section">
-              <Collapsible open={isToolsOpen} onOpenChange={setIsToolsOpen}>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isToolsOpen && "rotate-90")} />
-                    <span className="flex-1 text-left">Tools</span>
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="pl-1">
-                    {isLoadingApiTools ? (
-                      <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
-                    ) : apiToolsError ? (
-                      <div className="p-1 text-xs text-red-400">Error: {apiToolsError}</div>
-                    ) : apiTools.length === 0 ? (
-                      <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
-                    ) : (
-                      <>
-                        <ToolSubfolder key="active-tools" title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                        <ToolSubfolder key="unset-tools" title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                      </>
-                    )}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </Collapsible>
-            </SidebarMenuItem>
+            {apiTools.length > 0 && (
+              <SidebarMenuItem key="tools-section">
+                <Collapsible open={isToolsOpen} onOpenChange={setIsToolsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                      <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isToolsOpen && "rotate-90")} />
+                      <span className="flex-1 text-left">Tools</span>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub className="pl-1">
+                      {isLoadingApiTools ? (
+                        <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
+                      ) : apiToolsError ? (
+                        <div className="p-1 text-xs text-red-400">Error: {apiToolsError}</div>
+                      ) : apiTools.length === 0 ? (
+                        <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
+                      ) : (
+                        <>
+                          <ToolSubfolder key="active-tools" title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                          <ToolSubfolder key="unset-tools" title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                        </>
+                      )}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+            )}
 
           </SidebarMenu>
         </SidebarContent>
