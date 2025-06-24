@@ -14,13 +14,13 @@ export function useDashboards() {
     const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const detailedDashboardIdRef = useRef<string | null>(null);
-    
+
     useEffect(() => {
         detailedDashboardIdRef.current = detailedDashboard?.id ?? null;
     }, [detailedDashboard]);
 
     const fetchDashboardById = useCallback(async (dashboardId: string): Promise<void> => {
-        setIsLoadingDetails(true);
+        // setIsLoadingDetails(true);
         // Do not clear detailedDashboard here to avoid flickering during polling
         try {
             const token = await getToken();
@@ -100,7 +100,8 @@ export function useDashboards() {
     return { 
         dashboards, 
         detailedDashboard,
-        isLoading: isLoadingList || isLoadingDetails,
+        isLoadingList,
+        isLoadingDetails,
         error, 
         refetchDashboards: fetchDashboards,
         fetchDashboardById,

@@ -13,7 +13,7 @@ interface AIDashboardPanelProps {
 export default function AIDashboardPanel({ selectedDashboard }: AIDashboardPanelProps) {
   const { 
     detailedDashboard, 
-    isLoading, 
+    isLoadingDetails, 
     error, 
     fetchDashboardById 
   } = useDashboardContext();
@@ -25,7 +25,7 @@ export default function AIDashboardPanel({ selectedDashboard }: AIDashboardPanel
   }, [selectedDashboard, fetchDashboardById]);
           
   const renderContent = () => {
-    if (isLoading && !detailedDashboard) { // Show skeleton only on initial load
+    if (isLoadingDetails && !detailedDashboard) { // Show skeleton only on initial load
       return <Skeleton className="w-full h-full" />;
     }
     if (error) {
@@ -60,7 +60,7 @@ export default function AIDashboardPanel({ selectedDashboard }: AIDashboardPanel
             {selectedDashboard?.name || 'AI Dashboard'}
           </h2>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            {isLoading ? 'Loading...' : detailedDashboard ? 'Live Preview' : 'Select a dashboard'}
+            {isLoadingDetails ? 'Loading...' : detailedDashboard ? 'Live Preview' : 'Select a dashboard'}
           </p>
         </div>
       </div>
