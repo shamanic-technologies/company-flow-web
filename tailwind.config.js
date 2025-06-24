@@ -100,6 +100,5 @@ module.exports = {
     require("@tailwindcss/typography"),
     require("@tailwindcss/forms"),
     require("tailwindcss-animate"),
-    // require('@tremor/react/tailwind'), // Temporarily removed to debug module resolution
 ],
 } 

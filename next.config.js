@@ -37,7 +37,7 @@ const nextConfig = {
       },
     ],
   },
-  transpilePackages: ["lucide-react", "@agent-base/api-client"],
+  transpilePackages: ["lucide-react", "@agent-base/api-client", "@tremor/react"],
   webpack: (config, { isServer }) => {
     // Improve path alias resolution
     config.resolve.alias = {

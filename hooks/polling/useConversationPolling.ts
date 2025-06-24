@@ -27,7 +27,6 @@ export function useConversationPolling({
 
   useEffect(() => {
     const performFetch = () => {
-      console.log('useConversationPolling: Polling for all user conversations...');
       refreshConversations().catch(error => {
         console.error('useConversationPolling: Error during polling for conversations:', error);
       });
@@ -42,17 +41,12 @@ export function useConversationPolling({
     if (isSignedIn && activeOrgId) { 
       performFetch(); // Initial fetch
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useConversationPolling: Started polling for all user conversations for org ${activeOrgId} every ${pollingInterval}ms.`);
-    } else {
-      let reason = !isSignedIn ? "user not signed in" : "no active organization";
-      console.log(`useConversationPolling: Polling for conversations stopped/not started (${reason}).`);
     }
 
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log('useConversationPolling: Stopped polling for all user conversations.');
       }
     };
   }, [refreshConversations, pollingInterval, isSignedIn, activeOrgId]);

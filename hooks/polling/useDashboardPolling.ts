@@ -36,17 +36,14 @@ export function useDashboardPolling({
     if (isSignedIn && activeOrgId) {
       performFetch();
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useDashboardPolling: Started polling dashboards for org ${activeOrgId} every ${pollingInterval}ms.`);
     } else {
       let reason = !isSignedIn ? "user not signed in" : "no active organization";
-      console.log(`useDashboardPolling: Polling for dashboards stopped/not started (${reason}).`);
     }
 
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log('useDashboardPolling: Stopped polling for dashboards.');
       }
     };
   }, [fetchDashboards, pollingInterval, isSignedIn, activeOrgId]);

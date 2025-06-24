@@ -46,10 +46,10 @@ export async function POST(req: NextRequest) {
 
     if (!queryResponse.success) {
       console.error(`[API /dashboard/query] Error executing query:`, queryResponse.error);
-      return createErrorResponse(500, 'API_ERROR', 'Failed to execute query', queryResponse.error);
+      return new Response(JSON.stringify(queryResponse), {status: 500});
     }
-
-    return createSuccessResponse(queryResponse.data, 200); 
+    console.debug(queryResponse, null, 2);
+    return new Response(JSON.stringify(queryResponse.data), {status: 200}); 
 
   } catch (error: any) {
     console.error('[API /dashboard/query] Error:', error);

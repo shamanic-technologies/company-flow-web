@@ -1,114 +1,89 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { DashboardLayout, DashboardBlockConfig } from '@agent-base/types';
-import { Card, Title, Text, Metric, Grid, BarChart, DonutChart, Callout, LineChart } from '@tremor/react';
-import { useAuth } from '@clerk/nextjs';
-import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { Card, Text, Title } from '@tremor/react';
 
-const defaultColors = ['blue', 'green', 'yellow', 'red', 'purple', 'indigo'];
+import { useDashboardBlockQuery } from '@/hooks/useDashboardBlockQuery';
+import { MetricCard } from './dashboard-blocks/MetricCard';
+import { UsageCard } from './dashboard-blocks/UsageCard';
+import { DetailsCard } from './dashboard-blocks/DetailsCard';
+import { LineChartBlock } from './dashboard-blocks/LineChartBlock';
+import { BarChartBlock } from './dashboard-blocks/BarChartBlock';
+import { DonutChartBlock } from './dashboard-blocks/DonutChartBlock';
+import { TableBlock } from './dashboard-blocks/TableBlock';
+import { CalloutBlock } from './dashboard-blocks/CalloutBlock';
+import { TextBlock } from './dashboard-blocks/TextBlock';
+import { GridBlock } from './dashboard-blocks/GridBlock';
+import { DashboardBlockQueryProvider } from '../context/DashboardBlockQueryProvider';
 
 // --- Block Component Mapper ---
 const BlockComponentMapper: { [key: string]: React.FC<any> } = {
-  MetricCard: ({ title, source, change, changeType }) => (
-    <Card>
-      <Title>{title}</Title>
-      <Metric>{source?.value || 'N/A'}</Metric>
-      {change && <Text className={`mt-2 ${changeType === 'positive' ? 'text-green-500' : 'text-red-500'}`}>{change}</Text>}
-    </Card>
-  ),
-  LineChart: ({ title, data, props }) => (
-    <Card>
-      <Title>{title}</Title>
-      <LineChart data={data || []} index={props.index} categories={props.categories} colors={props.colors || defaultColors} />
-    </Card>
-  ),
-  BarChart: ({ title, data, props }) => (
-    <Card>
-      <Title>{title}</Title>
-      <BarChart data={data || []} index={props.index} categories={props.categories} colors={props.colors || defaultColors} />
-    </Card>
-  ),
-  DonutChart: ({ title, data, props }) => (
-    <Card>
-      <Title>{title}</Title>
-      <DonutChart data={data || []} index={props.index} category={props.category} colors={props.colors || defaultColors} />
-    </Card>
-  ),
-  Table: ({ title, data }) => (
-    <Card>
-      <Title>{title}</Title>
-      <pre className="text-xs mt-4 p-2 bg-gray-100 rounded">{JSON.stringify(data, null, 2)}</pre>
-    </Card>
-  ),
-  Text: ({ content, props }) => <p className={props?.className}>{content}</p>,
-  Callout: ({ title, content, props }) => (
-    <Callout
-      className="mt-4"
-      title={title}
-      icon={props?.icon === 'Info' ? CheckCircleIcon : ExclamationTriangleIcon}
-      color={props?.color || 'blue'}
-    >
-      {content}
-    </Callout>
-  ),
-  Grid: ({ children, props }) => (
-    <Grid {...props}>{children}</Grid>
-  ),
+  MetricCard,
+  UsageCard,
+  DetailsCard,
+  LineChart: LineChartBlock,
+  BarChart: BarChartBlock,
+  DonutChart: DonutChartBlock,
+  Table: TableBlock,
+  Text: TextBlock,
+  Callout: CalloutBlock,
+  Grid: GridBlock,
 };
 
 // --- Single Block Renderer ---
 const Block = ({ config }: { config: DashboardBlockConfig }) => {
-  const [data, setData] = useState<any[] | null>(() => {
-    if ('source' in config && config.source && 'data' in config.source && config.source.data) {
-        return config.source.data;
-    }
-    return null;
-  });
-  const [loading, setLoading] = useState(false);
-  const { getToken } = useAuth();
-
-  useEffect(() => {
-    if ('source' in config && config.source?.query) {
-      setLoading(true);
-      const fetchData = async () => {
-        try {
-          const token = await getToken();
-          const response = await fetch(`/api/dashboard/query`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ query: config.source.query })
-          });
-          const result = await response.json();
-          if (result.success) {
-            setData(result.data);
-          } else {
-            console.error("Query failed:", result.error);
-            setData([]);
-          }
-        } catch (err) {
-          console.error("Error fetching block data:", err);
-          setData([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchData();
-    }
-  }, [config, getToken]);
+  const { data, loading, error } = useDashboardBlockQuery(config);
 
   const Component = BlockComponentMapper[config.type];
-  if (!Component) return <div>Unknown block type: {config.type}</div>;
-  if (loading) return <Card><Title>{'title' in config ? config.title : 'Loading...'}</Title><Text>Loading data...</Text></Card>;
 
-  const children = 'children' in config && config.children?.map((childConfig: DashboardBlockConfig, index: number) => <Block key={index} config={childConfig} />);
+  if (error) {
+    return (
+      <Card className="bg-white dark:bg-gray-950 border border-red-200 dark:border-red-800 shadow-sm">
+        <Title className="text-sm font-medium text-red-700 dark:text-red-300">
+          Error loading block
+        </Title>
+        <Text className="text-xs text-red-600 dark:text-red-400 mt-1">
+          {error}
+        </Text>
+      </Card>
+    );
+  }
+
+  if (!Component) {
+    return (
+      <Card className="bg-white dark:bg-gray-950 border border-red-200 dark:border-red-800 shadow-sm">
+        <Title className="text-sm font-medium text-red-700 dark:text-red-300">
+          Unknown block type: {config.type}
+        </Title>
+        <Text className="text-xs text-red-600 dark:text-red-400 mt-1">
+          This block type is not supported.
+        </Text>
+      </Card>
+    );
+  }
+  
+  if (loading) {
+    return (
+      <Card className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 shadow-sm animate-pulse">
+        <Title className="text-lg font-semibold text-gray-900 dark:text-gray-50 mb-2">
+          {'title' in config ? config.title : 'Loading...'}
+        </Title>
+        <div className="space-y-3">
+          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/2"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        </div>
+      </Card>
+    );
+  }
+
+  const children = 'children' in config && config.children?.map((childConfig: DashboardBlockConfig, index: number) => 
+    <Block key={index} config={childConfig} />
+  );
 
   return <Component {...config} data={data}>{children}</Component>;
 };
-
 
 // --- Main Dashboard Renderer ---
 interface DashboardRendererProps {
@@ -116,7 +91,22 @@ interface DashboardRendererProps {
 }
 
 export function DashboardRenderer({ layout }: DashboardRendererProps) {
-  if (!layout || !layout.children) return <div>Invalid dashboard layout.</div>;
+  if (!layout || !layout.children) {
+    return (
+      <Card className="bg-white dark:bg-gray-950 border border-yellow-200 dark:border-yellow-800 shadow-sm">
+        <Title className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+          Invalid Dashboard Layout
+        </Title>
+        <Text className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+          The dashboard configuration is missing or invalid.
+        </Text>
+      </Card>
+    );
+  }
   
-  return <Block config={layout} />;
+  return (
+    <DashboardBlockQueryProvider>
+      <Block config={layout} />
+    </DashboardBlockQueryProvider>
+  );
 } 

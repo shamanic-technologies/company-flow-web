@@ -5,20 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { ClerkProvider } from '@clerk/nextjs';
 import Script from 'next/script';
 
-import { UserProvider } from '@/components/dashboard/context/UserProvider';
-import { OrganizationProvider } from '@/components/dashboard/context/OrganizationProvider';
-import { AgentProvider } from '@/components/dashboard/context/AgentProvider';
-import { ConversationProvider } from '@/components/dashboard/context/ConversationProvider';
-import { ChatProvider } from '@/components/dashboard/context/ChatProvider';
-import { ApiToolsProvider } from '@/components/dashboard/context/ApiToolsProvider';
-import { WebhookProvider } from '@/components/dashboard/context/WebhookProvider';
-import { BillingProvider } from '@/components/dashboard/context/BillingProvider';
-import { ViewProvider } from '@/components/dashboard/context/ViewProvider';
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { ReadinessProvider } from '@/components/dashboard/context/ReadinessProvider';
-import { LandingPromptProvider } from '@/components/dashboard/context/LandingPromptProvider';
-import { DashboardProvider } from '@/components/dashboard/context/DashboardProvider';
-
 const inter = Inter({ subsets: ["latin"] });
 
 /**
@@ -54,33 +40,7 @@ export default function RootLayout({
           </Script>
         </head>
         <body className={`${inter.className} antialiased h-full flex flex-col`}>
-          <UserProvider>
-            <OrganizationProvider>
-              <BillingProvider>
-                <AgentProvider>
-                  <ConversationProvider>
-                    <ApiToolsProvider>
-                      <WebhookProvider>
-                        <ChatProvider>
-                          <DashboardProvider>
-                            <ViewProvider>
-                              <SidebarProvider>
-                                <ReadinessProvider>
-                                  <LandingPromptProvider>
-                                    {children}
-                                  </LandingPromptProvider>
-                                </ReadinessProvider>
-                              </SidebarProvider>
-                            </ViewProvider>
-                          </DashboardProvider>
-                        </ChatProvider>
-                      </WebhookProvider>
-                    </ApiToolsProvider>
-                  </ConversationProvider>
-                </AgentProvider>
-              </BillingProvider>
-            </OrganizationProvider>
-          </UserProvider>
+          {children}
           <Toaster />
         </body>
       </html>

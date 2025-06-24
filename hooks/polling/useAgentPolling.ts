@@ -40,17 +40,12 @@ export function useAgentPolling({
     if (isSignedIn && activeOrgId) {
       performFetch(); 
       intervalIdRef.current = setInterval(performFetch, pollingInterval);
-      console.log(`useAgentPolling: Started polling agents for org ${activeOrgId} every ${pollingInterval}ms.`);
-    } else {
-      let reason = !isSignedIn ? "user not signed in" : "no active organization";
-      console.log(`useAgentPolling: Polling for agents stopped/not started (${reason}).`);
-    }
+    } 
 
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log('useAgentPolling: Stopped polling for agents.');
       }
     };
   }, [fetchAgents, pollingInterval, isSignedIn, activeOrgId]);

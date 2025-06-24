@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
 
     if (!listResponse.success) {
       console.error('[API /dashboard/list] Error listing dashboards:', listResponse.error);
-      return createErrorResponse(500, 'API_ERROR', 'Failed to list dashboards', listResponse.error);
+      return new Response(JSON.stringify(listResponse), {status: 500});
     }
 
-    return createSuccessResponse(listResponse.data, 200);
+    return new Response(JSON.stringify(listResponse.data), {status: 200});
 
   } catch (error: any) {
     console.error('[API /dashboard/list] Error:', error);

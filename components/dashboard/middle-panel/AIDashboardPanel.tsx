@@ -29,23 +29,37 @@ export default function AIDashboardPanel({ selectedDashboard }: AIDashboardPanel
       return <Skeleton className="w-full h-full" />;
     }
     if (error) {
-      return <div className="text-destructive">Error: {error}</div>;
-        }
+      return (
+        <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-xs text-red-700 dark:text-red-300">Error: {error}</p>
+        </div>
+      );
+    }
     if (detailedDashboard && detailedDashboard.id === selectedDashboard?.id) {
       return <DashboardRenderer layout={detailedDashboard.layout} />;
     }
     if (selectedDashboard) {
-        return <div>Select a dashboard to view its preview.</div>;
+      return (
+        <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-8 text-center">
+          <p className="text-xs text-gray-600 dark:text-gray-400">Select a dashboard to view its preview.</p>
+        </div>
+      );
     }
-    return <div>No dashboard selected.</div>;
+    return (
+      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-8 text-center">
+        <p className="text-xs text-gray-600 dark:text-gray-400">No dashboard selected.</p>
+      </div>
+    );
   };
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground p-4 gap-4">
-      <div className="flex justify-between items-center border-b pb-2">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 text-foreground p-6 gap-6">
+      <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-4">
         <div>
-          <h2 className="text-lg font-semibold">{selectedDashboard?.name || 'AI Dashboard'}</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50">
+            {selectedDashboard?.name || 'AI Dashboard'}
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
             {isLoading ? 'Loading...' : detailedDashboard ? 'Live Preview' : 'Select a dashboard'}
           </p>
         </div>

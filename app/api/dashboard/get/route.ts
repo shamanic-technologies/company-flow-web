@@ -47,10 +47,9 @@ export async function GET(req: NextRequest) {
 
     if (!getResponse.success) {
       console.error(`[API /dashboard/get] Error getting dashboard ${dashboardId}:`, getResponse.error);
-      return createErrorResponse(500, 'API_ERROR', 'Failed to get dashboard', getResponse.error);
+      return new Response(JSON.stringify(getResponse), {status: 500});
     }
-
-    return createSuccessResponse(getResponse.data, 200); 
+    return new Response(JSON.stringify(getResponse.data), {status: 200}); 
 
   } catch (error: any) {
     console.error('[API /dashboard/get] Error:', error);

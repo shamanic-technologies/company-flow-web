@@ -34,7 +34,6 @@ export function useMessagePolling({
   useEffect(() => {
     const performFetch = () => {
       if (currentConversationIdMiddlePanel) { // Should always be true due to the condition below, but good for safety
-        console.log(`useMessagePolling: Polling for messages in conversation ${currentConversationIdMiddlePanel}...`);
         fetchMessages(currentConversationIdMiddlePanel).catch(error => {
           console.error('useMessagePolling: Error during polling for messages:', error);
         });
@@ -56,14 +55,12 @@ export function useMessagePolling({
       else if (!activeOrgId) reason = "no active organization";
       else if (!currentConversationIdMiddlePanel) reason = "no conversation selected";
       else if (activeAgentView !== 'chat') reason = "not in chat view";
-      console.log(`useMessagePolling: Polling for messages stopped/not started (${reason}).`);
     }
 
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log('useMessagePolling: Stopped polling for messages.');
       }
     };
   }, [fetchMessages, currentConversationIdMiddlePanel, pollingInterval, isSignedIn, activeAgentView, activeOrgId]); // Added activeOrgId

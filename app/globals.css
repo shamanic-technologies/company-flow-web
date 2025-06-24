@@ -1,3 +1,4 @@
+@import './tremor.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -103,6 +104,49 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  /* Additional global styles for chart components */
+  .recharts-legend-item-text {
+    @apply text-xs text-gray-700 dark:text-gray-300;
+  }
+  .recharts-tooltip-wrapper .recharts-tooltip-label {
+    @apply text-xs font-semibold text-gray-900 dark:text-gray-50;
+  }
+  .recharts-tooltip-wrapper .recharts-tooltip-item-name,
+  .recharts-tooltip-wrapper .recharts-tooltip-item-separator,
+  .recharts-tooltip-wrapper .recharts-tooltip-item-value {
+    @apply text-xs text-gray-700 dark:text-gray-300;
+  }
+  
+  .recharts-text.recharts-label,
+  .recharts-text.recharts-cartesian-axis-tick-value {
+      @apply text-xs fill-gray-500 dark:fill-gray-500;
+  }
+
+  /* Chart Color Overrides for Dark Mode */
+  .dark .tremor-chart-bar-area, .dark .tremor-chart-bar, .dark .tremor-chart-line, .dark .tremor-chart-area-area {
+    stroke-opacity: 1 !important;
+    fill-opacity: 0.8 !important;
+  }
+
+  .dark .stroke-blue-500 { stroke: #60a5fa; }
+  .dark .fill-blue-500 { fill: #60a5fa; }
+  .dark .stroke-emerald-500 { stroke: #34d399; }
+  .dark .fill-emerald-500 { fill: #34d399; }
+  .dark .stroke-violet-500 { stroke: #8b5cf6; }
+  .dark .fill-violet-500 { fill: #8b5cf6; }
+  .dark .stroke-amber-500 { stroke: #f59e0b; }
+  .dark .fill-amber-500 { fill: #f59e0b; }
+  .dark .stroke-gray-500 { stroke: #9ca3af; }
+  .dark .fill-gray-500 { fill: #9ca3af; }
+  .dark .stroke-cyan-500 { stroke: #22d3ee; }
+  .dark .fill-cyan-500 { fill: #22d3ee; }
+  .dark .stroke-pink-500 { stroke: #ec4899; }
+  .dark .fill-pink-500 { fill: #ec4899; }
+  .dark .stroke-rose-500 { stroke: #f43f5e; }
+  .dark .fill-rose-500 { fill: #f43f5e; }
+  .dark .stroke-yellow-500 { stroke: #eab308; }
+  .dark .fill-yellow-500 { fill: #eab308; }
 }
 
 @layer base {
@@ -122,4 +166,8 @@
   100% {
     background-position: 200% 0;
   }
+} 
+
+html {
+  scroll-behavior: smooth;
 } 
