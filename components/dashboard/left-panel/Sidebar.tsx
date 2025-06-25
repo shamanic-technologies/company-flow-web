@@ -249,7 +249,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
             )}
 
             {/* Agents Section (moved below Inbound) */}
-            {agents.length > 1 && (
+            {agents.length > 0 && (
             <SidebarMenuItem key="agents-section">
               <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
                 <CollapsibleTrigger asChild>
