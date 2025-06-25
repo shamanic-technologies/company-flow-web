@@ -1,6 +1,7 @@
 import React from 'react';
 import { Callout } from '@tremor/react';
 import { CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import MemoizedMarkdown from '../../chat/MemoizedMarkdown';
 
 interface CalloutBlockProps {
   title: string;
@@ -38,7 +39,7 @@ export const CalloutBlock: React.FC<CalloutBlockProps> = ({ title, content, prop
         color={color}
         className="text-xs"
       >
-        {content}
+        <MemoizedMarkdown content={content} id={`callout-${title}`} />
       </Callout>
     </div>
   );
