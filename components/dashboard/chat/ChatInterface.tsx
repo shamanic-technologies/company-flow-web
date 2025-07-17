@@ -51,6 +51,8 @@ export default function ChatInterface({
     data,
   } = chat;
 
+  console.log('ChatInterface received handleSubmit:', handleSubmit.toString());
+
   useChatViewEffects({
     messages,
     messagesEndRef,

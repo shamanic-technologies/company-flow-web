@@ -147,6 +147,43 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
 
 
   /**
+   * Creates a new message object with user-specific metadata in the annotations.
+   * If the message is not from a user, it returns the message as is.
+   * @param {Message | CreateMessage} message - The message to add metadata to.
+   * @returns {Message | CreateMessage} The message with added metadata.
+   */
+  const addUserMetadata = useCallback((message: Message | CreateMessage): Message | CreateMessage => {
+    if (message.role !== 'user') {
+      return message;
+    }
+
+    const metadata: UserMessageMetadata = {
+      type: 'user',
+      started_at: new Date().toISOString(),
+      from_client_user: user ? {
+        displayName: user.fullName || undefined,
+        profileImage: user.imageUrl || undefined,
+      } : {},
+      to_agent: agent ? {
+        id: agent.id,
+        firstName: agent.firstName,
+        lastName: agent.lastName,
+        profilePicture: agent.profilePicture,
+      } : {},
+    };
+    console.debug('[useConfiguredChat] Metadata:', metadata);
+
+    return {
+      ...message,
+      annotations: [
+        ...(message.annotations || []),
+        metadata as unknown as JSONValue,
+      ],
+    };
+  }, [user, agent]);
+
+
+  /**
    * useEffect hook to process credit consumption based on data streamed from the backend.
    * It looks for 'credit_info' payloads in chatHelpers.data.
    * If a payload with 'costInUSDCents' is found and not yet processed (using transactionId),
@@ -220,8 +257,22 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     //   return;
     // }
     setChatError(null); 
-    chatHelpers.handleSubmit(event, chatRequestOptions as any); 
-  }, [chatHelpers.handleSubmit, validateCredits, setChatError]);
+
+    if (chatHelpers.input === '') {
+      return;
+    }
+
+    const messageToAppend: CreateMessage = {
+      role: 'user',
+      content: chatHelpers.input,
+    };
+    
+    const messageWithMetadata = addUserMetadata(messageToAppend);
+    
+    chatHelpers.append(messageWithMetadata, chatRequestOptions as any);
+    chatHelpers.setInput('');
+
+  }, [chatHelpers, addUserMetadata, validateCredits, setChatError]);
 
   /**
    * Appends a message with credit validation.
@@ -241,34 +292,11 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     // }
     setChatError(null); 
     
-    const messageWithMetadata = message.role === 'user' ? (() => {
-      const metadata: UserMessageMetadata = {
-        type: 'user',
-        started_at: new Date().toISOString(),
-        from_client_user: user ? {
-          displayName: user.fullName || undefined,
-          profileImage: user.imageUrl || undefined,
-        } : {},
-        to_agent: agent ? { 
-          id: agent.id,
-          firstName: agent.firstName,
-          lastName: agent.lastName,
-          profilePicture: agent.profilePicture,
-        } : {},
-      };
-  
-      return {
-        ...message,
-        annotations: [
-          ...(message.annotations || []),
-          metadata as unknown as JSONValue,
-        ]
-      };
-    })() : message;
+    const messageWithMetadata = addUserMetadata(message);
     
     const result = chatHelpers.append(messageWithMetadata, chatRequestOptions as any); 
     return result;
-  }, [chatHelpers.append, validateCredits, setChatError, agent, user]);
+  }, [chatHelpers.append, validateCredits, setChatError, addUserMetadata]);
 
   return {
     ...chatHelpers,

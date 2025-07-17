@@ -13,7 +13,7 @@ import {
 
 // Import Clerk's auth helper for server-side authentication
 import { auth } from "@clerk/nextjs/server";
-import { getOrCreateAgent } from '@agent-base/api-client';
+import { getOrCreateAgents } from '@agent-base/api-client';
 import { AgentBaseCredentials } from '@agent-base/types';
 
 
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       clientAuthOrganizationId: orgId,
       platformApiKey: agentBaseApiKey
     }
-    const getOrCreateAgentResponse = await getOrCreateAgent(platformUserApiServiceCredentials);
+    const getOrCreateAgentResponse = await getOrCreateAgents(platformUserApiServiceCredentials);
     if (!getOrCreateAgentResponse.success) {
       console.error('[API /agents/get-or-create] Error getting or creating agent:', getOrCreateAgentResponse.error);
       return createErrorResponse(500, 'AGENT_ERROR', 'Error getting or creating agent', getOrCreateAgentResponse.error);

@@ -1,10 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAllUserConversationsPlatformUserApiService } from '@agent-base/api-client'; 
+import { getAllClientUserConversationsApiService } from '@agent-base/api-client'; 
 import { ServiceResponse, Conversation, AgentBaseCredentials } from '@agent-base/types';
 
 // Import Clerk's auth helper for server-side authentication
 import { auth } from "@clerk/nextjs/server";
-import { createErrorResponse } from '../../utils';
+import { createErrorResponse } from '@/app/api/utils';
 
 // Assuming these utility functions are available and correctly pathed from the example
 // You might need to adjust the path or ensure these exist in your ../../utils location
@@ -41,7 +41,13 @@ export async function GET(req: NextRequest) { // Changed to NextRequest for cons
             platformApiKey: platformApiKey,
         };
 
-        const response: ServiceResponse<Conversation[]> = await getAllUserConversationsPlatformUserApiService(credentials);
+        // Ensure credentials are valid before proceeding
+        if (!credentials) {
+            console.error('[API /conversations/list-all-for-user] Invalid credentials');
+            return createErrorResponse(401, 'Unauthorized', 'Valid credentials are required.');
+        }
+
+        const response: ServiceResponse<Conversation[]> = await getAllClientUserConversationsApiService(credentials);
 
         if (response.success) {
             // Using NextResponse directly for success response

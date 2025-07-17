@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
         clientAuthOrganizationId: orgId,
         platformApiKey: agentBaseApiKey
     };
-
+    // TODO: Add conversationId to the payload if not present
+    console.debug('[API /agents/run] messages', JSON.stringify(messages, null, 2));
     const response = await triggerAgentRunPlatformUserApiServiceStream(
         conversationId,
         messages,
