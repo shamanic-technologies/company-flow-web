@@ -9,6 +9,8 @@ import { useCredits } from '@/hooks/useCredits';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { useUserContext } from './UserProvider';
 import { usePlanInfo } from '@/hooks/usePlanInfo';
+import { useAgentContext } from './AgentProvider';
+import { useUser } from '@clerk/nextjs';
 
 // This is a more accurate representation of what useConfiguredChat returns
 export type ConfiguredChatHelpers = {
@@ -60,6 +62,12 @@ export const ChatContext = createContext<ChatContextType>({
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { activeOrgId } = useOrganizationContext();
   const { handleClerkLogout } = useUserContext();
+  const { user } = useUser();
+  const { 
+    agents,
+    selectedAgentIdMiddlePanel,
+    selectedAgentIdRightPanel
+  } = useAgentContext();
   const { 
     currentConversationIdMiddlePanel, 
     currentConversationIdRightPanel,
@@ -90,12 +98,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     fetchPlanInfo,
   };
 
+  const selectedAgentMiddlePanel = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
+  const selectedAgentRightPanel = agents.find(agent => agent.id === selectedAgentIdRightPanel);
+
   const chatMiddlePanel = useConfiguredChat({
     api: '/api/agents/run',
     id: currentConversationIdMiddlePanel ?? undefined,
     initialMessages: initialMessagesMiddlePanel,
     activeOrgId: activeOrgId,
     creditOps: creditOps,
+    agent: selectedAgentMiddlePanel,
+    user,
   });
 
   const chatRightPanel = useConfiguredChat({
@@ -104,6 +117,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     initialMessages: initialMessagesRightPanel,
     activeOrgId: activeOrgId,
     creditOps: creditOps,
+    agent: selectedAgentRightPanel,
+    user,
   });
 
   const contextValue = useMemo(() => ({

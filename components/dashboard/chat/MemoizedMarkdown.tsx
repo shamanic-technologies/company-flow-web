@@ -14,8 +14,6 @@ import { marked } from 'marked';
 import { memo, useMemo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import remarkBreaks from 'remark-breaks';
 
 /**
  * Parse a markdown string into an array of block tokens
@@ -50,11 +48,7 @@ const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => {
     return (
       <div className="prose prose-invert prose-sm max-w-none text-xs">
-        <ReactMarkdown 
-          remarkPlugins={[remarkGfm, remarkBreaks]} 
-          rehypePlugins={[rehypeRaw]}
-          components={customMarkdownComponents}
-        >
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={customMarkdownComponents}>
           {content}
         </ReactMarkdown>
       </div>

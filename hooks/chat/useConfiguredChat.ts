@@ -6,11 +6,14 @@ import { createIdGenerator } from 'ai';
 import { 
   AgentBaseCreditStreamPayload, 
   AgentBaseDeductCreditRequest,
-  AgentBaseCreditConsumptionItem
+  AgentBaseCreditConsumptionItem,
+  UserMessageMetadata,
+  ClientUser,
+  Agent,
 } from '@agent-base/types';
 import { CreditBalance } from '@/types/credit';
 import { usePlanInfo } from '@/hooks/usePlanInfo';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@clerk/nextjs';
 
 /**
  * @file useConfiguredChat.ts
@@ -32,6 +35,8 @@ interface CreditFunctionsAndState {
 interface ConfiguredChatOptions extends UseChatOptions {
   activeOrgId: string | null | undefined;
   creditOps: CreditFunctionsAndState;
+  agent?: Agent;
+  user?: ReturnType<typeof useUser>['user'];
 }
 
 // --- Type Definitions ---
@@ -61,10 +66,12 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     onFinish: callerOnFinish, 
     onError: callerOnError,   
     id: conversationIdFromParams, 
-    api: apiFromParams, 
+    api: apiFromParams,
     streamProtocol: streamProtocolFromParams,
     activeOrgId, 
     creditOps,
+    agent,
+    user,
     ...restOfParams 
   } = params;
 
@@ -233,9 +240,35 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     //   return null;
     // }
     setChatError(null); 
-    const result = chatHelpers.append(message, chatRequestOptions as any); 
+    
+    const messageWithMetadata = message.role === 'user' ? (() => {
+      const metadata: UserMessageMetadata = {
+        type: 'user',
+        started_at: new Date().toISOString(),
+        from_client_user: user ? {
+          displayName: user.fullName || undefined,
+          profileImage: user.imageUrl || undefined,
+        } : {},
+        to_agent: agent ? { 
+          id: agent.id,
+          firstName: agent.firstName,
+          lastName: agent.lastName,
+          profilePicture: agent.profilePicture,
+        } : {},
+      };
+  
+      return {
+        ...message,
+        annotations: [
+          ...(message.annotations || []),
+          metadata as unknown as JSONValue,
+        ]
+      };
+    })() : message;
+    
+    const result = chatHelpers.append(messageWithMetadata, chatRequestOptions as any); 
     return result;
-  }, [chatHelpers.append, validateCredits, setChatError]);
+  }, [chatHelpers.append, validateCredits, setChatError, agent, user]);
 
   return {
     ...chatHelpers,
