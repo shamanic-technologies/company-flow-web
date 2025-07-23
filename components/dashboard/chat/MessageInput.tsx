@@ -39,7 +39,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
   }));
   
   return (
-    <div className="p-3 border-t border-gray-800 h-[70px] flex items-center">
+    <div className="p-3 border-t border-border h-[70px] flex items-center">
       <form 
         onSubmit={handleSubmit}
         className="flex items-center gap-2 w-full"
@@ -51,7 +51,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
             value={input}
             onChange={handleInputChange}
             placeholder="Send a message..."
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 text-gray-200 text-sm"
+            className="w-full px-4 py-2.5 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring text-foreground text-sm"
             disabled={isLoading}
           />
         </div>

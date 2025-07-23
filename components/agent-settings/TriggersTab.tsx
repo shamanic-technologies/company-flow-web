@@ -45,7 +45,7 @@ export default function TriggersTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-100">Agent Triggers</h3>
+        <h3 className="text-lg font-semibold text-foreground">Agent Triggers</h3>
         <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
           Add Trigger
@@ -56,22 +56,22 @@ export default function TriggersTab() {
         {mockTriggers.map((trigger) => {
           const IconComponent = trigger.icon;
           return (
-            <Card key={trigger.id} className="bg-gray-800 border-gray-700">
+            <Card key={trigger.id} className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-gray-700 rounded-lg">
-                      <IconComponent className="w-4 h-4 text-gray-300" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <IconComponent className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-medium text-gray-100">{trigger.name}</h4>
+                        <h4 className="font-medium text-foreground">{trigger.name}</h4>
                         <Badge className={`${getStatusColor(trigger.status)} text-white text-xs`}>
                           {getStatusText(trigger.status)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">{trigger.condition}</p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">{trigger.condition}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         <span className="font-medium">Action:</span> {trigger.action}
                       </p>
                     </div>
@@ -86,10 +86,10 @@ export default function TriggersTab() {
         })}
       </div>
 
-      <Card className="bg-gray-800 border-gray-700 border-dashed">
+      <Card className="bg-card border-border border-dashed">
         <CardContent className="p-6 text-center">
-          <Plus className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-          <p className="text-gray-400 text-sm">Create your first trigger to automate agent responses</p>
+          <Plus className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-muted-foreground text-sm">Create your first trigger to automate agent responses</p>
           <Button variant="outline" size="sm" className="mt-3">
             Get Started
           </Button>

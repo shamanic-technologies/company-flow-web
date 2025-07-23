@@ -124,10 +124,10 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                   </Avatar>
                   <span className="font-medium text-sm">{currentOrganization?.name}</span>
                 </div>
-                <ChevronsUpDown className="h-4 w-4 text-gray-400" />
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-60 p-1 bg-gray-800 border-gray-700 text-gray-200">
+            <PopoverContent className="w-60 p-1 bg-popover border-border text-popover-foreground">
               {organizations.map((org) => (
                 <Button
                   key={org.id}
@@ -138,11 +138,11 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                   {org.name}
                 </Button>
               ))}
-              <div className="border-t border-gray-700 my-1" />
+              <div className="border-t border-border my-1" />
               <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => setCreateOrgOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Create Organization
               </Button>
-              <div className="border-t border-gray-700 my-1" />
+              <div className="border-t border-border my-1" />
               <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => router.push('/dashboard/settings/billing')}>
                 <Settings className="mr-2 h-4 w-4" /> Settings
               </Button>

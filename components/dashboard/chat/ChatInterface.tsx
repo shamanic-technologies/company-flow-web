@@ -71,7 +71,7 @@ export default function ChatInterface({
   }, []);
 
   return (
-    <Card className="flex-1 flex flex-col overflow-hidden bg-gray-900 border-none shadow-none rounded-none">
+    <Card className="flex-1 flex flex-col overflow-hidden bg-background border-none shadow-none rounded-none">
       <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
         <ChatErrorDisplay 
           chatError={chatError?.message ?? null}

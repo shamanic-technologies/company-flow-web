@@ -20,25 +20,25 @@ interface AgentHeaderProps {
  */
 export default function AgentHeader({ agent, onNewChat }: AgentHeaderProps) {
   return (
-    <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800">
+    <div className="flex items-center justify-between p-4 border-b border-border bg-card">
       {agent ? (
         <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10 border-2 border-gray-600">
+          <Avatar className="h-10 w-10 border-2 border-border">
             <AvatarImage 
               src={agent.profilePicture?.startsWith('http') ? agent.profilePicture : undefined} 
               alt={`${agent.firstName} ${agent.lastName}`} 
             />
-            <AvatarFallback className="bg-gray-600 text-gray-300">
+            <AvatarFallback className="bg-muted text-muted-foreground">
               {agent.firstName?.charAt(0) || ''}{agent.lastName?.charAt(0) || ''}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="font-semibold text-gray-100">{`${agent.firstName} ${agent.lastName}`}</h2>
-            <p className="text-sm text-gray-400">{agent.jobTitle}</p>
+            <h2 className="font-semibold text-foreground">{`${agent.firstName} ${agent.lastName}`}</h2>
+            <p className="text-sm text-muted-foreground">{agent.jobTitle}</p>
           </div>
         </div>
       ) : (
-        <div className="text-gray-500">Select an agent to start chatting</div>
+        <div className="text-muted-foreground">Select an agent to start chatting</div>
       )}
       
       {/* --- New Chat Button --- */}

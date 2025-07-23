@@ -9,7 +9,7 @@ export default function InstructionsTab({ agent }: InstructionsTabProps) {
   return (
     <ScrollArea className="h-full">
       {agent?.memory ? (
-        <pre className="text-xs bg-gray-900/50 p-3 rounded overflow-auto h-full text-gray-300 font-mono whitespace-pre-wrap">
+        <pre className="text-xs bg-muted/50 p-3 rounded overflow-auto h-full text-foreground font-mono whitespace-pre-wrap">
           {(() => {
             try {
               const memoryObject = typeof agent.memory === 'string' 
@@ -23,7 +23,7 @@ export default function InstructionsTab({ agent }: InstructionsTabProps) {
           })()}
         </pre>
       ) : (
-        <div className="text-center text-gray-500 py-4">No memory data available for this agent.</div>
+        <div className="text-center text-muted-foreground py-4">No memory data available for this agent.</div>
       )}
     </ScrollArea>
   );

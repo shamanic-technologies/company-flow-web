@@ -17,7 +17,7 @@ interface ToolDetailPanelProps {
 const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ searchApiTool }) => {
   if (!searchApiTool) {
     return (
-      <div className="p-4 h-full flex items-center justify-center text-sm text-gray-500">
+      <div className="p-4 h-full flex items-center justify-center text-sm text-muted-foreground">
         No tool selected or tool data is unavailable.
       </div>
     );
@@ -54,114 +54,114 @@ const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ searchApiTool }) => {
   };
 
   return (
-    <div className="p-2 h-full overflow-auto text-sm text-gray-200 space-y-2">
+    <div className="p-2 h-full overflow-auto text-sm text-foreground space-y-2">
       {/* --- Tool Details Card --- */}
-      <Card className="border-gray-700 text-gray-300">
+      <Card className="border-border text-card-foreground">
         <CardHeader className="p-3 flex flex-row items-center space-x-2">
-          <Package className="h-5 w-5 text-gray-400" />
-          <CardTitle className="text-base text-white">Tool: {displayName}</CardTitle>
+          <Package className="h-5 w-5 text-muted-foreground" />
+          <CardTitle className="text-base text-foreground">Tool: {displayName}</CardTitle>
         </CardHeader>
         <CardContent className="text-xs p-3 space-y-1.5">
           <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 items-center">
-            <span className="font-semibold text-gray-400">ID:</span>
+            <span className="font-semibold text-muted-foreground">ID:</span>
             <span className="font-mono break-all">{searchApiTool.apiToolId}</span>
 
             {searchApiTool.name && (
               <>
-                <span className="font-semibold text-gray-400">Name:</span>
+                <span className="font-semibold text-muted-foreground">Name:</span>
                 <span>{searchApiTool.name}</span>
               </>
             )}
 
             {status && (
               <>
-                <span className="font-semibold text-gray-400">Status:</span>
+                <span className="font-semibold text-muted-foreground">Status:</span>
                 <span className="capitalize">{String(status)}</span>
               </>
             )}
 
             {description && (
               <>
-                <span className="font-semibold text-gray-400">Description:</span>
+                <span className="font-semibold text-muted-foreground">Description:</span>
                 <span className="whitespace-pre-wrap">{String(description)}</span>
               </>
             )}
 
             {utilityProvider && (
               <>
-                <span className="font-semibold text-gray-400">Provider:</span>
+                <span className="font-semibold text-muted-foreground">Provider:</span>
                 <span>{String(utilityProvider)}</span>
               </>
             )}
 
             {securityOption && (
               <>
-                <span className="font-semibold text-gray-400">Security:</span>
+                <span className="font-semibold text-muted-foreground">Security:</span>
                 <span>{String(securityOption)}</span>
               </>
             )}
 
             {typeof isVerified === 'boolean' && (
               <>
-                <span className="font-semibold text-gray-400">Verified:</span>
+                <span className="font-semibold text-muted-foreground">Verified:</span>
                 <span>{isVerified ? 'Yes' : 'No'}</span>
               </>
             )}
             
             {userId && (
               <>
-                <span className="font-semibold text-gray-400">User ID:</span>
+                <span className="font-semibold text-muted-foreground">User ID:</span>
                 <span className="font-mono break-all">{String(userId)}</span>
               </>
             )}
 
             {creatorUserId && userId !== creatorUserId && ( // Only show if different from userId
               <>
-                <span className="font-semibold text-gray-400">Creator ID:</span>
+                <span className="font-semibold text-muted-foreground">Creator ID:</span>
                 <span className="font-mono break-all">{String(creatorUserId)}</span>
               </>
             )}
 
             {typeof totalExecutions === 'number' && (
               <>
-                <span className="font-semibold text-gray-400">Total Runs:</span>
+                <span className="font-semibold text-muted-foreground">Total Runs:</span>
                 <span>{totalExecutions}</span>
               </>
             )}
 
             {typeof succeededExecutions === 'number' && (
               <>
-                <span className="font-semibold text-gray-400">Successful:</span>
+                <span className="font-semibold text-muted-foreground">Successful:</span>
                 <span>{succeededExecutions}</span>
               </>
             )}
 
             {typeof failedExecutions === 'number' && (
               <>
-                <span className="font-semibold text-gray-400">Failed:</span>
+                <span className="font-semibold text-muted-foreground">Failed:</span>
                 <span>{failedExecutions}</span>
               </>
             )}
 
             {createdAt && (
               <>
-                <span className="font-semibold text-gray-400">Created:</span>
+                <span className="font-semibold text-muted-foreground">Created:</span>
                 <span>{formatDate(createdAt)}</span>
               </>
             )}
 
             {updatedAt && (
               <>
-                <span className="font-semibold text-gray-400">Updated:</span>
+                <span className="font-semibold text-muted-foreground">Updated:</span>
                 <span>{formatDate(updatedAt)}</span>
               </>
             )}
           </div>
           {/* Placeholder for more tool details like OpenAPI Spec if it's a string */}
           {/* {(tool as any).openapiSpecification && typeof (tool as any).openapiSpecification === 'string' && (
-            <div className="mt-2 pt-2 border-t border-gray-700">
-              <h4 className="font-semibold text-gray-400 mb-1">OpenAPI Spec:</h4>
-              <pre className="whitespace-pre-wrap bg-gray-800 p-2 rounded text-xs font-mono">
+            <div className="mt-2 pt-2 border-t border-border">
+              <h4 className="font-semibold text-muted-foreground mb-1">OpenAPI Spec:</h4>
+              <pre className="whitespace-pre-wrap bg-muted p-2 rounded text-xs font-mono">
                 {String((tool as any).openapiSpecification)}
               </pre>
             </div>
@@ -170,9 +170,9 @@ const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ searchApiTool }) => {
       </Card>
 
       {/* Placeholder for tool-specific actions or configurations */}
-      <Card className="border-gray-700 text-gray-300 mt-2">
+      <Card className="border-border text-card-foreground mt-2">
         <CardHeader className="p-3">
-          <CardTitle className="text-base text-white">Tool Actions / Configuration</CardTitle>
+          <CardTitle className="text-base text-foreground">Tool Actions / Configuration</CardTitle>
         </CardHeader>
         <CardContent className="text-xs p-3">
         </CardContent>

@@ -34,20 +34,20 @@ export default function OutputTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100 flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <Palette className="w-5 h-5 mr-2" />
             Response Style
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tone" className="text-gray-300">
+            <Label htmlFor="tone" className="text-foreground">
               Response Tone
             </Label>
             <Select defaultValue="professional">
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100">
+              <SelectTrigger className="bg-background border-input text-foreground">
                 <SelectValue placeholder="Select tone" />
               </SelectTrigger>
               <SelectContent>
@@ -61,11 +61,11 @@ export default function OutputTab() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="length" className="text-gray-300">
+            <Label htmlFor="length" className="text-foreground">
               Response Length
             </Label>
             <Select defaultValue="medium">
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100">
+              <SelectTrigger className="bg-background border-input text-foreground">
                 <SelectValue placeholder="Select length" />
               </SelectTrigger>
               <SelectContent>
@@ -77,11 +77,11 @@ export default function OutputTab() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="language" className="text-gray-300">
+            <Label htmlFor="language" className="text-foreground">
               Primary Language
             </Label>
             <Select defaultValue="en">
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-gray-100">
+              <SelectTrigger className="bg-background border-input text-foreground">
                 <SelectValue placeholder="Select language" />
               </SelectTrigger>
               <SelectContent>
@@ -95,9 +95,9 @@ export default function OutputTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100">Output Formats</CardTitle>
+          <CardTitle className="text-foreground">Output Formats</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -106,15 +106,15 @@ export default function OutputTab() {
               return (
                 <div
                   key={format.id}
-                  className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gray-600 rounded-lg">
-                      <IconComponent className="w-4 h-4 text-gray-300" />
+                    <div className="p-2 bg-background rounded-lg">
+                      <IconComponent className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-100">{format.name}</h4>
-                      <p className="text-sm text-gray-400">{format.description}</p>
+                      <h4 className="font-medium text-foreground">{format.name}</h4>
+                      <p className="text-sm text-muted-foreground">{format.description}</p>
                     </div>
                   </div>
                   <Switch defaultChecked={format.enabled} />
@@ -125,16 +125,16 @@ export default function OutputTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100 flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <Clock className="w-5 h-5 mr-2" />
             Response Timing
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="typing-delay" className="text-gray-300">
+            <Label htmlFor="typing-delay" className="text-foreground">
               Typing Indicator Delay (seconds)
             </Label>
             <Input
@@ -142,15 +142,15 @@ export default function OutputTab() {
               type="number"
               step="0.1"
               defaultValue="1.5"
-              className="bg-gray-700 border-gray-600 text-gray-100"
+              className="bg-background border-input text-foreground"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               How long to show typing indicator before responding
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="response-delay" className="text-gray-300">
+            <Label htmlFor="response-delay" className="text-foreground">
               Minimum Response Time (seconds)
             </Label>
             <Input
@@ -158,9 +158,9 @@ export default function OutputTab() {
               type="number"
               step="0.1"
               defaultValue="0.5"
-              className="bg-gray-700 border-gray-600 text-gray-100"
+              className="bg-background border-input text-foreground"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Minimum time before sending response (for natural feel)
             </p>
           </div>

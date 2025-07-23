@@ -69,7 +69,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
   const isDoneThinking = reasoningPart && (hasStartedAnswer || !isStreaming);
   
   return (
-    <div className={`flex items-start gap-3 px-2 py-3 rounded-lg ${message.role === 'user' ? "bg-gray-800/50" : "bg-gray-850/30"}`}>
+    <div className={`flex items-start gap-3 px-2 py-3 rounded-lg ${message.role === 'user' ? "bg-secondary/50" : "bg-muted/30"}`}>
       <div className="flex-1 overflow-hidden min-w-0">
         {/* Avatar and Name */}
         <div className="flex items-center gap-2 mb-1">
@@ -80,7 +80,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
                 <AvatarFallback className="text-[10px] bg-gradient-to-br from-indigo-600 to-purple-600 text-white">AI</AvatarFallback>
                 )}
             </Avatar>
-            <div className="text-xs font-medium text-gray-300">
+            <div className="text-xs font-medium text-foreground">
               {message.role === 'user' ? 'You' : `${agentFirstName} ${agentLastName}`}
             </div>
         </div>
@@ -143,7 +143,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
               );
             } else if (part.type === 'text') {
               return (
-                <div key={`text-${index}`} className="text-xs text-gray-200">
+                <div key={`text-${index}`} className="text-xs text-foreground">
                   <MemoizedMarkdown content={part.text || ''} id={`${message.id}-part-${index}`} />
                 </div>
               );
@@ -154,7 +154,7 @@ export const ChatMessage = ({ message, userInitials, agentFirstName, agentLastNa
 
         {/* Fallback for user messages or messages without text parts */}
         {message.role === 'user' && (!textParts || textParts.length === 0) && (
-          <div className="text-xs text-gray-200">
+          <div className="text-xs text-foreground">
             <MemoizedMarkdown content={message.content} id={message.id} />
           </div>
         )}

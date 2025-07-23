@@ -55,14 +55,14 @@ const SimpleBarGraph: React.FC<BarGraphProps> = ({ title, data, colorClass }) =>
   const MAX_BAR_HEIGHT = 100; // pixels
   
   return (
-    <div className="flex-1 bg-gray-800 p-3 rounded-md">
+    <div className="flex-1 bg-card p-3 rounded-md border border-border">
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-semibold text-gray-300 flex items-center gap-1.5">
+        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           {title}
         </h4>
         
         {/* Show max value to provide scale context */}
-        <span className="text-xs text-gray-500">{maxValue > 0 ? `Max: ${maxValue}` : ''}</span>
+        <span className="text-xs text-muted-foreground">{maxValue > 0 ? `Max: ${maxValue}` : ''}</span>
       </div>
       
       <div className="h-32 flex items-end justify-between space-x-1 mt-5 pt-2 relative">
@@ -91,19 +91,19 @@ const SimpleBarGraph: React.FC<BarGraphProps> = ({ title, data, colorClass }) =>
           return (
             <div key={i} className="flex flex-col items-center flex-1 group relative">
               {/* Tooltip on hover */}
-              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs font-medium text-white bg-gray-800 px-2 py-1 rounded pointer-events-none z-10">
+              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs font-medium text-foreground bg-popover border border-border px-2 py-1 rounded pointer-events-none z-10">
                 {item.value}
               </div>
               {/* The bar itself */}
               <div 
-                className={`w-full rounded-t ${item.value > 0 ? colorClass : 'bg-gray-800'} transition-colors duration-200`} 
+                className={`w-full rounded-t ${item.value > 0 ? colorClass : 'bg-muted'} transition-colors duration-200`} 
                 style={{ 
                   height: `${heightPx}px`,
                   minHeight: item.value > 0 ? '4px' : '0'
                 }}
               />
               {/* Month label */}
-              <div className="text-xs text-gray-500 mt-1">{item.month}</div>
+              <div className="text-xs text-muted-foreground mt-1">{item.month}</div>
             </div>
           );
         })}
@@ -314,22 +314,22 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversati
   }
 
   if (error) {
-    return <div className="p-4 text-red-400">Error loading data: {error}</div>;
+    return <div className="p-4 text-destructive">Error loading data: {error}</div>;
   }
 
   // If no actions found at all (not just filtered)
   if (recentProcessedActions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-10 text-center bg-gray-800/30 rounded-lg">
-        <div className="w-16 h-16 mb-6 rounded-full bg-gray-800 flex items-center justify-center">
-          <Filter className="w-8 h-8 text-gray-500" />
+      <div className="flex flex-col items-center justify-center p-10 text-center bg-muted/30 rounded-lg">
+        <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
+          <Filter className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-gray-300 text-lg font-medium mb-2">No Actions Found</h3>
-        <p className="text-gray-500 max-w-md mb-4">
+        <h3 className="text-foreground text-lg font-medium mb-2">No Actions Found</h3>
+        <p className="text-muted-foreground max-w-md mb-4">
           When your agent performs actions like sending emails, processing payments, or starting conversations, 
           they will appear here.
         </p>
-        <p className="text-gray-600 text-sm">
+        <p className="text-muted-foreground text-sm">
           Try asking your agent to perform an action in the chat.
         </p>
       </div>
@@ -340,7 +340,7 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversati
     <div className="flex flex-col">
       {/* Graphs Section */}
       <div className="mb-6 flex-shrink-0">
-        <h3 className="text-lg font-semibold mb-3 text-gray-200">Monthly Action Summary</h3>
+        <h3 className="text-lg font-semibold mb-3 text-foreground">Monthly Action Summary</h3>
         <div className="flex space-x-4">
           <SimpleBarGraph 
             title={<><GmailIcon className="h-4 w-4" /><span>Sent emails</span></>}
@@ -363,25 +363,25 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversati
       {/* Actions Table Section with Filters */}
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-semibold text-gray-200 flex-shrink-0">Actions</h3>
+          <h3 className="text-lg font-semibold text-foreground flex-shrink-0">Actions</h3>
           <div className="flex gap-2 items-center">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search actions..."
-                className="pl-8 h-9 w-64 bg-gray-800 border-gray-700 text-sm"
+                className="pl-8 h-9 w-64 bg-background border-input text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-9 w-40 bg-gray-800 border-gray-700 text-sm">
+              <SelectTrigger className="h-9 w-40 bg-background border-input text-sm">
                 <div className="flex items-center">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter type" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="gmail">Emails</SelectItem>
                 <SelectItem value="stripe">Refunds</SelectItem>
@@ -393,20 +393,20 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversati
 
         {/* Actions Table */}
         {filteredActions.length === 0 ? (
-          <div className="text-sm text-gray-500 p-4 text-center bg-gray-800/60 rounded-md">
+          <div className="text-sm text-muted-foreground p-4 text-center bg-muted/60 rounded-md">
             {searchQuery || filterType !== "all" 
               ? "No actions match your filters" 
               : "No actions found"}
           </div>
         ) : (
-          <div className="rounded-md border border-gray-700 overflow-hidden">
+          <div className="rounded-md border border-border overflow-hidden">
             <Table>
-              <TableHeader className="bg-gray-800">
-                <TableRow className="hover:bg-gray-700/50 border-b border-gray-700">
-                  <TableHead className="text-gray-400 font-medium">Time</TableHead>
-                  <TableHead className="text-gray-400 font-medium">Type</TableHead>
-                  <TableHead className="text-gray-400 font-medium">Action</TableHead>
-                  <TableHead className="text-gray-400 font-medium">Details</TableHead>
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-muted/50 border-b border-border">
+                  <TableHead className="text-muted-foreground font-medium">Time</TableHead>
+                  <TableHead className="text-muted-foreground font-medium">Type</TableHead>
+                  <TableHead className="text-muted-foreground font-medium">Action</TableHead>
+                  <TableHead className="text-muted-foreground font-medium">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -417,21 +417,21 @@ const ActionsPanel: React.FC<ActionsPanelProps> = ({ agentId, onSelectConversati
                   return (
                     <TableRow 
                       key={action.id} 
-                      className="hover:bg-gray-700/40 border-b border-gray-800 cursor-pointer transition-all duration-200 group relative"
+                      className="hover:bg-muted/40 border-b border-border cursor-pointer transition-all duration-200 group relative"
                       onClick={() => handleActionClick(action)}
                     >
-                      <TableCell className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors pl-4 relative">
+                      <TableCell className="text-xs text-muted-foreground group-hover:text-foreground transition-colors pl-4 relative">
                         {/* Left highlight bar as pseudo-element inside TableCell */}
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -ml-3" />
                         {formattedDate}
                       </TableCell>
                       <TableCell className="group-hover:scale-110 transition-transform duration-200">
-                        {IconComponent && <IconComponent className="h-5 w-5 text-gray-400 group-hover:text-gray-200" />}
+                        {IconComponent && <IconComponent className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />}
                       </TableCell>
-                      <TableCell className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                      <TableCell className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors">
                         {action.title}
                       </TableCell>
-                      <TableCell className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
+                      <TableCell className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                         {action.detail}
                       </TableCell>
                     </TableRow>

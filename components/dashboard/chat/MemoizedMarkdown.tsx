@@ -47,7 +47,7 @@ const customMarkdownComponents: Components = {
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => {
     return (
-      <div className="prose prose-invert prose-sm max-w-none text-xs">
+      <div className="prose prose-sm max-w-none text-xs text-foreground">
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={customMarkdownComponents}>
           {content}
         </ReactMarkdown>

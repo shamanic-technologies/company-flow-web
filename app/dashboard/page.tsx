@@ -27,16 +27,16 @@ function DashboardLayout() {
      || isLandingPromptProcessing
     ) {
       return (
-        <div className="flex h-full w-full items-center justify-center bg-gray-950">
-          <Skeleton className="h-16 w-16 rounded-full bg-gray-700" /> 
-          <p className="ml-4 text-lg text-gray-300">Loading Dashboard...</p>
+        <div className="flex h-full w-full items-center justify-center bg-background">
+          <Skeleton className="h-16 w-16 rounded-full bg-muted" /> 
+          <p className="ml-4 text-lg text-muted-foreground">Loading Dashboard...</p>
         </div>
       );
   }
 
   // Render the layout once Clerk is loaded. Middleware ensures user is authenticated.
   return (
-    <div className="flex h-screen w-full bg-gray-950 text-gray-50">
+    <div className="flex h-screen w-full bg-background text-foreground">
       <SidebarComponent className="w-64 flex-shrink-0" />
       <div className="flex flex-1 flex-col overflow-hidden">
         <MiddlePanel />

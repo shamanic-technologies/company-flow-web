@@ -53,7 +53,7 @@ export default function RightPanel() {
     }
     
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-800">
+        <div className="flex flex-col h-full bg-background">
             <AgentHeader 
                 agent={chatAgent}
                 onNewChat={handleNewChat}

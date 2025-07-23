@@ -41,49 +41,49 @@ export default function InputTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100 flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <Settings className="w-5 h-5 mr-2" />
             Input Configuration
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="max-length" className="text-gray-300">
+            <Label htmlFor="max-length" className="text-foreground">
               Maximum Message Length
             </Label>
             <Input
               id="max-length"
               type="number"
               defaultValue="2000"
-              className="bg-gray-700 border-gray-600 text-gray-100"
+              className="bg-background border-input text-foreground"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Maximum number of characters allowed in a single message
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rate-limit" className="text-gray-300">
+            <Label htmlFor="rate-limit" className="text-foreground">
               Rate Limit (messages per minute)
             </Label>
             <Input
               id="rate-limit"
               type="number"
               defaultValue="10"
-              className="bg-gray-700 border-gray-600 text-gray-100"
+              className="bg-background border-input text-foreground"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Maximum messages a user can send per minute
             </p>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100">Supported Input Types</CardTitle>
+          <CardTitle className="text-foreground">Supported Input Types</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -92,15 +92,15 @@ export default function InputTab() {
               return (
                 <div
                   key={inputType.id}
-                  className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gray-600 rounded-lg">
-                      <IconComponent className="w-4 h-4 text-gray-300" />
+                    <div className="p-2 bg-background rounded-lg">
+                      <IconComponent className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-100">{inputType.name}</h4>
-                      <p className="text-sm text-gray-400">{inputType.description}</p>
+                      <h4 className="font-medium text-foreground">{inputType.name}</h4>
+                      <p className="text-sm text-muted-foreground">{inputType.description}</p>
                     </div>
                   </div>
                   <Switch defaultChecked={inputType.enabled} />
@@ -111,22 +111,22 @@ export default function InputTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100">Input Preprocessing</CardTitle>
+          <CardTitle className="text-foreground">Input Preprocessing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="preprocessing-rules" className="text-gray-300">
+            <Label htmlFor="preprocessing-rules" className="text-foreground">
               Custom Preprocessing Rules
             </Label>
             <Textarea
               id="preprocessing-rules"
               placeholder="Enter custom rules for input preprocessing..."
-              className="bg-gray-700 border-gray-600 text-gray-100 min-h-[100px]"
+              className="bg-background border-input text-foreground min-h-[100px]"
               defaultValue="- Remove profanity and inappropriate content&#10;- Normalize text formatting&#10;- Extract mentions and hashtags"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Define rules for how inputs should be processed before reaching the agent
             </p>
           </div>

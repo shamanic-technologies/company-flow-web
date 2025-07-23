@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning className="dark scroll-smooth h-full">
+      <html lang="en" suppressHydrationWarning className="scroll-smooth h-full">
         <head>
           <Script async src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}></Script>
           <Script id="google-analytics">

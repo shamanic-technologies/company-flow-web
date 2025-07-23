@@ -64,7 +64,7 @@ export default function ToolsTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-100">Available Tools</h3>
+        <h3 className="text-lg font-semibold text-foreground">Available Tools</h3>
         <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
           Add Custom Tool
@@ -72,9 +72,9 @@ export default function ToolsTab() {
       </div>
 
       {categories.map((category) => (
-        <Card key={category} className="bg-gray-800 border-gray-700">
+        <Card key={category} className="bg-card border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-gray-100 flex items-center text-md">
+            <CardTitle className="text-foreground flex items-center text-md">
               <Wrench className="w-4 h-4 mr-2" />
               {category}
             </CardTitle>
@@ -88,20 +88,20 @@ export default function ToolsTab() {
                   return (
                     <div
                       key={tool.id}
-                      className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gray-600 rounded-lg">
-                          <IconComponent className="w-4 h-4 text-gray-300" />
+                        <div className="p-2 bg-background rounded-lg">
+                          <IconComponent className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <h4 className="font-medium text-gray-100">{tool.name}</h4>
+                            <h4 className="font-medium text-foreground">{tool.name}</h4>
                             <Badge className={`${getCategoryColor(tool.category)} text-white text-xs`}>
                               {tool.category}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-400 mt-1">{tool.description}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{tool.description}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -118,27 +118,27 @@ export default function ToolsTab() {
         </Card>
       ))}
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-100">Tool Usage Statistics</CardTitle>
+          <CardTitle className="text-foreground">Tool Usage Statistics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="text-center p-3 bg-gray-700 rounded-lg">
-              <div className="text-2xl font-bold text-blue-400">23</div>
-              <div className="text-gray-400">Tools Used Today</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">23</div>
+              <div className="text-muted-foreground">Tools Used Today</div>
             </div>
-            <div className="text-center p-3 bg-gray-700 rounded-lg">
-              <div className="text-2xl font-bold text-green-400">156</div>
-              <div className="text-gray-400">Total Tool Calls</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-green-600">156</div>
+              <div className="text-muted-foreground">Total Tool Calls</div>
             </div>
-            <div className="text-center p-3 bg-gray-700 rounded-lg">
-              <div className="text-2xl font-bold text-purple-400">5</div>
-              <div className="text-gray-400">Active Tools</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">5</div>
+              <div className="text-muted-foreground">Active Tools</div>
             </div>
-            <div className="text-center p-3 bg-gray-700 rounded-lg">
-              <div className="text-2xl font-bold text-orange-400">98%</div>
-              <div className="text-gray-400">Success Rate</div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">98%</div>
+              <div className="text-muted-foreground">Success Rate</div>
             </div>
           </div>
         </CardContent>
