@@ -193,6 +193,7 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     ...chatHelpers,
     handleSubmit,
     append,
+    agent,
     chatError,
     rawError,
     errorInfo, 

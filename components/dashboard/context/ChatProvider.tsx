@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { Message, CreateMessage } from 'ai/react';
 import { useConfiguredChat, CustomChatRequestOptions } from '@/hooks/chat/useConfiguredChat';
 import { useConversationContext } from './ConversationProvider';
@@ -9,6 +9,7 @@ import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { useUserContext } from './UserProvider';
 import { useAgentContext } from './AgentProvider';
 import { useUser } from '@clerk/nextjs';
+import { Agent } from '@agent-base/types';
 
 // This is a more accurate representation of what useConfiguredChat returns
 export type ConfiguredChatHelpers = {
@@ -28,6 +29,7 @@ export type ConfiguredChatHelpers = {
     toolCallId: string;
     result: any;
   }) => void;
+  agent: Agent | undefined;
 };
 
 interface ChatContextType {
@@ -42,26 +44,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { 
     agents,
-    selectedAgentId,
   } = useAgentContext();
   const { 
     currentConversationId,
   } = useConversationContext();
   
+  const [chatAgent, setChatAgent] = useState<Agent | undefined>(undefined);
+
+  // Set the chat agent only once when the agent list is first loaded.
+  useEffect(() => {
+    if (!chatAgent && agents.length > 0) {
+      setChatAgent(agents[0]);
+    }
+  }, [agents, chatAgent]);
+
   const { currentConversationMessages: initialMessages } = useConversationMessages({
     conversationId: currentConversationId,
     handleLogout: handleClerkLogout,
     activeOrgId,
   });
 
-  const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
-
   const chat = useConfiguredChat({
     api: '/api/agents/run',
     id: currentConversationId ?? undefined,
     initialMessages: initialMessages,
     activeOrgId: activeOrgId,
-    agent: selectedAgent,
+    agent: chatAgent,
     user,
   });
 

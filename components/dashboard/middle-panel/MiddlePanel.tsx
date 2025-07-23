@@ -20,11 +20,11 @@ import { useWebhookContext } from '../context/WebhookProvider';
 import { useApiToolsContext } from '../context/ApiToolsProvider';
 
 import ChatInterface from '../chat/ChatInterface';
-import MemoryPanel from './MemoryPanel';
 import WebhookDetailPanel from './WebhookDetailPanel';
 import ToolDetailPanel from './ToolDetailPanel';
 import ActionsPanel from './ActionsPanel';
 import AgentSettingsPage from './AgentSettingsPage';
+import { AgentsView } from './views/AgentsView';
 
 
 /**
@@ -34,7 +34,7 @@ import AgentSettingsPage from './AgentSettingsPage';
  */
 export default function MiddlePanel() {
   const { 
-    activeAgentView, 
+    activeView, 
     selectConversationAndSetView, 
     selectedWebhook, 
     selectedTool 
@@ -54,7 +54,7 @@ export default function MiddlePanel() {
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
-  if (isLoadingAgents || !selectedAgent) {
+  if (activeView !== 'agents' && (isLoadingAgents || !selectedAgent)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center">
         {isLoadingAgents ? <p>Loading agents...</p> : <p>No agent selected.</p>}
@@ -63,11 +63,13 @@ export default function MiddlePanel() {
   }
 
   const renderContent = () => {
-    switch (activeAgentView) {
+    switch (activeView) {
+      case 'agents':
+        return <AgentsView />;
       case 'memory':
-        return <AgentSettingsPage agent={selectedAgent} />;
+        return selectedAgent ? <AgentSettingsPage agent={selectedAgent} /> : null;
       case 'actions':
-        return <ActionsPanel agentId={selectedAgent.id} />;
+        return selectedAgent ? <ActionsPanel agentId={selectedAgent.id} /> : null;
       case 'webhookDetail':
         if (!selectedWebhook) return <div>No webhook selected.</div>;
         return <WebhookDetailPanel webhook={selectedWebhook} onEventClick={selectConversationAndSetView} />;

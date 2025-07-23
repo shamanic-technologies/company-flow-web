@@ -25,42 +25,29 @@ import { Agent } from '@agent-base/types';
  * and conversation data from the DashboardContext.
  */
 export default function RightPanel() {
-    const { 
-        agents, 
-        selectedAgentId, 
-        isLoadingAgents 
-    } = useAgentContext();
-    
-    const { 
-        currentConversationId 
-    } = useConversationContext();
-    
     const { getClerkUserInitials } = useUserContext();
     const { createNewChatAndSetView } = useViewContext();
     const { chat } = useChatContext();
 
     const { 
-        messages, 
+        agent: chatAgent,
         isLoading: isLoadingMessages, 
-        error: chatError 
     } = chat;
-    
-    const selectedAgent = agents.find((agent: Agent) => agent.id === selectedAgentId);
 
     const handleNewChat = () => {
         console.log("RightPanel: 'New Chat' button clicked.");
         createNewChatAndSetView();
     };
 
-    if (isLoadingAgents) {
-        return <div className="p-4">Loading agents...</div>;
+    if (isLoadingMessages && !chatAgent) {
+        return <div className="p-4">Loading Chat...</div>;
     }
 
-    if (!selectedAgent) {
+    if (!chatAgent) {
         return (
             <div className="flex flex-col h-full items-center justify-center">
-                <p>No agent selected.</p>
-                <p className="text-sm text-gray-500">Please select an agent from the list to start a conversation.</p>
+                <p>No Agent available for chat.</p>
+                <p className="text-sm text-gray-500">Please create an agent to start a conversation.</p>
             </div>
         );
     }
@@ -68,14 +55,14 @@ export default function RightPanel() {
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-800">
             <AgentHeader 
-                agent={selectedAgent}
+                agent={chatAgent}
                 onNewChat={handleNewChat}
             />
             <div className="flex-1 overflow-y-auto">
                 <ChatInterface
                     userInitials={getClerkUserInitials()}
-                    agentFirstName={selectedAgent.firstName}
-                    agentLastName={selectedAgent.lastName}
+                    agentFirstName={chatAgent.firstName}
+                    agentLastName={chatAgent.lastName}
                     chat={chat}
                 />
             </div>

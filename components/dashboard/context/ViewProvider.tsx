@@ -11,11 +11,11 @@ import { useWebhookContext } from './WebhookProvider';
 import { useUserContext } from './UserProvider';
 import { useOrganizationContext } from './OrganizationProvider';
 
-type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail' | 'dashboard';
+type ActiveView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail' | 'dashboard' | 'agents';
 
 interface ViewContextType {
-  activeAgentView: ActiveAgentView;
-  setActiveAgentView: (view: ActiveAgentView) => void;
+  activeView: ActiveView;
+  setActiveView: (view: ActiveView) => void;
   selectedTool: SearchApiToolResultItem | null;
   selectedWebhook: SearchWebhookResultItem | null;
   selectedDashboard: DashboardInfo | null;
@@ -30,8 +30,8 @@ interface ViewContextType {
 }
 
 export const ViewContext = createContext<ViewContextType>({
-  activeAgentView: 'conversations',
-  setActiveAgentView: () => {},
+  activeView: 'conversations',
+  setActiveView: () => {},
   selectedTool: null,
   selectedWebhook: null,
   selectedDashboard: null,
@@ -53,7 +53,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const { fetchUserWebhooks } = useWebhookContext();
   const { fetchApiTools } = useApiToolsContext();
 
-  const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
+  const [activeView, setActiveView] = useState<ActiveView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState<DashboardInfo | null>(null);
@@ -67,7 +67,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
     selectAgentId(agentId);
     if (agentId) {
-      setActiveAgentView('conversations'); 
+      setActiveView('conversations'); 
       setSelectedWebhook(null); 
       setSelectedTool(null);
     } 
@@ -80,7 +80,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
         selectAgentId(conversation.agentId); 
       }
       selectConversationId(conversationId);
-      setActiveAgentView('chat');
+      setActiveView('chat');
     } else {
       selectConversationId(null);
     }
@@ -93,34 +93,34 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const selectWebhookAndSetView = useCallback((webhook: SearchWebhookResultItem | null) => {
     setSelectedWebhook(webhook);
     if (webhook) {
-      setActiveAgentView('webhookDetail');
+      setActiveView('webhookDetail');
       setSelectedTool(null);
     } else {
-      if (selectedAgentId) setActiveAgentView('conversations');
+      if (selectedAgentId) setActiveView('conversations');
     }
   }, [selectedAgentId]);
 
   const selectToolAndSetView = useCallback((tool: SearchApiToolResultItem | null) => {
     setSelectedTool(tool);
     if (tool) {
-      setActiveAgentView('toolDetail');
+      setActiveView('toolDetail');
       setSelectedWebhook(null);
     } else {
-      if (selectedAgentId) setActiveAgentView('conversations');
+      if (selectedAgentId) setActiveView('conversations');
     }
   }, [selectedAgentId]);
 
   const selectDashboardAndSetView = useCallback((dashboard: DashboardInfo | null) => {
     setSelectedDashboard(dashboard);
-    setActiveAgentView('dashboard'); 
+    setActiveView('dashboard'); 
     selectAgentId(null);
     setSelectedWebhook(null);
     setSelectedTool(null);
   }, [selectAgentId]);
 
   const contextValue = useMemo(() => ({
-    activeAgentView,
-    setActiveAgentView,
+    activeView,
+    setActiveView,
     selectedTool,
     selectedWebhook,
     selectedDashboard,
@@ -133,7 +133,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     initialPrompt,
     setInitialPrompt,
   }), [
-    activeAgentView,
+    activeView,
     selectedTool,
     selectedWebhook,
     selectedDashboard,

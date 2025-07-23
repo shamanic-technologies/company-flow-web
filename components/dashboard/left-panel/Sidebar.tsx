@@ -73,8 +73,8 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
   const { agents, isLoadingAgents, agentError, selectedAgentId } = useAgentContext();
   const { 
-    activeAgentView, 
-    setActiveAgentView, 
+    activeView, 
+    setActiveView, 
     selectAgentAndSetView,
     selectedWebhook,
     selectWebhookAndSetView,
@@ -197,6 +197,15 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub className="pl-1">
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="w-full justify-start text-xs h-6 px-1 gap-1"
+                        onClick={() => setActiveView('agents')}
+                      >
+                        <List className="h-3.5 w-3.5 shrink-0" />
+                        All Agents
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     {renderSectionContent(
                       isLoadingAgents,
                       agentError,
@@ -210,7 +219,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                           >
                             <CollapsibleTrigger asChild>
                               <SidebarMenuButton
-                                data-active={selectedAgentId === agent.id && activeAgentView === null}
+                                data-active={selectedAgentId === agent.id && activeView === null}
                                 className={cn(
                                   "w-full justify-start text-xs h-6 px-1 gap-1",
                                   "data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground",
@@ -232,7 +241,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                               <SidebarMenuSub className="pl-1">
                                 {agentSubMenuItems.map((item) => {
                                   const Icon = item.icon
-                                  const isActive = activeAgentView === item.id && selectedAgentId === agent.id
+                                  const isActive = activeView === item.id && selectedAgentId === agent.id
                                   return (
                                     <SidebarMenuItem key={item.id}>
                                       <SidebarMenuButton
@@ -244,7 +253,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                                             ? "text-accent-foreground font-semibold"
                                             : "font-normal text-muted-foreground"
                                         )}
-                                        onClick={() => setActiveAgentView(item.id as any)}
+                                        onClick={() => setActiveView(item.id as any)}
                                       >
                                         <Icon className="h-3.5 w-3.5 shrink-0" />
                                         {item.label}

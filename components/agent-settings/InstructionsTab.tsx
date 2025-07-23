@@ -1,27 +1,24 @@
-'use client';
-
-import React from 'react';
+import { Agent } from "@agent-base/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Agent } from '@agent-base/types';
 
-interface MemoryPanelProps {
-  selectedAgent: Agent | null | undefined;
+interface InstructionsTabProps {
+  agent: Agent;
 }
 
-const MemoryPanel: React.FC<MemoryPanelProps> = ({ selectedAgent }) => {
+export default function InstructionsTab({ agent }: InstructionsTabProps) {
   return (
     <ScrollArea className="h-full">
-      {selectedAgent?.memory ? (
+      {agent?.memory ? (
         <pre className="text-xs bg-gray-900/50 p-3 rounded overflow-auto h-full text-gray-300 font-mono whitespace-pre-wrap">
           {(() => {
             try {
-              const memoryObject = typeof selectedAgent.memory === 'string' 
-                ? JSON.parse(selectedAgent.memory)
-                : selectedAgent.memory;
+              const memoryObject = typeof agent.memory === 'string' 
+                ? JSON.parse(agent.memory)
+                : agent.memory;
               return JSON.stringify(memoryObject, null, 2); 
             } catch (e) {
               console.warn("Agent memory is not valid JSON, displaying as raw string.");
-              return selectedAgent.memory;
+              return agent.memory;
             }
           })()}
         </pre>
@@ -30,6 +27,4 @@ const MemoryPanel: React.FC<MemoryPanelProps> = ({ selectedAgent }) => {
       )}
     </ScrollArea>
   );
-};
-
-export default MemoryPanel; 
+} 
