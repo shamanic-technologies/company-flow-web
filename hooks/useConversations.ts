@@ -3,38 +3,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Conversation, ConversationId, CreateConversationInput, ServiceResponse } from '@agent-base/types';
 // import { Message as VercelMessage } from 'ai/react'; // No longer directly used here
-import { UserResource } from '@clerk/types';
-import { useConversationMessages } from './useConversationMessages'; // Import the new hook
 import { useAuth } from '@clerk/nextjs';
+import { UserResource } from '@clerk/types';
+import { useConversationMessages } from './useConversationMessages';
 
 interface UseConversationsProps {
-  selectedAgentIdMiddlePanel: string | null;
-  selectedAgentIdRightPanel: string | null;
+  selectedAgentId: string | null;
   user: UserResource | null | undefined;
   handleLogout: () => void;
   activeOrgId: string | null | undefined;
-}
-
-interface UseConversationsReturn {
-  conversationList: Conversation[];
-  currentConversationIdMiddlePanel: string | null;
-  currentConversationIdRightPanel: string | null;
-  selectConversationIdMiddlePanel: (conversationId: string | null) => void;
-  selectConversationIdRightPanel: (conversationId: string | null) => void;
-  isLoadingConversationList: boolean;
-  isCreatingConversationRightPanel: boolean;
-  isConversationReadyRightPanel: boolean;
-  conversationError: string | null;
-  handleCreateNewChatRightPanel: () => Promise<string | null>;
-  refreshConversationList: () => Promise<void>;
-  currentMessagesMiddlePanel: any[]; // Consider using a more specific type
-  isLoadingMessagesMiddlePanel: boolean;
-  messageErrorMiddlePanel: string | null;
-  fetchMessagesMiddlePanel: (conversationId: string) => Promise<void>;
-  currentMessagesRightPanel: any[]; // Consider using a more specific type
-  isLoadingMessagesRightPanel: boolean;
-  messageErrorRightPanel: string | null;
-  fetchMessagesRightPanel: (conversationId: string) => Promise<void>;
 }
 
 /**
@@ -45,56 +22,42 @@ interface UseConversationsReturn {
  * and message-related states/functions from useMessages.
  */
 export function useConversations({ 
-  selectedAgentIdMiddlePanel, 
-  selectedAgentIdRightPanel, 
+  selectedAgentId, 
   user, 
   handleLogout, 
   activeOrgId
-}: UseConversationsProps): UseConversationsReturn {
+}: UseConversationsProps) {
   const { getToken, isLoaded } = useAuth();
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
-  const [currentConversationIdMiddlePanel, setCurrentConversationIdMiddlePanel] = useState<string | null>(null);
-  const [currentConversationIdRightPanel, setCurrentConversationIdRightPanel] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   // A single loading state for the conversation LIST
   const [isLoadingConversationList, setIsLoadingConversationList] = useState<boolean>(false);
-  // isCreatingConversationRightPanel is for creating a NEW conversation
-  const [isCreatingConversationRightPanel, setIsCreatingConversationRightPanel] = useState<boolean>(false);
+  // isCreatingConversation is for creating a NEW conversation
+  const [isCreatingConversation, setIsCreatingConversation] = useState<boolean>(false);
   // conversationError is for errors related to fetching/creating conversation LIST
   const [conversationError, setConversationError] = useState<string | null>(null);
 
-  // The right panel conversation is "ready" when an agent is selected, a conversation has been
+  // The conversation is "ready" when an agent is selected, a conversation has been
   // successfully selected or created for it, and no creation process is ongoing.
-  const isConversationReadyRightPanel = 
-    !!selectedAgentIdRightPanel &&
-    !!currentConversationIdRightPanel &&
-    !isCreatingConversationRightPanel;
+  const isConversationReady = !isLoadingConversationList && !isCreatingConversation;
 
-  // --- Instantiate useMessages hook for Middle Panel ---
   const {
-    currentConversationMessages: currentMessagesMiddlePanel,
-    isLoadingConversationMessages: isLoadingMessagesMiddlePanel,
-    conversationMessagesError: messageErrorMiddlePanel,
-    fetchConversationMessages: fetchMessagesMiddlePanel,
-  } = useConversationMessages({ conversationId: currentConversationIdMiddlePanel, handleLogout, activeOrgId });
+    currentConversationMessages,
+    isLoadingConversationMessages,
+    conversationMessagesError,
+    fetchConversationMessages,
+  } = useConversationMessages({ conversationId: currentConversationId, handleLogout, activeOrgId });
 
-  // --- Instantiate useMessages hook for Right Panel ---
-  const {
-    currentConversationMessages: currentMessagesRightPanel,
-    isLoadingConversationMessages: isLoadingMessagesRightPanel,
-    conversationMessagesError: messageErrorRightPanel,
-    fetchConversationMessages: fetchMessagesRightPanel,
-  } = useConversationMessages({ conversationId: currentConversationIdRightPanel, handleLogout, activeOrgId });
+  const selectConversationId = useCallback((conversationId: string | null) => {
+    console.log(`useConversations: Setting current conversation to: ${conversationId ?? 'None'}`);
+    setCurrentConversationId(conversationId);
+  }, []);
 
-  // --- Function to fetch ALL conversations for the user ---
   const fetchUserConversations = useCallback(async () => {
-    if (!activeOrgId) {
-      console.log("useConversations: Waiting for activeOrgId to fetch conversations...");
-      setConversationList([]);
-      setIsLoadingConversationList(false);
-      // setConversationError("Organization not selected. Cannot fetch conversations.");
-      return;
-    }
-    console.log(`useConversations: Fetching conversations for org: ${activeOrgId}`);
+    // This function can be called on mount or for a refresh.
+    // Don't show loader on background refresh, only on initial load.
+    // The caller will set isLoadingConversationList to true if it's an initial load.
+    console.log("useConversations: Fetching all user conversations...");
     setConversationError(null);
 
     try {
@@ -152,7 +115,7 @@ export function useConversations({
       console.error("useConversations.createConversation: activeOrgId not available.");
       return null;
     }
-    setIsCreatingConversationRightPanel(true);
+    setIsCreatingConversation(true);
     setConversationError(null);
 
     const newConversationId = crypto.randomUUID();
@@ -195,118 +158,48 @@ export function useConversations({
 
       console.log("useConversations: New chat created successfully, fetching all user conversations to update list.");
       await fetchUserConversations();
+
+      // Automatically select the new conversation
+      console.log(`useConversations: Automatically selecting new conversation ${createdConversationId}`);
+      setCurrentConversationId(createdConversationId);
       
-      setCurrentConversationIdRightPanel(createdConversationId);
       return createdConversationId;
-    } catch (error: any) {
-      console.error("useConversations: Error creating new chat:", error);
-      setConversationError(`Error creating chat: ${error.message}`);
+
+    } catch (error) {
+      const errorMessage = (error instanceof Error) ? error.message : 'An unknown error occurred';
+      console.error(`🚫 useConversations - Error in createConversation: ${errorMessage}`);
+      setConversationError(errorMessage);
       return null;
     } finally {
-      setIsCreatingConversationRightPanel(false);
+      setIsCreatingConversation(false);
     }
-  }, [user, activeOrgId, getToken, handleLogout, fetchUserConversations]);
+  }, [user, getToken, handleLogout, fetchUserConversations, activeOrgId]);
 
-  // Effect to update currentConversationIdMiddlePanel based on selectedAgentIdMiddlePanel and conversationList
-  useEffect(() => {
-    if (!activeOrgId) { // If org changes, selection logic might need to reset or re-evaluate
-      setCurrentConversationIdMiddlePanel(null);
-      setCurrentConversationIdRightPanel(null);
-      return; // Exit early if no org
-    }
-    if (selectedAgentIdMiddlePanel) {
-      const agentConversations = conversationList
-        .filter(convo => convo.agentId === selectedAgentIdMiddlePanel)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      if (agentConversations.length > 0) {
-        const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdMiddlePanel);
-        if (!currentConvoStillValid || currentConversationIdMiddlePanel === null) {
-          setCurrentConversationIdMiddlePanel(agentConversations[0].conversationId);
-        }
-      } else {
-        // If an agent is selected but has no conversations, do not create one for the middle panel.
-        if (currentConversationIdMiddlePanel !== null) {
-            setCurrentConversationIdMiddlePanel(null);
-        }
-      }
-    } else {
-      if (currentConversationIdMiddlePanel !== null) {
-        setCurrentConversationIdMiddlePanel(null);
-      }
-    }
-  }, [selectedAgentIdMiddlePanel, conversationList, currentConversationIdMiddlePanel, activeOrgId]); // createConversation removed
 
-  // --- Effect to update currentConversationIdRightPanel based on selectedAgentIdRightPanel and conversationList ---
-  useEffect(() => {
-    // Guard against running this logic too early.
-    // Wait for the initial conversation list to load, and ensure we're not already creating one.
-    if (!activeOrgId || !selectedAgentIdRightPanel || isLoadingConversationList || isCreatingConversationRightPanel) {
-        return;
+  const handleCreateNewChat = useCallback(async () => {
+    if (!selectedAgentId) {
+      console.error("useConversations.handleCreateNewChat: Cannot create chat without a selected agent.");
+      // Optionally, set an error state to inform the user
+      setConversationError("Please select an agent before starting a new chat.");
+      return;
     }
+    console.log(`useConversations: handleCreateNewChat called for agent ${selectedAgentId}`);
+    await createConversation(selectedAgentId);
+  }, [createConversation, selectedAgentId]);
 
-    const agentConversations = conversationList
-        .filter(convo => convo.agentId === selectedAgentIdRightPanel)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    if (agentConversations.length > 0) {
-      const currentConvoStillValid = agentConversations.some(c => c.conversationId === currentConversationIdRightPanel);
-      if (!currentConvoStillValid || currentConversationIdRightPanel === null) {
-            setCurrentConversationIdRightPanel(agentConversations[0].conversationId);
-      }
-    } else {
-      // If we have finished loading and there are still no conversations, create one.
-      console.log(`useConversations: No conversations found for agent ${selectedAgentIdRightPanel} in right panel. Creating one.`);
-      createConversation(selectedAgentIdRightPanel);
-    }
-  }, [
-    selectedAgentIdRightPanel, 
-    conversationList, 
-    currentConversationIdRightPanel, 
-    activeOrgId, 
-    createConversation, 
-    isLoadingConversationList,
-    isCreatingConversationRightPanel
-  ]);
-
-  // --- Refresh all user conversations (used by polling for conversation list) ---
   const refreshConversationList = useCallback(async () => {
-    if (!activeOrgId) {
-        console.log("useConversations: Cannot refresh list, no active org.");
-        return; 
-    }
+    // This is a manual refresh, so we don't need to set the loading state.
+    // It will just update the list in the background.
     await fetchUserConversations();
-  }, [activeOrgId, fetchUserConversations]); // Added activeOrgId
+  }, [fetchUserConversations]);
 
-  // --- Handler to Create New Chat --- 
-  const handleCreateNewChatRightPanel = useCallback(async () => {
-    if (!selectedAgentIdRightPanel) {
-      console.error("No agent selected in the right panel to create a chat for.");
-      return null;
+  // --- Utility to select the first conversation if none is selected ---
+  useEffect(() => {
+    if (currentConversationId === null && conversationList.length > 0) {
+      console.log(`useConversations: No conversation selected, defaulting to the first one: ${conversationList[0].conversationId}`);
+      setCurrentConversationId(conversationList[0].conversationId);
     }
-    const newConvId = await createConversation(selectedAgentIdRightPanel);
-    if (newConvId) {
-      // This automatically sets the new conversation as active for the right panel
-      setCurrentConversationIdRightPanel(newConvId);
-      // We might not want to automatically switch the view, just prepare the new chat.
-      // setActiveAgentView('chat'); // This line could be removed if view switching is handled elsewhere.
-    }
-    return newConvId; // Return the new ID
-  }, [selectedAgentIdRightPanel, createConversation]);
-
-  // --- Simple setter for selecting a conversation ID --- 
-  const selectConversationIdMiddlePanel = useCallback((conversationId: string | null) => {
-    console.log(`useConversations: Setting current conversation ID to: ${conversationId}`);
-    if (conversationId !== currentConversationIdMiddlePanel) {
-      setCurrentConversationIdMiddlePanel(conversationId);
-    }
-  }, [currentConversationIdMiddlePanel]);
-
-  const selectConversationIdRightPanel = useCallback((conversationId: string | null) => {
-    if (conversationId !== currentConversationIdRightPanel) {
-      setCurrentConversationIdRightPanel(conversationId);
-    }
-  }, [currentConversationIdRightPanel]);
+  }, [conversationList, currentConversationId]);
 
   // --- Initial fetch of all conversations when the hook mounts and user is available ---
   useEffect(() => {
@@ -318,8 +211,7 @@ export function useConversations({
     } else {
       // Clear data if clerk is not loaded or no org is selected
       setConversationList([]);
-      setCurrentConversationIdMiddlePanel(null);
-      setCurrentConversationIdRightPanel(null);
+      setCurrentConversationId(null);
       setIsLoadingConversationList(false);
       setConversationError(null);
     }
@@ -328,27 +220,19 @@ export function useConversations({
   return {
     // Conversation list related
     conversationList,
-    currentConversationIdMiddlePanel, // Renamed for clarity in return
-    currentConversationIdRightPanel, // Renamed for clarity in return
-    selectConversationIdMiddlePanel,
-    selectConversationIdRightPanel,
+    currentConversationId,
+    selectConversationId,
     isLoadingConversationList,
-    isCreatingConversationRightPanel,
-    isConversationReadyRightPanel,
+    isCreatingConversation,
+    isConversationReady,
     conversationError, // Error related to conversation list/creation
-    handleCreateNewChatRightPanel,
+    handleCreateNewChat,
     refreshConversationList, // Function to refresh the conversation list
 
-    // --- Messages for Middle Panel ---
-    currentMessagesMiddlePanel,
-    isLoadingMessagesMiddlePanel,
-    messageErrorMiddlePanel,
-    fetchMessagesMiddlePanel,
-
-    // --- Messages for Right Panel ---
-    currentMessagesRightPanel,
-    isLoadingMessagesRightPanel,
-    messageErrorRightPanel,
-    fetchMessagesRightPanel,
+    // --- Messages ---
+    currentConversationMessages,
+    isLoadingConversationMessages,
+    conversationMessagesError,
+    fetchMessagesForCurrentConversation: fetchConversationMessages,
   };
 } 

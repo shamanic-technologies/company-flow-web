@@ -16,13 +16,15 @@ import { useUserContext } from '../context/UserProvider';
 import { useViewContext } from '../context/ViewProvider';
 import { useChatContext } from '../context/ChatProvider';
 import { useConversationContext } from '../context/ConversationProvider';
+import { useWebhookContext } from '../context/WebhookProvider';
+import { useApiToolsContext } from '../context/ApiToolsProvider';
 
 import ChatInterface from '../chat/ChatInterface';
 import MemoryPanel from './MemoryPanel';
-import ConversationListPanel from './ConversationListPanel';
 import WebhookDetailPanel from './WebhookDetailPanel';
 import ToolDetailPanel from './ToolDetailPanel';
 import ActionsPanel from './ActionsPanel';
+import AgentSettingsPage from './AgentSettingsPage';
 
 
 /**
@@ -31,44 +33,39 @@ import ActionsPanel from './ActionsPanel';
  * Uses data fetched and managed by the DashboardContext.
  */
 export default function MiddlePanel() {
-  const { agents, selectedAgentIdMiddlePanel } = useAgentContext();
+  const { 
+    activeAgentView, 
+    selectConversationAndSetView, 
+    selectedWebhook, 
+    selectedTool 
+  } = useViewContext();
+  const { 
+    agents, 
+    selectedAgentId,
+    isLoadingAgents,
+  } = useAgentContext();
+  const { 
+    conversationList, 
+    isLoadingConversationList, 
+    conversationError, 
+    currentConversationId 
+  } = useConversationContext();
   const { getClerkUserInitials } = useUserContext();
-  const { activeAgentView, selectedWebhook, selectedTool, selectedDashboard, selectConversationAndSetView } = useViewContext();
-  const { chatMiddlePanel } = useChatContext();
-  const { conversationList, isLoadingConversationList, conversationError, currentConversationIdMiddlePanel } = useConversationContext();
 
-  const selectedAgent = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
+  const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
-  if (!selectedAgent) {
-    // If not dashboard view and no agent, show placeholder
+  if (isLoadingAgents || !selectedAgent) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        Select an agent to get started
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {isLoadingAgents ? <p>Loading agents...</p> : <p>No agent selected.</p>}
       </div>
     );
   }
 
   const renderContent = () => {
     switch (activeAgentView) {
-      case 'chat':
-        return (
-          <ChatInterface
-            userInitials={getClerkUserInitials()}
-            agentFirstName={selectedAgent.firstName}
-            agentLastName={selectedAgent.lastName}
-            chat={chatMiddlePanel}
-          />
-        );
-      case 'conversations':
-        return <ConversationListPanel 
-            conversationList={conversationList}
-            isLoadingConversations={isLoadingConversationList}
-            historyError={conversationError}
-            currentConversationIdMiddlePanel={currentConversationIdMiddlePanel}
-            onConversationSelect={selectConversationAndSetView}
-        />;
       case 'memory':
-        return <MemoryPanel selectedAgent={selectedAgent} />;
+        return <AgentSettingsPage agent={selectedAgent} />;
       case 'actions':
         return <ActionsPanel agentId={selectedAgent.id} />;
       case 'webhookDetail':
@@ -77,15 +74,7 @@ export default function MiddlePanel() {
       case 'toolDetail':
         if (!selectedTool) return <div>No tool selected.</div>;
         return <ToolDetailPanel searchApiTool={selectedTool} />;
-      default:
-        return (
-            <ChatInterface
-                userInitials={getClerkUserInitials()}
-                agentFirstName={selectedAgent.firstName}
-                agentLastName={selectedAgent.lastName}
-                chat={chatMiddlePanel}
-            />
-        );
+      ;
     }
   };
 

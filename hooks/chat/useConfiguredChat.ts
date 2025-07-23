@@ -17,27 +17,8 @@ import { useOrganization, useUser } from '@clerk/nextjs';
 
 /**
  * @file useConfiguredChat.ts
- * @description Custom hook to configure and wrap Vercel AI SDK's useChat with credit validation and consumption.
+ * @description Custom hook to configure and wrap Vercel AI SDK's useChat.
  */
-
-// Props for the credit functionalities needed by this hook
-interface CreditFunctionsAndState {
-  validateCredits: (estimatedCredits?: number) => Promise<boolean>;
-  consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
-  isValidatingCredits: boolean;
-  creditBalance: CreditBalance | null;
-  creditHookError: string | null;
-  clearCreditHookError: () => void;
-  fetchPlanInfo: () => Promise<void>;
-}
-
-// Extend UseChatOptions to include activeOrgId and credit functions/state
-interface ConfiguredChatOptions extends UseChatOptions {
-  activeOrgId: string | null | undefined;
-  creditOps: CreditFunctionsAndState;
-  agent?: Agent;
-  user?: ReturnType<typeof useUser>['user'];
-}
 
 // --- Type Definitions ---
 export interface CustomChatRequestOptions extends UseChatOptions {
@@ -54,12 +35,16 @@ interface UpdateOrganizationArgs {
 interface DeleteOrganizationArgs {
   client_organization_id: string;
 }
+interface ConfiguredChatOptions extends UseChatOptions {
+  activeOrgId: string | null | undefined;
+  agent: Agent | undefined;
+  user: ReturnType<typeof useUser>['user'];
+}
 
 /**
- * A custom hook that configures and wraps the Vercel AI SDK's useChat hook 
- * with upfront credit validation and downstream credit consumption.
- * @param {ConfiguredChatOptions} params - Options for the useChat hook, including activeOrgId and credit operations.
- * @returns {object} Enhanced chat helpers and credit-related states/functions.
+ * A custom hook that configures and wraps the Vercel AI SDK's useChat hook.
+ * @param {ConfiguredChatOptions} params - Options for the useChat hook.
+ * @returns {object} Enhanced chat helpers and state.
  */
 export function useConfiguredChat(params: ConfiguredChatOptions) {
   const { 
@@ -69,23 +54,10 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     api: apiFromParams,
     streamProtocol: streamProtocolFromParams,
     activeOrgId, 
-    creditOps,
     agent,
     user,
     ...restOfParams 
   } = params;
-
-  const { 
-    validateCredits, 
-    consumeCredits,
-    isValidatingCredits, 
-    creditBalance,
-    creditHookError,
-    clearCreditHookError,
-    fetchPlanInfo,
-  } = creditOps;
-
-  const [lastProcessedTransactionId, setLastProcessedTransactionId] = useState<string | null>(null);
 
   // State for chat-specific errors that might occur during send/receive
   const [chatError, setChatError] = useState<string | null>(null);
@@ -182,80 +154,11 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     };
   }, [user, agent]);
 
-
-  /**
-   * useEffect hook to process credit consumption based on data streamed from the backend.
-   * It looks for 'credit_info' payloads in chatHelpers.data.
-   * If a payload with 'costInUSDCents' is found and not yet processed (using transactionId),
-   * it calls 'consumeCredits' and then 'fetchPlanInfo'.
-   */
-  useEffect(() => {
-    if (chatHelpers.data && chatHelpers.data.length > 0 && conversationIdFromParams) {
-        let latestCreditInfoPayload: AgentBaseCreditStreamPayload | null = null;
-        
-        for (let i = chatHelpers.data.length - 1; i >= 0; i--) {
-            const item = chatHelpers.data[i];
-            if (typeof item === 'string') {
-                try {
-                    const parsedItem = JSON.parse(item);
-                    if (parsedItem && typeof parsedItem === 'object' && parsedItem.type === 'credit_info' && parsedItem.data) {
-                        latestCreditInfoPayload = parsedItem as AgentBaseCreditStreamPayload;
-                        break; 
-                    }
-                } catch (e) {
-                    // Not the JSON string we are looking for, or malformed.
-                }
-            }
-        }
-
-        if (latestCreditInfoPayload && latestCreditInfoPayload.data) {
-            // Destructure with optional chaining for safety
-            const costInUSDCents = latestCreditInfoPayload.data?.creditConsumption?.totalAmountInUSDCents;
-            // const newBalanceInUSDCents = latestCreditInfoPayload.data?.newBalanceInUSDCents;
-            // Use assistantMessageId as a proxy for transactionId if actual transactionId isn't in this payload
-            const currentMessageTransactionId = latestCreditInfoPayload.data?.assistantMessageId;
-            
-            // Check for consumption data and if it's a new transaction (based on assistantMessageId)
-            if (typeof costInUSDCents === 'number' && costInUSDCents > 0 && currentMessageTransactionId && currentMessageTransactionId !== lastProcessedTransactionId) {
-                console.log(`🔵 [useConfiguredChat useEffect] Found credit_info with cost: ${costInUSDCents} cents, assistantMessageId: ${currentMessageTransactionId}. Attempting to consume.`);
-                consumeCredits(costInUSDCents, conversationIdFromParams)
-                    .then(consumedSuccessfully => {
-                        if (consumedSuccessfully) {
-                            console.log('🟢 [useConfiguredChat useEffect] Credits consumed successfully. Fetching updated plan info for assistantMessageId:', currentMessageTransactionId);
-                            fetchPlanInfo(); 
-                            setLastProcessedTransactionId(currentMessageTransactionId); // Mark as processed using assistantMessageId
-                        } else {
-                            console.error('🔴 [useConfiguredChat useEffect] Failed to consume credits for assistantMessageId:', currentMessageTransactionId);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('🔴 [useConfiguredChat useEffect] Error during credit consumption or plan info fetch for assistantMessageId:', currentMessageTransactionId, error);
-                    });
-            }
-
-            if (latestCreditInfoPayload.error) {
-                 console.error('🔴 [useConfiguredChat useEffect] credit_info failure reported by backend:', latestCreditInfoPayload.error, latestCreditInfoPayload.details);
-            }
-        }
-    }
-  }, [chatHelpers.data, consumeCredits, fetchPlanInfo, conversationIdFromParams, lastProcessedTransactionId, setLastProcessedTransactionId]);
-
-  /**
-   * Handles form submission with credit validation.
-   * @param {React.FormEvent<HTMLFormElement>} [event] - The form submission event.
-   * @param {CustomChatRequestOptions} [chatRequestOptions] - Options for the chat request.
-   */
-  const handleSubmitWithCredits = useCallback(async (
+  const handleSubmit = useCallback(async (
     event?: React.FormEvent<HTMLFormElement>,
     chatRequestOptions?: CustomChatRequestOptions 
   ): Promise<void> => {
     event?.preventDefault();
-    // Validate for a nominal amount, actual cost determined by backend stream
-    // const hasSufficientCredits = await validateCredits(1); 
-    // if (!hasSufficientCredits) {
-    //   setChatError('Insufficient credits. Please upgrade your plan.'); 
-    //   return;
-    // }
     setChatError(null); 
 
     if (chatHelpers.input === '') {
@@ -272,40 +175,24 @@ export function useConfiguredChat(params: ConfiguredChatOptions) {
     chatHelpers.append(messageWithMetadata, chatRequestOptions as any);
     chatHelpers.setInput('');
 
-  }, [chatHelpers, addUserMetadata, validateCredits, setChatError]);
+  }, [chatHelpers, addUserMetadata, setChatError]);
 
-  /**
-   * Appends a message with credit validation.
-   * @param {Message | CreateMessage} message - The message to append.
-   * @param {CustomChatRequestOptions} [chatRequestOptions] - Options for the chat request.
-   * @returns {Promise<string | null | undefined>} The result of the append operation.
-   */
-  const appendWithCredits = useCallback(async (
+  const append = useCallback(async (
     message: Message | CreateMessage, 
     chatRequestOptions?: CustomChatRequestOptions
   ): Promise<string | null | undefined> => {
-    // Validate for a nominal amount, actual cost determined by backend stream
-    // const hasSufficientCredits = await validateCredits(1); 
-    // if (!hasSufficientCredits) {
-    //   setChatError('Insufficient credits. Please upgrade your plan.'); 
-    //   return null;
-    // }
     setChatError(null); 
     
     const messageWithMetadata = addUserMetadata(message);
     
     const result = chatHelpers.append(messageWithMetadata, chatRequestOptions as any); 
     return result;
-  }, [chatHelpers.append, validateCredits, setChatError, addUserMetadata]);
+  }, [chatHelpers.append, setChatError, addUserMetadata]);
 
   return {
     ...chatHelpers,
-    handleSubmit: handleSubmitWithCredits,
-    append: appendWithCredits,
-    isValidatingCredits,
-    creditBalance,
-    creditHookError,
-    clearCreditHookError,
+    handleSubmit,
+    append,
     chatError,
     rawError,
     errorInfo, 

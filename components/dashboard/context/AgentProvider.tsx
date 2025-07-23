@@ -1,71 +1,84 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { Agent } from '@agent-base/types';
 import { useAgents } from '../../../hooks/useAgents';
 import { useOrganizationContext } from './OrganizationProvider';
 import { useUserContext } from './UserProvider';
+import { useUser } from '@clerk/nextjs';
+import { useWebhooks } from "@/hooks/useWebhooks";
 
 interface AgentContextType {
   agents: Agent[];
+  selectedAgentId: string | null;
+  selectAgentId: (agentId: string | null) => void;
   isLoadingAgents: boolean;
   agentError: string | null;
-  selectedAgentIdMiddlePanel: string | null;
-  selectedAgentIdRightPanel: string | null;
-  selectAgentMiddlePanel: (agentId: string | null) => void;
-  selectAgentRightPanel: (agentId: string | null) => void;
+  handleCreateAgent: (orgId: string) => Promise<string | null>;
+  isCreatingAgent: boolean;
   fetchAgents: () => Promise<void>;
   isAgentsReady: boolean;
 }
 
 export const AgentContext = createContext<AgentContextType>({
   agents: [],
+  selectedAgentId: null,
+  selectAgentId: () => {},
   isLoadingAgents: false,
   agentError: null,
-  selectedAgentIdMiddlePanel: null,
-  selectedAgentIdRightPanel: null,
-  selectAgentMiddlePanel: () => {},
-  selectAgentRightPanel: () => {},
+  handleCreateAgent: async () => null,
+  isCreatingAgent: false,
   fetchAgents: async () => {},
   isAgentsReady: false,
 });
 
 export function AgentProvider({ children }: { children: ReactNode }) {
+  const { isLoaded, user } = useUser();
   const { activeOrgId } = useOrganizationContext();
-  const { handleClerkLogout } = useUserContext();
-
-  const {
+  
+  const { 
     agents, 
-    selectedAgentIdMiddlePanel, 
-    selectedAgentIdRightPanel, 
-    selectAgentMiddlePanel,    
-    selectAgentRightPanel,     
+    selectedAgentId,
+    selectAgentId,
     isLoadingAgents, 
-    agentError, 
+    agentError,
+    handleCreateAgent,
+    isCreatingAgent,
     fetchAgents,
-    isAgentsReady
-  } = useAgents({ handleLogout: handleClerkLogout, activeOrgId });
+    isAgentsReady,
+  } = useAgents({ 
+    user: user ?? undefined,
+    isUserLoaded: isLoaded,
+    activeOrgId: activeOrgId ?? undefined,
+  });
+
+  // Effect to select the first agent by default if none is selected
+  useEffect(() => {
+    if (agents.length > 0 && !selectedAgentId) {
+      selectAgentId(agents[0].id);
+    }
+  }, [agents, selectedAgentId, selectAgentId]);
 
   const contextValue = useMemo(() => ({
-    agents, 
-    selectedAgentIdMiddlePanel, 
-    selectedAgentIdRightPanel, 
-    selectAgentMiddlePanel,    
-    selectAgentRightPanel,     
-    isLoadingAgents, 
-    agentError, 
+    agents,
+    selectedAgentId,
+    selectAgentId,
+    isLoadingAgents,
+    agentError,
+    handleCreateAgent,
+    isCreatingAgent,
     fetchAgents,
-    isAgentsReady
+    isAgentsReady,
   }), [
     agents, 
-    selectedAgentIdMiddlePanel, 
-    selectedAgentIdRightPanel, 
-    selectAgentMiddlePanel,    
-    selectAgentRightPanel,     
+    selectedAgentId,
+    selectAgentId,
     isLoadingAgents, 
     agentError, 
+    handleCreateAgent,
+    isCreatingAgent,
     fetchAgents,
-    isAgentsReady
+    isAgentsReady,
   ]);
 
   return (

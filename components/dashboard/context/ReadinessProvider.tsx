@@ -21,7 +21,7 @@ export const ReadinessContext = createContext<ReadinessContextType>({
 export function ReadinessProvider({ children }: { children: ReactNode }) {
   const { isOrganizationsReady } = useOrganizations();
   const { isAgentsReady } = useAgentContext();
-  const { isConversationReadyRightPanel } = useConversationContext();
+  const { isConversationReady } = useConversationContext();
   const { isApiToolsReady } = useApiToolsContext();
   const { isWebhooksReady } = useWebhookContext();
   const { isBillingReady } = useBillingContext();
@@ -32,10 +32,10 @@ export function ReadinessProvider({ children }: { children: ReactNode }) {
   const isSystemReady = 
     isOrganizationsReady 
     && isAgentsReady 
-    && isConversationReadyRightPanel 
-    // && isApiToolsReady 
-    // && isWebhooksReady 
-    // && isBillingReady
+    && isConversationReady 
+    && isApiToolsReady 
+    && isWebhooksReady 
+    && isBillingReady
     ;
 
   // This effect sets the initial load flag once and never changes it back.

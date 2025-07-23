@@ -48,8 +48,8 @@ export const ViewContext = createContext<ViewContextType>({
 export function ViewProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useUserContext();
   const { activeOrgId } = useOrganizationContext();
-  const { fetchAgents, selectAgentMiddlePanel, selectedAgentIdMiddlePanel } = useAgentContext();
-  const { conversationList, selectConversationIdMiddlePanel, handleCreateNewChatRightPanel, refreshConversationList } = useConversationContext();
+  const { fetchAgents, selectAgentId, selectedAgentId } = useAgentContext();
+  const { conversationList, selectConversationId, handleCreateNewChat, refreshConversationList } = useConversationContext();
   const { fetchUserWebhooks } = useWebhookContext();
   const { fetchApiTools } = useApiToolsContext();
 
@@ -65,30 +65,30 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
-    selectAgentMiddlePanel(agentId);
+    selectAgentId(agentId);
     if (agentId) {
       setActiveAgentView('conversations'); 
       setSelectedWebhook(null); 
       setSelectedTool(null);
     } 
-  }, [selectAgentMiddlePanel]);
+  }, [selectAgentId]);
 
   const selectConversationAndSetView = useCallback((conversationId: string | null) => {
     if (conversationId) {
       const conversation = conversationList.find(c => c.conversationId === conversationId);
       if (conversation?.agentId) {
-        selectAgentMiddlePanel(conversation.agentId); 
+        selectAgentId(conversation.agentId); 
       }
-      selectConversationIdMiddlePanel(conversationId);
+      selectConversationId(conversationId);
       setActiveAgentView('chat');
     } else {
-      selectConversationIdMiddlePanel(null);
+      selectConversationId(null);
     }
-  }, [selectConversationIdMiddlePanel, selectAgentMiddlePanel, conversationList]);
+  }, [selectConversationId, selectAgentId, conversationList]);
 
   const createNewChatAndSetView = useCallback(async () => {
-    await handleCreateNewChatRightPanel();
-  }, [handleCreateNewChatRightPanel]);
+    await handleCreateNewChat();
+  }, [handleCreateNewChat]);
 
   const selectWebhookAndSetView = useCallback((webhook: SearchWebhookResultItem | null) => {
     setSelectedWebhook(webhook);
@@ -96,9 +96,9 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setActiveAgentView('webhookDetail');
       setSelectedTool(null);
     } else {
-      if (selectedAgentIdMiddlePanel) setActiveAgentView('conversations');
+      if (selectedAgentId) setActiveAgentView('conversations');
     }
-  }, [selectedAgentIdMiddlePanel]);
+  }, [selectedAgentId]);
 
   const selectToolAndSetView = useCallback((tool: SearchApiToolResultItem | null) => {
     setSelectedTool(tool);
@@ -106,17 +106,17 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setActiveAgentView('toolDetail');
       setSelectedWebhook(null);
     } else {
-      if (selectedAgentIdMiddlePanel) setActiveAgentView('conversations');
+      if (selectedAgentId) setActiveAgentView('conversations');
     }
-  }, [selectedAgentIdMiddlePanel]);
+  }, [selectedAgentId]);
 
   const selectDashboardAndSetView = useCallback((dashboard: DashboardInfo | null) => {
     setSelectedDashboard(dashboard);
     setActiveAgentView('dashboard'); 
-    selectAgentMiddlePanel(null);
+    selectAgentId(null);
     setSelectedWebhook(null);
     setSelectedTool(null);
-  }, [selectAgentMiddlePanel]);
+  }, [selectAgentId]);
 
   const contextValue = useMemo(() => ({
     activeAgentView,

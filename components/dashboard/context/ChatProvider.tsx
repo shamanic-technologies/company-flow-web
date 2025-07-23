@@ -5,10 +5,8 @@ import { Message, CreateMessage } from 'ai/react';
 import { useConfiguredChat, CustomChatRequestOptions } from '@/hooks/chat/useConfiguredChat';
 import { useConversationContext } from './ConversationProvider';
 import { useOrganizationContext } from './OrganizationProvider';
-import { useCredits } from '@/hooks/useCredits';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { useUserContext } from './UserProvider';
-import { usePlanInfo } from '@/hooks/usePlanInfo';
 import { useAgentContext } from './AgentProvider';
 import { useUser } from '@clerk/nextjs';
 
@@ -32,32 +30,11 @@ export type ConfiguredChatHelpers = {
   }) => void;
 };
 
-
 interface ChatContextType {
-  chatMiddlePanel: ConfiguredChatHelpers;
-  chatRightPanel: ConfiguredChatHelpers;
+  chat: ConfiguredChatHelpers;
 }
 
-const defaultChatHelpers: ConfiguredChatHelpers = {
-  messages: [],
-  append: async () => null,
-  reload: async () => null,
-  stop: () => {},
-  setMessages: () => {},
-  input: '',
-  setInput: () => {},
-  handleInputChange: () => {},
-  handleSubmit: async () => {},
-  isLoading: false,
-  error: undefined,
-  data: undefined,
-  addToolResult: () => {},
-};
-
-export const ChatContext = createContext<ChatContextType>({
-  chatMiddlePanel: defaultChatHelpers,
-  chatRightPanel: defaultChatHelpers,
-});
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { activeOrgId } = useOrganizationContext();
@@ -65,66 +42,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { 
     agents,
-    selectedAgentIdMiddlePanel,
-    selectedAgentIdRightPanel
+    selectedAgentId,
   } = useAgentContext();
   const { 
-    currentConversationIdMiddlePanel, 
-    currentConversationIdRightPanel,
+    currentConversationId,
   } = useConversationContext();
   
-  const { fetch: fetchPlanInfo } = usePlanInfo({ activeOrgId });
-  const creditsHook = useCredits({ activeOrgId });
-
-  const { currentConversationMessages: initialMessagesMiddlePanel } = useConversationMessages({
-    conversationId: currentConversationIdMiddlePanel,
+  const { currentConversationMessages: initialMessages } = useConversationMessages({
+    conversationId: currentConversationId,
     handleLogout: handleClerkLogout,
     activeOrgId,
   });
 
-  const { currentConversationMessages: initialMessagesRightPanel } = useConversationMessages({
-    conversationId: currentConversationIdRightPanel,
-    handleLogout: handleClerkLogout,
-    activeOrgId,
-  });
+  const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
-  const creditOps = {
-    validateCredits: creditsHook.validateCredits,
-    consumeCredits: creditsHook.consumeCredits,
-    isValidatingCredits: creditsHook.isValidating,
-    creditBalance: creditsHook.creditBalance,
-    creditHookError: creditsHook.error,
-    clearCreditHookError: creditsHook.clearError,
-    fetchPlanInfo,
-  };
-
-  const selectedAgentMiddlePanel = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
-  const selectedAgentRightPanel = agents.find(agent => agent.id === selectedAgentIdRightPanel);
-
-  const chatMiddlePanel = useConfiguredChat({
+  const chat = useConfiguredChat({
     api: '/api/agents/run',
-    id: currentConversationIdMiddlePanel ?? undefined,
-    initialMessages: initialMessagesMiddlePanel,
+    id: currentConversationId ?? undefined,
+    initialMessages: initialMessages,
     activeOrgId: activeOrgId,
-    creditOps: creditOps,
-    agent: selectedAgentMiddlePanel,
-    user,
-  });
-
-  const chatRightPanel = useConfiguredChat({
-    api: '/api/agents/run',
-    id: currentConversationIdRightPanel ?? undefined,
-    initialMessages: initialMessagesRightPanel,
-    activeOrgId: activeOrgId,
-    creditOps: creditOps,
-    agent: selectedAgentRightPanel,
+    agent: selectedAgent,
     user,
   });
 
   const contextValue = useMemo(() => ({
-    chatMiddlePanel,
-    chatRightPanel,
-  }), [chatMiddlePanel, chatRightPanel]);
+    chat,
+  }), [chat]);
 
   return (
     <ChatContext.Provider value={contextValue}>

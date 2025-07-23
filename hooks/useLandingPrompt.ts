@@ -14,7 +14,7 @@ const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
  */
 export function useLandingPrompt(): { isLandingPromptProcessing: boolean } {
   const { createPersonalOrganization } = useOrganizations();
-  const { chatRightPanel } = useChatContext();
+  const { chat } = useChatContext();
   const { isSystemReady } = useReadinessContext();
   const [promptToProcess, setPromptToProcess] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,13 +63,13 @@ export function useLandingPrompt(): { isLandingPromptProcessing: boolean } {
       // After creation, the other hooks will automatically create the agent and conversation.
       // Because we waited for `isSystemReady`, we know the `chatRightPanel` is now valid
       // for a *new* conversation that was just created.
-      chatRightPanel.append({
+      chat.append({
         role: 'user',
         content: promptToProcess,
       });
     }
     // Dependency array ensures this effect runs when the system becomes ready or when a prompt is found.
-  }, [promptToProcess, isSystemReady, createPersonalOrganization, chatRightPanel, isProcessing]);
+  }, [promptToProcess, isSystemReady, createPersonalOrganization, chat, isProcessing]);
 
   return { isLandingPromptProcessing: isProcessing };
 } 

@@ -2,59 +2,52 @@
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { Conversation } from '@agent-base/types';
-import { useConversations } from '../../../hooks/useConversations';
+import { useConversations } from '@/hooks/useConversations';
 import { useAgentContext } from './AgentProvider';
 import { useUserContext } from './UserProvider';
 import { useOrganizationContext } from './OrganizationProvider';
 
 interface ConversationContextType {
   conversationList: Conversation[]; 
-  currentConversationIdMiddlePanel: string | null;
+  currentConversationId: string | null;
+  selectConversationId: (conversationId: string | null) => void;
   isLoadingConversationList: boolean;
+  isCreatingConversation: boolean;
   conversationError: string | null;
-  currentConversationIdRightPanel: string | null;
-  isCreatingConversationRightPanel: boolean;
-  selectConversationIdMiddlePanel: (conversationId: string | null) => void;
-  selectConversationIdRightPanel: (conversationId: string | null) => void;
-  handleCreateNewChatRightPanel: () => Promise<string | null>;
+  handleCreateNewChat: () => Promise<void>;
   refreshConversationList: () => Promise<void>;
-  isConversationReadyRightPanel: boolean;
+  isConversationReady: boolean;
 }
 
 export const ConversationContext = createContext<ConversationContextType>({
   conversationList: [],
-  currentConversationIdMiddlePanel: null,
+  currentConversationId: null,
+  selectConversationId: () => {},
   isLoadingConversationList: false,
+  isCreatingConversation: false,
   conversationError: null,
-  currentConversationIdRightPanel: null,
-  isCreatingConversationRightPanel: false,
-  selectConversationIdMiddlePanel: () => {},
-  selectConversationIdRightPanel: () => {},
-  handleCreateNewChatRightPanel: async () => null,
+  handleCreateNewChat: async () => {},
   refreshConversationList: async () => {},
-  isConversationReadyRightPanel: false,
+  isConversationReady: false,
 });
 
 export function ConversationProvider({ children }: { children: ReactNode }) {
   const { clerkUser, handleClerkLogout } = useUserContext();
   const { activeOrgId } = useOrganizationContext();
-  const { selectedAgentIdMiddlePanel, selectedAgentIdRightPanel } = useAgentContext();
+  const { selectedAgentId } = useAgentContext();
 
   const {
     conversationList,
-    currentConversationIdMiddlePanel,
-    currentConversationIdRightPanel,
-    selectConversationIdMiddlePanel,
-    selectConversationIdRightPanel,
+    currentConversationId,
+    selectConversationId,
     isLoadingConversationList,
-    isCreatingConversationRightPanel,
+    isCreatingConversation,
     conversationError,
-    handleCreateNewChatRightPanel,
+    handleCreateNewChat,
     refreshConversationList,
-    isConversationReadyRightPanel,
+    isConversationReady,
   } = useConversations({
-    selectedAgentIdMiddlePanel,
-    selectedAgentIdRightPanel,
+    selectedAgentId: selectedAgentId,
     user: clerkUser,
     handleLogout: handleClerkLogout,
     activeOrgId,
@@ -62,28 +55,24 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(() => ({
     conversationList,
-    currentConversationIdMiddlePanel,
-    currentConversationIdRightPanel,
-    selectConversationIdMiddlePanel,
-    selectConversationIdRightPanel,
+    currentConversationId,
+    selectConversationId,
     isLoadingConversationList,
-    isCreatingConversationRightPanel,
+    isCreatingConversation,
     conversationError,
-    handleCreateNewChatRightPanel,
+    handleCreateNewChat,
     refreshConversationList,
-    isConversationReadyRightPanel,
+    isConversationReady,
   }), [
     conversationList,
-    currentConversationIdMiddlePanel,
-    currentConversationIdRightPanel,
-    selectConversationIdMiddlePanel,
-    selectConversationIdRightPanel,
+    currentConversationId,
+    selectConversationId,
     isLoadingConversationList,
-    isCreatingConversationRightPanel,
+    isCreatingConversation,
     conversationError,
-    handleCreateNewChatRightPanel,
+    handleCreateNewChat,
     refreshConversationList,
-    isConversationReadyRightPanel,
+    isConversationReady,
   ]);
 
   return (
