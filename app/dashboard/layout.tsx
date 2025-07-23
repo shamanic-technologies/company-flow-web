@@ -13,7 +13,6 @@ import { ViewProvider } from '@/components/dashboard/context/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ReadinessProvider } from '@/components/dashboard/context/ReadinessProvider';
 import { LandingPromptProvider } from '@/components/dashboard/context/LandingPromptProvider';
-import { DashboardProvider } from '@/components/dashboard/context/DashboardProvider';
 
 /**
  * Layout for the main dashboard area.
@@ -31,20 +30,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <ApiToolsProvider>
                 <WebhookProvider>
                   <ChatProvider>
-                    <DashboardProvider>
-                      <ViewProvider>
-                        <SidebarProvider>
-                          <ReadinessProvider>
-                            <LandingPromptProvider>
-                              <div className="h-screen w-screen overflow-hidden bg-background text-foreground">
-                                {/* The DashboardProvider and specific page structure (3 panels) will be in page.tsx */}
-                                {children}
-                              </div>
-                            </LandingPromptProvider>
-                          </ReadinessProvider>
-                        </SidebarProvider>
-                      </ViewProvider>
-                    </DashboardProvider>
+                    <ViewProvider>
+                      <SidebarProvider>
+                        <ReadinessProvider>
+                          <LandingPromptProvider>
+                            <div className="h-screen w-screen overflow-hidden bg-background text-foreground">
+                              {/* The DashboardProvider and specific page structure (3 panels) will be in page.tsx */}
+                              {children}
+                            </div>
+                          </LandingPromptProvider>
+                        </ReadinessProvider>
+                      </SidebarProvider>
+                    </ViewProvider>
                   </ChatProvider>
                 </WebhookProvider>
               </ApiToolsProvider>

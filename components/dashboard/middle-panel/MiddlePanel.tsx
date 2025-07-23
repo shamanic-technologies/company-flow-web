@@ -23,15 +23,7 @@ import ConversationListPanel from './ConversationListPanel';
 import WebhookDetailPanel from './WebhookDetailPanel';
 import ToolDetailPanel from './ToolDetailPanel';
 import ActionsPanel from './ActionsPanel';
-// Dynamically import the AIDashboardPanel to prevent SSR issues
-const AIDashboardPanel = dynamic(() => import('./AIDashboardPanel'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center text-gray-500">
-      Loading Dashboard...
-    </div>
-  ),
-});
+
 
 /**
  * MiddlePanel Component
@@ -46,11 +38,6 @@ export default function MiddlePanel() {
   const { conversationList, isLoadingConversationList, conversationError, currentConversationIdMiddlePanel } = useConversationContext();
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentIdMiddlePanel);
-
-  // Render dashboard view if active, it doesn't need an agent
-  if (activeAgentView === 'dashboard') {
-    return <AIDashboardPanel selectedDashboard={selectedDashboard} />;
-  }
 
   if (!selectedAgent) {
     // If not dashboard view and no agent, show placeholder

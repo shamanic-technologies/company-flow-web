@@ -10,8 +10,6 @@ import { useApiToolsContext } from './ApiToolsProvider';
 import { useWebhookContext } from './WebhookProvider';
 import { useUserContext } from './UserProvider';
 import { useOrganizationContext } from './OrganizationProvider';
-import { useDashboardPolling } from '@/hooks/polling/useDashboardPolling';
-import { useDashboardContext } from './DashboardProvider';
 
 type ActiveAgentView = 'chat' | 'conversations' | 'memory' | 'actions' | 'webhookDetail' | 'toolDetail' | 'dashboard';
 
@@ -54,7 +52,6 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const { conversationList, selectConversationIdMiddlePanel, handleCreateNewChatRightPanel, refreshConversationList } = useConversationContext();
   const { fetchUserWebhooks } = useWebhookContext();
   const { fetchApiTools } = useApiToolsContext();
-  const { refetchDashboards } = useDashboardContext();
 
   const [activeAgentView, setActiveAgentView] = useState<ActiveAgentView>('conversations');
   const [selectedTool, setSelectedTool] = useState<SearchApiToolResultItem | null>(null);
@@ -66,7 +63,6 @@ export function ViewProvider({ children }: { children: ReactNode }) {
 
   useAgentPolling({ fetchAgents, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
   useConversationPolling({ refreshConversations: refreshConversationList, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
-  useDashboardPolling({ fetchDashboards: refetchDashboards, pollingInterval: POLLING_INTERVAL, isSignedIn, activeOrgId });
 
   const selectAgentAndSetView = useCallback((agentId: string | null) => {
     selectAgentMiddlePanel(agentId);
