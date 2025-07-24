@@ -15,7 +15,7 @@ import { LandingPromptProvider, useLandingPromptContext } from '@/providers/Land
 import { usePathname } from 'next/navigation';
 
 import SidebarComponent from '@/components/dashboard/sidebar/Sidebar';
-import RightPanel from '@/components/dashboard/right-panel/ChatPanel';
+import RightPanel from '@/components/dashboard/right-panel/LangGraphChatPanel';
 import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";

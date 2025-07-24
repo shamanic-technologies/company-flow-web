@@ -94,17 +94,18 @@ export default function ChatInterface({
                 const isStreaming = isLastMessage && msg.role === 'assistant' && isLoading;
 
                 return (
-                <ChatMessage 
-                  key={msg.id} 
-                  message={msg} 
-                  userInitials={userInitials} 
-                  agentFirstName={agentFirstName}
-                  agentLastName={agentLastName}
-                  append={append} 
-                  addToolResult={addToolResult}
-                  messages={messages}
+                <div key={msg.id}>
+                  <ChatMessage 
+                    message={msg} 
+                    userInitials={userInitials} 
+                    agentFirstName={agentFirstName}
+                    agentLastName={agentLastName}
+                    append={append} 
+                    addToolResult={addToolResult}
+                    messages={messages}
                     isStreaming={isStreaming}
-                />
+                  />
+                </div>
                 );
               })}
               

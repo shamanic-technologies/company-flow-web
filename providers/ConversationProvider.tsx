@@ -44,16 +44,6 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     setCurrentConversationId(null);
   }, [agentId]);
 
-  // Step 2: When the new conversation list arrives, select the first one
-  // if no conversation is currently selected.
-  useEffect(() => {
-    console.debug('[ConversationProvider][Step 2] conversations', conversations);
-    if (conversations && conversations.length > 0 && !currentConversationId) {
-      setCurrentConversationId(conversations[0].conversationId);
-    }
-  }, [conversations, currentConversationId]);
-
-
   const selectConversationId = useCallback((id: string | null) => {
     setCurrentConversationId(id);
   }, []);
