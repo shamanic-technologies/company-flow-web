@@ -1,86 +1,74 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { Message, CreateMessage } from 'ai/react';
-import { useConfiguredChat, CustomChatRequestOptions } from '@/hooks/chat/useConfiguredChat';
-import { useConversationContext } from './ConversationProvider';
-import { useOrganizationContext } from './OrganizationProvider';
-import { useConversationMessages } from '@/hooks/useConversationMessages';
-import { useUserContext } from './UserProvider';
-import { useAgentContext } from './AgentProvider';
-import { useUser } from '@clerk/nextjs';
+import { createContext, useContext, ReactNode } from 'react';
+import { useChat, type UseChatOptions, type UseChatHelpers } from 'ai/react';
 import { Agent } from '@agent-base/types';
+import { useAgentContext } from './AgentProvider';
+import { useConversationContext } from './ConversationProvider';
+import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
+import { useUser } from '@clerk/nextjs';
+import { useViewContext } from './ViewProvider';
 
-// This is a more accurate representation of what useConfiguredChat returns
-export type ConfiguredChatHelpers = {
-  messages: Message[];
-  append: (message: Message | CreateMessage, chatRequestOptions?: CustomChatRequestOptions) => Promise<string | null | undefined>;
-  reload: (chatRequestOptions?: CustomChatRequestOptions) => Promise<string | null | undefined>;
-  stop: () => void;
-  setMessages: (messages: Message[]) => void;
-  input: string;
-  setInput: (input: string) => void;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>, chatRequestOptions?: CustomChatRequestOptions) => Promise<void>;
-  isLoading: boolean;
-  error: Error | undefined;
-  data?: any;
-  addToolResult: (options: {
-    toolCallId: string;
-    result: any;
-  }) => void;
-  agent: Agent | undefined;
-};
-
-interface ChatContextType {
-  chat: ConfiguredChatHelpers;
+interface ChatContextType extends UseChatHelpers {
+  chatAgent: Agent | null;
 }
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+const ChatContext = createContext<ChatContextType | null>(null);
 
-export function ChatProvider({ children }: { children: ReactNode }) {
-  const { activeOrgId } = useOrganizationContext();
-  const { handleClerkLogout } = useUserContext();
+function ChatInitializer({ chatAgent, children }: { chatAgent: Agent, children: ReactNode }) {
+  const { activeOrgId } = useOrganizationsQuery();
   const { user } = useUser();
-  const { 
-    agents,
-  } = useAgentContext();
-  const { 
-    currentConversationId,
-  } = useConversationContext();
+  const { currentConversationId } = useConversationContext();
   
-  const [chatAgent, setChatAgent] = useState<Agent | undefined>(undefined);
-
-  // Set the chat agent only once when the agent list is first loaded.
-  useEffect(() => {
-    if (!chatAgent && agents.length > 0) {
-      setChatAgent(agents[0]);
-    }
-  }, [agents, chatAgent]);
-
-  const { currentConversationMessages: initialMessages } = useConversationMessages({
-    conversationId: currentConversationId,
-    handleLogout: handleClerkLogout,
-    activeOrgId,
-  });
-
-  const chat = useConfiguredChat({
+  const chat = useChat({
     api: '/api/agents/run',
-    id: currentConversationId ?? undefined,
-    initialMessages: initialMessages,
-    activeOrgId: activeOrgId,
-    agent: chatAgent,
-    user,
+    body: {
+      conversationId: currentConversationId,
+      activeOrgId: activeOrgId,
+      agent: chatAgent,
+    },
   });
 
-  const contextValue = useMemo(() => ({
-    chat,
-  }), [chat]);
+  const chatContextValue: ChatContextType = {
+    ...chat,
+    chatAgent,
+  };
 
   return (
-    <ChatContext.Provider value={contextValue}>
+    <ChatContext.Provider value={chatContextValue}>
       {children}
     </ChatContext.Provider>
+  );
+}
+
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const { selectedAgentForChat, isLoadingAgents } = useAgentContext();
+  const { isCreatingAgent } = useViewContext();
+
+  if (isCreatingAgent) {
+    const newAgentPlaceholder: Agent = {
+      id: 'new-agent',
+      firstName: 'New',
+      lastName: 'Agent',
+      profilePicture: '',
+      gender: 'other',
+      modelId: 'default',
+      memory: 'none',
+      jobTitle: 'New Agent',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    return <ChatInitializer chatAgent={newAgentPlaceholder}>{children}</ChatInitializer>;
+  }
+
+  if (isLoadingAgents || !selectedAgentForChat) {
+    return <ChatContext.Provider value={null}>{children}</ChatContext.Provider>;
+  }
+
+  return (
+    <ChatInitializer chatAgent={selectedAgentForChat}>
+      {children}
+    </ChatInitializer>
   );
 }
 

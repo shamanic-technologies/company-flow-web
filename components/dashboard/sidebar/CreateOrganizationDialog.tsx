@@ -15,33 +15,20 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast";
-import { useOrganizations } from "@/hooks/useOrganizations";
+import { useOrganizationsQuery } from "@/hooks/useOrganizationsQuery";
 
 interface CreateOrganizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * Modern organization creation dialog
- * 
- * Features:
- * - Clean, minimal design inspired by Stripe/Airbnb
- * - Form validation and loading states
- * - Responsive design
- * - Accessibility compliant
- * - Uses the centralized `useOrganizations` hook for creation logic
- */
 export function CreateOrganizationDialog({ 
   open, 
   onOpenChange, 
 }: CreateOrganizationDialogProps) {
-  const { createOrganization } = useOrganizations();
-  const [formData, setFormData] = useState({
-    name: '',
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const { createOrganization, isCreatingOrganization } = useOrganizationsQuery();
+  const [formData, setFormData] = useState({ name: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -57,19 +44,15 @@ export function CreateOrganizationDialog({
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setIsLoading(true)
     setErrors({});
     
     try {
       const organizationName = formData.name.trim();
-
-      // Use the centralized hook to create the organization
       await createOrganization(organizationName);
 
       toast({
@@ -77,9 +60,8 @@ export function CreateOrganizationDialog({
         description: `Successfully created and switched to ${organizationName}.`,
       });
 
-      // Reset form and close dialog
-      setFormData({ name: '' })
-      onOpenChange(false)
+      setFormData({ name: '' });
+      onOpenChange(false);
       
     } catch (error: any) {
       console.error('Error creating organization from dialog:', error);
@@ -90,8 +72,6 @@ export function CreateOrganizationDialog({
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -131,7 +111,7 @@ export function CreateOrganizationDialog({
               value={formData.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
               className={`h-8 text-xs placeholder:text-xs ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-              disabled={isLoading}
+              disabled={isCreatingOrganization}
             />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name}</p>
@@ -143,17 +123,17 @@ export function CreateOrganizationDialog({
               type="button"
               variant="outline"
               onClick={handleCancel}
-              disabled={isLoading}
+              disabled={isCreatingOrganization}
               className="h-8 text-xs flex-1"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={isCreatingOrganization}
               className="h-8 text-xs flex-1"
             >
-              {isLoading ? (
+              {isCreatingOrganization ? (
                 <>
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   Adding...
@@ -167,6 +147,4 @@ export function CreateOrganizationDialog({
       </DialogContent>
     </Dialog>
   )
-}
-
-export default CreateOrganizationDialog; 
+} 

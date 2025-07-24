@@ -1,7 +1,8 @@
+/*
 'use client';
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 import { useAgentContext } from './AgentProvider';
 import { useConversationContext } from './ConversationProvider';
 import { useApiToolsContext } from './ApiToolsProvider';
@@ -19,12 +20,12 @@ export const ReadinessContext = createContext<ReadinessContextType>({
 });
 
 export function ReadinessProvider({ children }: { children: ReactNode }) {
-  const { isOrganizationsReady } = useOrganizations();
+  const { isOrganizationsReady } = useOrganizationsQuery();
   const { isAgentsReady } = useAgentContext();
-  const { isConversationReady } = useConversationContext();
+  const { isConversationsReady } = useConversationContext();
   const { isApiToolsReady } = useApiToolsContext();
   const { isWebhooksReady } = useWebhookContext();
-  const { isBillingReady } = useBillingContext();
+  const { isReady: isBillingReady } = useBillingContext();
   
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
@@ -32,7 +33,7 @@ export function ReadinessProvider({ children }: { children: ReactNode }) {
   const isSystemReady = 
     isOrganizationsReady 
     && isAgentsReady 
-    && isConversationReady 
+    && isConversationsReady 
     && isApiToolsReady 
     && isWebhooksReady 
     && isBillingReady
@@ -58,4 +59,5 @@ export function useReadinessContext() {
     throw new Error('useReadinessContext must be used within a ReadinessProvider');
   }
   return context;
-} 
+}
+*/ 

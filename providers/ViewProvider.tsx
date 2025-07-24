@@ -1,23 +1,41 @@
 'use client';
 
-import { createContext, useState, ReactNode, useContext } from 'react';
+import { createContext, useState, ReactNode, useContext, useMemo } from 'react';
 
 interface ViewContextType {
   isRightPanelOpen: boolean;
   setIsRightPanelOpen: (isOpen: boolean) => void;
+  isCreatingAgent: boolean;
+  setIsCreatingAgent: (isCreating: boolean) => void;
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
 
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
-  const value = {
-    isRightPanelOpen,
-    setIsRightPanelOpen,
+  const handleSetIsRightPanelOpen = (isOpen: boolean) => {
+    setIsRightPanelOpen(isOpen);
+    if (!isOpen) {
+      // When the panel is closed, we should exit any special modes.
+      setIsCreatingAgent(false);
+    }
   };
 
-  return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>;
+  const contextValue = useMemo(
+    () => ({
+      isRightPanelOpen,
+      setIsRightPanelOpen: handleSetIsRightPanelOpen,
+      isCreatingAgent,
+      setIsCreatingAgent,
+    }),
+    [isRightPanelOpen, isCreatingAgent]
+  );
+
+  return (
+    <ViewContext.Provider value={contextValue}>{children}</ViewContext.Provider>
+  );
 }
 
 export function useViewContext() {

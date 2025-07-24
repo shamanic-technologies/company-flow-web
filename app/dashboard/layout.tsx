@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useIsFetching } from '@tanstack/react-query';
 import { UserProvider } from '@/providers/UserProvider';
-import { OrganizationProvider } from '@/providers/OrganizationProvider';
 import { AgentProvider, useAgentContext } from '@/providers/AgentProvider';
 import { ConversationProvider } from '@/providers/ConversationProvider';
 import { ChatProvider } from '@/providers/ChatProvider';
@@ -11,7 +11,6 @@ import { WebhookProvider } from '@/providers/WebhookProvider';
 import { BillingProvider } from '@/providers/BillingProvider';
 import { ViewProvider, useViewContext } from '@/providers/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ReadinessProvider, useReadinessContext } from '@/providers/ReadinessProvider';
 import { LandingPromptProvider, useLandingPromptContext } from '@/providers/LandingPromptProvider';
 
 import SidebarComponent from '@/components/dashboard/sidebar/Sidebar';
@@ -20,14 +19,25 @@ import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AgentSettingsPanel from '@/components/dashboard/right-panel/AgentSettingsPanel';
+import QueryProvider from '@/providers/QueryProvider';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { hasInitiallyLoaded } = useReadinessContext();
+  const isFetching = useIsFetching();
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    // Once fetching is complete for the first time, we mark it as loaded.
+    // This prevents the main loader from showing up for background refetches.
+    if (isFetching === 0 && !hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [isFetching, hasLoadedOnce]);
+
   const { isLandingPromptProcessing } = useLandingPromptContext();
   const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
-  const { selectedAgentForPanel } = useAgentContext();
+  const { selectedAgentForSettings } = useAgentContext();
 
-  if (!hasInitiallyLoaded || isLandingPromptProcessing) {
+  if (!hasLoadedOnce || isLandingPromptProcessing) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-background">
         <Skeleton className="h-16 w-16 rounded-full bg-muted" />
@@ -49,13 +59,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             {/* The SheetTitle is required for accessibility but is visually hidden to not affect the UI */}
             <SheetHeader>
               <SheetTitle className="sr-only">
-                {selectedAgentForPanel
-                  ? `Agent Settings - ${selectedAgentForPanel.firstName} ${selectedAgentForPanel.lastName}`
+                {selectedAgentForSettings
+                  ? `Agent Settings - ${selectedAgentForSettings.firstName} ${selectedAgentForSettings.lastName}`
                   : "Chat Panel"}
               </SheetTitle>
             </SheetHeader>
-            {selectedAgentForPanel ? (
-              <AgentSettingsPanel agent={selectedAgentForPanel} />
+            {selectedAgentForSettings ? (
+              <AgentSettingsPanel agent={selectedAgentForSettings} />
             ) : (
               <RightPanel />
             )}
@@ -68,30 +78,28 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <UserProvider>
-      <OrganizationProvider>
+    <QueryProvider>
+      <UserProvider>
         <BillingProvider>
-          <AgentProvider>
-            <ConversationProvider>
+          <ConversationProvider>
+            <AgentProvider>
               <ApiToolsProvider>
                 <WebhookProvider>
-                  <ChatProvider>
-                    <ViewProvider>
-                      <SidebarProvider>
-                        <ReadinessProvider>
-                          <LandingPromptProvider>
-                            <AppLayout>{children}</AppLayout>
-                          </LandingPromptProvider>
-                        </ReadinessProvider>
-                      </SidebarProvider>
-                    </ViewProvider>
-                  </ChatProvider>
+                  <ViewProvider>
+                    <SidebarProvider>
+                      <ChatProvider>
+                        <LandingPromptProvider>
+                          <AppLayout>{children}</AppLayout>
+                        </LandingPromptProvider>
+                      </ChatProvider>
+                    </SidebarProvider>
+                  </ViewProvider>
                 </WebhookProvider>
               </ApiToolsProvider>
-            </ConversationProvider>
-          </AgentProvider>
+            </AgentProvider>
+          </ConversationProvider>
         </BillingProvider>
-      </OrganizationProvider>
-    </UserProvider>
+      </UserProvider>
+    </QueryProvider>
   );
 } 

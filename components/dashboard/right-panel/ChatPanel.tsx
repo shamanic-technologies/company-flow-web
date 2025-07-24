@@ -26,18 +26,23 @@ import { Agent } from '@agent-base/types';
  */
 export default function ChatPanel() {
     const { getClerkUserInitials } = useUserContext();
-    const { chat } = useChatContext();
+    const chat = useChatContext();
 
-    const { 
-        agent: chatAgent,
-        isLoading: isLoadingMessages, 
-    } = chat;
+    // The chat context can be null while the agent list is loading.
+    // We render a loading state until the context is ready.
+    if (!chat) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
 
-    if (isLoadingMessages && !chatAgent) {
+    if (chat.isLoading && !chat.chatAgent) {
         return <div className="p-4">Loading Chat...</div>;
     }
 
-    if (!chatAgent) {
+    if (!chat.chatAgent) {
         return (
             <div className="flex flex-col h-full items-center justify-center">
                 <p>No Agent available for chat.</p>
@@ -49,13 +54,13 @@ export default function ChatPanel() {
     return (
         <div className="flex flex-col h-full bg-background">
             <AgentHeader 
-                agent={chatAgent}
+                agent={chat.chatAgent}
             />
             <div className="flex-1 overflow-y-auto">
                 <ChatInterface
                     userInitials={getClerkUserInitials()}
-                    agentFirstName={chatAgent.firstName}
-                    agentLastName={chatAgent.lastName}
+                    agentFirstName={chat.chatAgent.firstName}
+                    agentLastName={chat.chatAgent.lastName}
                     chat={chat}
                 />
             </div>

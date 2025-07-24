@@ -1,3 +1,4 @@
+/*
 import { useState, useCallback, useEffect } from 'react';
 import { useUser, useAuth, useClerk } from '@clerk/nextjs';
 import type { UserResource, OrganizationMembershipResource, SetActive, OrganizationResource } from '@clerk/types';
@@ -22,13 +23,6 @@ interface UseOrganizationsReturn {
   // refreshOrganizations: () => Promise<void>; 
 }
 
-/**
- * Custom hook to manage Clerk organizations.
- * - Fetches all user organizations.
- * - Handles automatic activation of the "Personal" organization if no other is active.
- * - Provides a function to switch between organizations.
- * - Manages loading and error states.
- */
 export function useOrganizations(): UseOrganizationsReturn {
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
   const { orgId: activeOrgIdFromClerk, isLoaded: authIsLoaded } = useAuth();
@@ -272,4 +266,5 @@ export function useOrganizations(): UseOrganizationsReturn {
     createPersonalOrganization: createPersonalOrganization,
     activeOrgId: activeOrgIdFromClerk, // Directly return the activeOrgId from Clerk Auth
   };
-} 
+}
+*/ 

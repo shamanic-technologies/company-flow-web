@@ -1,52 +1,31 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useWebhooks } from '@/hooks/useWebhooks';
-import { useOrganizationContext } from './OrganizationProvider';
-import { useUserContext } from './UserProvider';
-import { SearchWebhookResultItem } from '@agent-base/types';
+import { useWebhooksQuery } from '@/hooks/useWebhooksQuery';
+import { Webhook } from '@agent-base/types';
 
 interface WebhookContextType {
-  userWebhooks: SearchWebhookResultItem[];
+  webhooks: Webhook[];
   isLoadingWebhooks: boolean;
   webhookError: string | null;
-  fetchUserWebhooks: () => Promise<void>;
   isWebhooksReady: boolean;
 }
 
-export const WebhookContext = createContext<WebhookContextType>({
-  userWebhooks: [],
-  isLoadingWebhooks: false,
-  webhookError: null,
-  fetchUserWebhooks: async () => {},
-  isWebhooksReady: false,
-});
+export const WebhookContext = createContext<WebhookContextType | undefined>(undefined);
 
 export function WebhookProvider({ children }: { children: ReactNode }) {
-  const { activeOrgId } = useOrganizationContext();
-  const { handleClerkLogout } = useUserContext();
-
   const { 
-    userWebhooks, 
+    webhooks, 
     isLoadingWebhooks, 
-    webhookError, 
-    fetchUserWebhooks,
-    isWebhooksReady
-  } = useWebhooks({ handleLogout: handleClerkLogout, activeOrgId });
+    webhooksError 
+  } = useWebhooksQuery();
 
   const contextValue = useMemo(() => ({
-    userWebhooks, 
-    isLoadingWebhooks, 
-    webhookError, 
-    fetchUserWebhooks,
-    isWebhooksReady
-  }), [
-    userWebhooks, 
-    isLoadingWebhooks, 
-    webhookError, 
-    fetchUserWebhooks,
-    isWebhooksReady
-  ]);
+    webhooks,
+    isLoadingWebhooks,
+    webhookError: webhooksError?.message ?? null,
+    isWebhooksReady: !isLoadingWebhooks && !webhooksError,
+  }), [webhooks, isLoadingWebhooks, webhooksError]);
 
   return (
     <WebhookContext.Provider value={contextValue}>
@@ -57,7 +36,7 @@ export function WebhookProvider({ children }: { children: ReactNode }) {
 
 export function useWebhookContext() {
   const context = useContext(WebhookContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useWebhookContext must be used within a WebhookProvider');
   }
   return context;

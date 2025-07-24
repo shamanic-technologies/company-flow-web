@@ -11,9 +11,8 @@ import {
   ClientUser,
   Agent,
 } from '@agent-base/types';
-import { CreditBalance } from '@/types/credit';
-import { usePlanInfo } from '@/hooks/usePlanInfo';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
+
 
 /**
  * @file useConfiguredChat.ts

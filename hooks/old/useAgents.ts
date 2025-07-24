@@ -1,3 +1,4 @@
+/*
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -23,9 +24,6 @@ export interface UseAgentsReturn {
   fetchAgents: () => Promise<void>;
 }
 
-/**
- * @description Hook to manage agent data including fetching, selection, and creation.
- */
 export function useAgents({ user, isUserLoaded, activeOrgId }: UseAgentsProps): UseAgentsReturn {
   const { getToken } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -110,4 +108,5 @@ export function useAgents({ user, isUserLoaded, activeOrgId }: UseAgentsProps): 
     isAgentsReady,
     fetchAgents,
   };
-} 
+}
+*/ 

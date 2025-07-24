@@ -1,90 +1,92 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { usePlanInfo } from '@/hooks/usePlanInfo';
-import { useCredits } from '@/hooks/useCredits';
-import { useOrganizationContext } from './OrganizationProvider';
-import { PlanInfo, CreditBalance } from '@/types/credit';
+import {
+  createContext,
+  useContext,
+  ReactNode,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
+import { CreditBalance, PlanInfo, PlanDetails, PlansList } from '@/types/credit';
+import { useAuth } from '@clerk/nextjs';
 
 interface BillingContextType {
   planInfo: PlanInfo | null;
-  isLoadingPlanInfo: boolean;
-  planInfoError: string | null;
-  isValidating: boolean;
-  isConsuming: boolean;
   creditBalance: CreditBalance | null;
+  isLoading: boolean;
   error: string | null;
-  validateCredits: (estimatedCredits?: number) => Promise<boolean>;
-  consumeCredits: (totalAmountInUSDCents: number, conversationId: string) => Promise<boolean>;
-  clearError: () => void;
-  fetchPlanInfo: () => Promise<void>;
-  isBillingReady: boolean;
+  isReady: boolean;
+  plans: PlanDetails[];
+  refetchBillingInfo: () => void;
 }
 
-export const BillingContext = createContext<BillingContextType>({
-  planInfo: null,
-  isLoadingPlanInfo: true,
-  planInfoError: null,
-  isValidating: false,
-  isConsuming: false,
-  creditBalance: null,
-  error: null,
-  validateCredits: async () => false,
-  consumeCredits: async () => false,
-  clearError: () => {},
-  fetchPlanInfo: async () => {},
-  isBillingReady: false,
-});
+const BillingContext = createContext<BillingContextType | undefined>(undefined);
 
 export function BillingProvider({ children }: { children: ReactNode }) {
-  const { activeOrgId } = useOrganizationContext();
-  
-  const {
-    planInfo,
-    isLoading: isLoadingPlanInfo,
-    error: planInfoError,
-    fetch: fetchPlanInfo
-  } = usePlanInfo({ activeOrgId });
+  const { getToken } = useAuth();
+  const { activeOrgId, isOrganizationsReady } = useOrganizationsQuery();
 
-  const {
-    isValidating,
-    isConsuming,
-    creditBalance,
-    error,
-    validateCredits,
-    consumeCredits,
-    clearError,
-  } = useCredits({ activeOrgId });
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
+  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const isBillingReady = !isLoadingPlanInfo && !isValidating && !isConsuming;
+  const fetchBillingInfo = useCallback(async () => {
+    if (!activeOrgId) return;
 
-  const contextValue = useMemo(() => ({
-    planInfo,
-    isLoadingPlanInfo,
-    planInfoError,
-    fetchPlanInfo,
-    isValidating,
-    isConsuming,
-    creditBalance,
-    error,
-    validateCredits,
-    consumeCredits,
-    clearError,
-    isBillingReady,
-  }), [
-    planInfo,
-    isLoadingPlanInfo,
-    planInfoError,
-    fetchPlanInfo,
-    isValidating,
-    isConsuming,
-    creditBalance,
-    error,
-    validateCredits,
-    consumeCredits,
-    clearError,
-    isBillingReady,
-  ]);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      const response = await fetch('/api/credits/plan-info', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch billing info');
+      }
+
+      const data = await response.json();
+      setPlanInfo(data); // The response is the PlanInfo object itself
+      // We need to derive CreditBalance from PlanInfo
+      const derivedCreditBalance: CreditBalance = {
+        balance: data.credits.balance,
+        hasCredits: data.credits.balance > 0,
+        // These fields might not be directly available, adjust as needed
+        stripeCustomerId: data.stripeCustomerId || null, 
+      };
+      setCreditBalance(derivedCreditBalance);
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeOrgId, getToken]);
+
+  useEffect(() => {
+    if (isOrganizationsReady && activeOrgId) {
+      fetchBillingInfo();
+    }
+  }, [isOrganizationsReady, activeOrgId, fetchBillingInfo]);
+
+  const contextValue = useMemo(
+    () => ({
+      planInfo,
+      creditBalance,
+      isLoading,
+      error,
+      isReady: !isLoading && !error,
+      plans: PlansList, // Use the imported PlansList
+      refetchBillingInfo: fetchBillingInfo,
+    }),
+    [planInfo, creditBalance, isLoading, error, fetchBillingInfo]
+  );
 
   return (
     <BillingContext.Provider value={contextValue}>

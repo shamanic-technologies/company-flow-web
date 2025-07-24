@@ -4,18 +4,18 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useLandingPrompt } from '@/hooks/useLandingPrompt';
 
 interface LandingPromptContextType {
-  isLandingPromptProcessing: boolean;
+  isProcessing: boolean;
 }
 
 export const LandingPromptContext = createContext<LandingPromptContextType>({
-  isLandingPromptProcessing: false,
+  isProcessing: false,
 });
 
 export function LandingPromptProvider({ children }: { children: ReactNode }) {
-  const { isLandingPromptProcessing } = useLandingPrompt();
+  const { isProcessing } = useLandingPrompt();
 
   return (
-    <LandingPromptContext.Provider value={{ isLandingPromptProcessing }}>
+    <LandingPromptContext.Provider value={{ isProcessing }}>
       {children}
     </LandingPromptContext.Provider>
   );

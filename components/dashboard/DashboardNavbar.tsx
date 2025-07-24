@@ -1,13 +1,15 @@
 'use client';
 
+import * as React from "react"
 import { useState } from 'react';
+import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 import { useUserContext } from '@/providers/UserProvider';
-import { useOrganizationContext } from '@/providers/OrganizationProvider';
+import { usePathname } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronsUpDown, PlusCircle } from "lucide-react"
-import CreateOrganizationDialog from './sidebar/CreateOrganizationDialog';
+import { CreateOrganizationDialog } from './sidebar/CreateOrganizationDialog';
 
 const aiAgentQuotes = [
   {
@@ -113,8 +115,17 @@ const aiAgentQuotes = [
 ];
 
 export default function DashboardNavbar() {
-  const { clerkUser } = useUserContext();
-  const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
+  const pathname = usePathname();
+  const { 
+    organizations, 
+    currentOrganization, 
+    switchOrganization,
+    isLoadingOrganizations,
+    isSwitchingOrganization,
+  } = useOrganizationsQuery();
+
+  const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
+  const userInitials = getClerkUserInitials();
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(() =>
     Math.floor(Math.random() * aiAgentQuotes.length)

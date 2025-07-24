@@ -11,11 +11,15 @@ import { useAgentContext } from "@/providers/AgentProvider"
 import { useViewContext } from "@/providers/ViewProvider"
 
 export function AgentsView() {
-  const { agents, isLoadingAgents, setSelectedAgentForPanel } = useAgentContext()
-  const { setIsRightPanelOpen } = useViewContext()
+  const { 
+    agents, 
+    isLoadingAgents, 
+    setSelectedAgentForSettings, 
+  } = useAgentContext()
+  const { setIsRightPanelOpen, setIsCreatingAgent } = useViewContext()
 
   const handleRowClick = (agent: Agent) => {
-    setSelectedAgentForPanel(agent);
+    setSelectedAgentForSettings(agent);
     setIsRightPanelOpen(true);
   }
 
@@ -36,7 +40,8 @@ export function AgentsView() {
           variant="default"
           className="bg-blue-600 hover:bg-blue-700 text-white"
           onClick={() => {
-            setSelectedAgentForPanel(null); // Clear agent selection
+            setIsCreatingAgent(true);
+            setSelectedAgentForSettings(null);
             setIsRightPanelOpen(true);
           }}
         >

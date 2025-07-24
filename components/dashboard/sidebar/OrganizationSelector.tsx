@@ -1,165 +1,121 @@
 'use client';
 
 import * as React from "react"
-import { useState } from 'react';
-import {
-  Plus,
-  Building2,
-  Check,
-  ChevronsUpDown,
-  FolderClosed,
-} from "lucide-react"
+import { useState, useMemo } from 'react';
+import { useOrganizationsQuery } from "@/hooks/useOrganizationsQuery"; 
+import { ChevronsUpDown, Check, Plus, FolderClosed, Building2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CreateOrganizationDialog } from './CreateOrganizationDialog'
-import { toast } from "@/hooks/use-toast"
-import { useOrganizationContext } from '../context/OrganizationProvider';
-import { ClientOrganization } from '@agent-base/types'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
+import { ClientOrganization } from "@agent-base/types";
 
 interface OrganizationSelectorProps {
-  onOrganizationChange?: (organization: ClientOrganization) => void;
+  onOrganizationChange?: (orgId: string) => void;
 }
 
-/**
- * Modern organization selector component with create functionality
- * Integrates seamlessly with the existing sidebar design system
- * 
- * Features:
- * - Switch between personal and organization workspaces using real Clerk data
- * - Create new organizations with modal dialog
- * - Visual distinction between personal and organization types
- * - Responsive design with proper hover states
- * - Keyboard navigation support
- * - Toast notifications for user feedback
- * - Integration with DashboardContext for real organization management
- */
 export function OrganizationSelector({ 
   onOrganizationChange
 }: OrganizationSelectorProps) {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  // Replace the old context with the new React Query hook
   const {
     organizations,
     currentOrganization,
     isLoadingOrganizations,
-    organizationError,
     switchOrganization,
-  } = useOrganizationContext();
-
-  const [isOpen, setIsOpen] = useState(false)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-
-  const handleCreateOrganization = () => {
-    setIsOpen(false)
-    setIsCreateDialogOpen(true)
-  }
+    isSwitchingOrganization,
+  } = useOrganizationsQuery();
 
   const handleSwitchOrganization = async (org: ClientOrganization) => {
-    if (!org.clientAuthOrganizationId) {
-      console.error('[OrganizationSelector] Organization missing clientAuthOrganizationId:', org);
-      toast({
-        title: 'Error switching organization',
-        description: 'Organization ID not found. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const previousOrg = currentOrganization;
-    setIsOpen(false);
-    
+    if (org.id === currentOrganization?.id) return;
     try {
-      await switchOrganization(org.clientAuthOrganizationId);
-      
-      // Show switch confirmation toast
-      if (!previousOrg || org.clientAuthOrganizationId !== previousOrg.clientAuthOrganizationId) {
-        toast({
-          title: `Switched to ${org.name}`,
-          description: `You're now working in ${org.name === 'Personal' ? 'your personal workspace' : org.name}.`,
-        });
-      }
-      
-      if (onOrganizationChange) {
-        onOrganizationChange(org);
-      }
-      
-    } catch (error: any) {
-      console.error('[OrganizationSelector] Error switching organization:', error);
-      toast({
-        title: 'Failed to switch organization',
-        description: 'There was an error switching organizations. Please try again.',
-        variant: 'destructive',
-      });
+      await switchOrganization(org.id);
+      onOrganizationChange?.(org.id);
+    } catch (error) {
+      console.error("Failed to switch organization", error);
+      // Optionally show a toast notification here
     }
-  }
+  };
 
-  // Show loading state
+  const handleCreateOrganization = () => {
+    setIsCreateDialogOpen(true);
+  };
+
+  const sortedOrganizations = useMemo(() => {
+    return [...organizations].sort((a, b) => {
+      if (a.name === 'Personal') return -1;
+      if (b.name === 'Personal') return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [organizations]);
+
   if (isLoadingOrganizations) {
     return (
-      <Button
-        variant="ghost"
-        disabled
-        className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-muted-foreground opacity-50"
-      >
-        <div className="flex items-center gap-2 overflow-hidden">
-          <FolderClosed className="h-4 w-4 shrink-0" />
-          <span className="truncate">Loading...</span>
-        </div>
-      </Button>
+      <div className="flex items-center gap-2 px-2">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
     );
   }
 
-  // Show error state
-  if (organizationError) {
-    return (
-      <Button
-        variant="ghost"
-        disabled
-        className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-destructive opacity-75"
-      >
-        <div className="flex items-center gap-2 overflow-hidden">
-          <FolderClosed className="h-4 w-4 shrink-0" />
-          <span className="truncate">Error loading organizations</span>
-        </div>
-      </Button>
-    );
-  }
+  const triggerLabel = currentOrganization?.name 
+    ? (currentOrganization.name.length > 20 ? `${currentOrganization.name.substring(0, 18)}...` : currentOrganization.name)
+    : "Select Organization";
 
   return (
     <>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="group flex h-9 w-full items-center justify-between rounded-md border border-dashed border-border/70 px-3 text-xs font-medium text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset transition-colors"
+            className="w-full justify-between h-10 px-2 group"
+            disabled={isSwitchingOrganization}
           >
-            <div className="flex items-center gap-2 overflow-hidden">
-              {currentOrganization?.name === 'Personal' ? (
-                <FolderClosed className="h-4 w-4 shrink-0" />
-              ) : (
-                <Building2 className="h-4 w-4 shrink-0" />
-              )}
-              <span className="truncate">
-                {currentOrganization?.name || 'Select Organization'}
-              </span>
+            <div className="flex items-center gap-2 truncate">
+              {currentOrganization ? (
+                currentOrganization.name === 'Personal' ? (
+                  <FolderClosed className="h-4 w-4 flex-shrink-0" />
+                ) : (
+                  <Building2 className="h-4 w-4 flex-shrink-0" />
+                )
+              ) : <div className="h-4 w-4" />}
+              <span className="truncate text-sm font-medium">{triggerLabel}</span>
             </div>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+            <ChevronsUpDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="start" side="bottom">
           <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
             Organizations
           </DropdownMenuLabel>
-          {organizations.map((org: ClientOrganization) => (
+          {sortedOrganizations.map((org: ClientOrganization) => (
             <DropdownMenuItem
               key={org.id}
               onClick={() => handleSwitchOrganization(org)}
               className="flex items-center gap-2 cursor-pointer text-xs"
+              disabled={isSwitchingOrganization}
             >
               <div className="flex h-4 w-4 items-center justify-center">
                 {currentOrganization?.id === org.id && <Check className="h-3.5 w-3.5" />}
@@ -189,6 +145,4 @@ export function OrganizationSelector({
       />
     </>
   )
-}
-
-export default OrganizationSelector; 
+} 

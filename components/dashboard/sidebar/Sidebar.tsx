@@ -35,12 +35,12 @@ import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToo
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useAgentContext } from '@/providers/AgentProvider';
 import { useViewContext } from '@/providers/ViewProvider';
-import { useApiToolsContext } from '@/providers/ApiToolsProvider';
-import { useWebhookContext } from '@/providers/WebhookProvider';
-import { useOrganizationContext } from '@/providers/OrganizationProvider';
+import { useApiToolsQuery } from '@/hooks/useApiToolsQuery';
+import { useWebhooksQuery } from '@/hooks/useWebhooksQuery';
+import { useOrganizationsQuery } from "@/hooks/useOrganizationsQuery";
 import { useUserContext } from '@/providers/UserProvider';
 import { Agent, DashboardInfo } from '@agent-base/types';
-import CreateOrganizationDialog from './CreateOrganizationDialog';
+import { CreateOrganizationDialog } from './CreateOrganizationDialog';
 import {
   Collapsible,
   CollapsibleContent,
@@ -68,11 +68,11 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const router = useRouter();
   const pathname = usePathname();
   const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
-  const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
+  const { currentOrganization } = useOrganizationsQuery();
   const { agents, isLoadingAgents, agentError } = useAgentContext();
   const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
-  const { apiTools, isLoadingApiTools, apiToolsError } = useApiToolsContext();
-  const { userWebhooks, isLoadingWebhooks, webhookError } = useWebhookContext();
+  const { apiTools, isLoadingApiTools, apiToolsError } = useApiToolsQuery();
+  const { webhooks, isLoadingWebhooks, webhooksError } = useWebhooksQuery();
 
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
 
@@ -82,16 +82,9 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
   const [isWebhooksOpen, setIsWebhooksOpen] = useState(true)
 
   // --- Filter Webhooks by Status --- 
-  // Explicitly type userWebhooks from context to match imported type
-  const typedUserWebhooks = userWebhooks as SearchWebhookResultItem[];
-  // Use the correct property and enum values for filtering
-  const activeWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.ACTIVE);
-  const unsetWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.UNSET || !wh.currentUserWebhookStatus); // Include undefined/null as UNSET
-  const disabledWebhooks = typedUserWebhooks.filter(wh => wh.currentUserWebhookStatus === WebhookStatus.DISABLED);
-
-  // --- Filter Tools by Status (using live data from context) ---
-  const activeTools = apiTools.filter((t: SearchApiToolResultItem) => t.status === ApiToolStatus.ACTIVE);
-  const unsetTools = apiTools.filter((t: SearchApiToolResultItem) => t.status === ApiToolStatus.UNSET);
+  // No longer needed as we will simplify the display
+  
+  // --- Tools are no longer filtered by status in this component ---
 
   return (
     <>
@@ -113,7 +106,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
             </SidebarMenuItem>
             
             {/* Webhooks Section (renamed to Inbound) */}
-            {typedUserWebhooks.length > 0 && (
+            {webhooks && webhooks.length > 0 && (
               <SidebarMenuItem key="webhooks-section">
                 <Collapsible open={isWebhooksOpen} onOpenChange={setIsWebhooksOpen}>
                   <CollapsibleTrigger asChild>
@@ -126,15 +119,20 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                     <SidebarMenuSub className="pl-1">
                       {isLoadingWebhooks ? (
                         <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
-                      ) : webhookError ? (
-                        <div className="p-1 text-xs text-red-400">Error: {webhookError}</div>
-                      ) : typedUserWebhooks.length === 0 ? (
+                      ) : webhooksError ? (
+                        <div className="p-1 text-xs text-red-400">Error: {webhooksError.message}</div>
+                      ) : webhooks.length === 0 ? (
                         <div className="p-1 text-xs text-muted-foreground">No webhooks found.</div>
                       ) : (
                         <>
-                          {/* <WebhookSubfolder key="active-webhooks" title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                          <WebhookSubfolder key="unset-webhooks" title="Unset" webhooks={unsetWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                          <WebhookSubfolder key="disabled-webhooks" title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} /> */}
+                          {webhooks.map((webhook) => (
+                            <SidebarMenuItem key={webhook.id}>
+                                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                                    <WebhookIcon className="h-3.5 w-3.5" />
+                                    <span className="flex-1 text-left">{webhook.name}</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
                         </>
                       )}
                     </SidebarMenuSub>
@@ -157,7 +155,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
             </SidebarMenuItem>
 
             {/* Tools Section (now last) */}
-            {apiTools.length > 0 && (
+            {apiTools && apiTools.length > 0 && (
               <SidebarMenuItem key="tools-section">
                 <Collapsible open={isToolsOpen} onOpenChange={setIsToolsOpen}>
                   <CollapsibleTrigger asChild>
@@ -171,13 +169,19 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                       {isLoadingApiTools ? (
                         <div className="p-1 flex flex-col gap-1"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div>
                       ) : apiToolsError ? (
-                        <div className="p-1 text-xs text-red-400">Error: {apiToolsError}</div>
-                      ) : apiTools.length === 0 ? (
+                        <div className="p-1 text-xs text-red-400">Error: {apiToolsError.message}</div>
+                      ) : !apiTools || apiTools.length === 0 ? (
                         <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
                       ) : (
                         <>
-                          {/* <ToolSubfolder key="active-tools" title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                          <ToolSubfolder key="unset-tools" title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} /> */}
+                          {apiTools.map((tool) => (
+                            <SidebarMenuItem key={tool.apiToolId}>
+                                <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
+                                    <ToyBrick className="h-3.5 w-3.5" />
+                                    <span className="flex-1 text-left">{tool.name}</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
                         </>
                       )}
                     </SidebarMenuSub>

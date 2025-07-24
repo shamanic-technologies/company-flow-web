@@ -1,52 +1,31 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useApiTools } from '@/hooks/useApiTools';
-import { useOrganizationContext } from './OrganizationProvider';
-import { useUserContext } from './UserProvider';
+import { useApiToolsQuery } from '@/hooks/useApiToolsQuery';
 import { SearchApiToolResultItem } from '@agent-base/types';
 
 interface ApiToolsContextType {
   apiTools: SearchApiToolResultItem[];
   isLoadingApiTools: boolean;
   apiToolsError: string | null;
-  fetchApiTools: () => Promise<void>;
   isApiToolsReady: boolean;
 }
 
-export const ApiToolsContext = createContext<ApiToolsContextType>({
-  apiTools: [],
-  isLoadingApiTools: false,
-  apiToolsError: null,
-  fetchApiTools: async () => {},
-  isApiToolsReady: false,
-});
+export const ApiToolsContext = createContext<ApiToolsContextType | undefined>(undefined);
 
 export function ApiToolsProvider({ children }: { children: ReactNode }) {
-  const { activeOrgId } = useOrganizationContext();
-  const { handleClerkLogout } = useUserContext();
-
-  const {
-    apiTools,
-    isLoadingApiTools,
-    apiToolsError,
-    fetchApiTools,
-    isApiToolsReady,
-  } = useApiTools({ handleLogout: handleClerkLogout, activeOrgId });
-
+  const { 
+    apiTools, 
+    isLoadingApiTools, 
+    apiToolsError 
+  } = useApiToolsQuery();
+  
   const contextValue = useMemo(() => ({
     apiTools,
     isLoadingApiTools,
-    apiToolsError,
-    fetchApiTools,
-    isApiToolsReady,
-  }), [
-    apiTools,
-    isLoadingApiTools,
-    apiToolsError,
-    fetchApiTools,
-    isApiToolsReady,
-  ]);
+    apiToolsError: apiToolsError?.message ?? null,
+    isApiToolsReady: !isLoadingApiTools && !apiToolsError,
+  }), [apiTools, isLoadingApiTools, apiToolsError]);
 
   return (
     <ApiToolsContext.Provider value={contextValue}>

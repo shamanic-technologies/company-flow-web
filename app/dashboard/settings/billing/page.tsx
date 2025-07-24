@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, Crown, Zap, Loader2, Star } from 'lucide-react';
-import { usePlanInfo } from '@/hooks/usePlanInfo';
+import { usePlanInfo } from '@/hooks/old/usePlanInfo';
 import { PlansList } from '@/types/credit'; // PlanDetails might not be directly used here anymore if uiPlanDetails handles all display aspects
 
 /**
