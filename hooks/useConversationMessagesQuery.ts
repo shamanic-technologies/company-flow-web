@@ -11,7 +11,8 @@ async function fetchConversationMessages(getToken: () => Promise<string | null>,
         throw new Error('Failed to fetch messages');
     }
     const data = await response.json();
-    return data.messages;
+    // Ensure we always return an array, even if the data or data.messages is missing.
+    return data || [];
 }
 
 export function useConversationMessagesQuery(conversationId: string | null | undefined) {
@@ -22,7 +23,8 @@ export function useConversationMessagesQuery(conversationId: string | null | und
         queryKey,
         queryFn: () => fetchConversationMessages(getToken, conversationId!),
         enabled: !!conversationId,
-        refetchInterval: 2000, // Poll every 2 seconds for messages
+        // Polling is managed by React Query's default behavior,
+        // such as refetchOnWindowFocus, for a smart real-time experience.
     });
 
     return {

@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
       { conversationId },
       credentials
     );
+    console.debug('[API /messages/list] getMessagesFromConversationResponse', getMessagesFromConversationResponse);
 
     // If the backend call was NOT successful, handle the error properly
     if (!getMessagesFromConversationResponse.success) {
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
     }
 
     const messages = getMessagesFromConversationResponse.data.messages;
-
+    console.debug('[API /messages/list] messages', messages);
     return createSuccessResponse(messages, 200);
     
   } catch (error: any) {
