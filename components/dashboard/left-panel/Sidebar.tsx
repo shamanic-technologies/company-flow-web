@@ -3,12 +3,13 @@
 import * as React from "react"
 import { useState } from 'react';
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronRight,
   File,
   Folder,
   LayoutDashboard,
+  Home,
   Settings,
   LogOut,
   ChevronDown,
@@ -65,19 +66,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 // Main Sidebar Component
 export default function SidebarComponent({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
+  const pathname = usePathname();
   const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
   const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
   const { agents, isLoadingAgents, agentError } = useAgentContext();
-  const { 
-    activeView, 
-    setActiveView, 
-    selectedWebhook,
-    selectWebhookAndSetView,
-    selectedTool,
-    selectToolAndSetView,
-    selectDashboardAndSetView,
-    selectedDashboard,
-  } = useViewContext();
+  const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
   const { apiTools, isLoadingApiTools, apiToolsError } = useApiToolsContext();
   const { userWebhooks, isLoadingWebhooks, webhookError } = useWebhookContext();
 
@@ -104,41 +97,21 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
     <>
       <CreateOrganizationDialog open={isCreateOrgOpen} onOpenChange={setCreateOrgOpen} />
       <Sidebar {...props} className="border-r border-border/40">
-        <SidebarHeader className="p-2 border-b border-border/40">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" className="w-full flex justify-between items-center p-2">
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={currentOrganization?.profileImage} />
-                    <AvatarFallback>{currentOrganization?.name?.charAt(0) || '?'}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium text-sm">{currentOrganization?.name}</span>
-                </div>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-60 p-1 bg-popover border-border text-popover-foreground">
-              {organizations.map((org) => (
-                <Button
-                  key={org.id}
-                  variant="ghost"
-                  className="w-full justify-start p-2 text-sm"
-                  onClick={() => switchOrganization(org.id)}
-                >
-                  {org.name}
-                </Button>
-              ))}
-              <div className="border-t border-border my-1" />
-              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => setCreateOrgOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Organization
-              </Button>
-            </PopoverContent>
-          </Popover>
-        </SidebarHeader>
-
         <SidebarContent className="flex-1 overflow-y-auto p-2">
           <SidebarMenu>
+            {/* Home Button */}
+            <SidebarMenuItem key="home-section">
+              <Link href="/dashboard" passHref>
+                <SidebarMenuButton
+                  className="group/button w-full justify-start text-sm h-8 px-2 gap-2"
+                  data-active={pathname === '/dashboard'}
+                >
+                  <Home className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left font-medium">Home</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            
             {/* Webhooks Section (renamed to Inbound) */}
             {typedUserWebhooks.length > 0 && (
               <SidebarMenuItem key="webhooks-section">
@@ -159,9 +132,9 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                         <div className="p-1 text-xs text-muted-foreground">No webhooks found.</div>
                       ) : (
                         <>
-                          <WebhookSubfolder key="active-webhooks" title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                          {/* <WebhookSubfolder key="active-webhooks" title="Active" webhooks={activeWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
                           <WebhookSubfolder key="unset-webhooks" title="Unset" webhooks={unsetWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
-                          <WebhookSubfolder key="disabled-webhooks" title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} />
+                          <WebhookSubfolder key="disabled-webhooks" title="Disabled" webhooks={disabledWebhooks} selectedWebhook={selectedWebhook} selectWebhookAndSetView={selectWebhookAndSetView} /> */}
                         </>
                       )}
                     </SidebarMenuSub>
@@ -172,13 +145,15 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
             {/* Agents Section - Changed from collapsible to single button */}
             <SidebarMenuItem key="agents-section">
-              <SidebarMenuButton
-                className="group/button w-full justify-start text-sm h-8 px-2 gap-2"
-                onClick={() => setActiveView('agents')}
-              >
-                <Bot className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-hover/button:scale-110" />
-                <span className="flex-1 text-left font-medium">Agents</span>
-              </SidebarMenuButton>
+              <Link href="/dashboard/agents" passHref>
+                <SidebarMenuButton
+                  className="group/button w-full justify-start text-sm h-8 px-2 gap-2"
+                  data-active={pathname.startsWith('/dashboard/agents')}
+                >
+                  <Bot className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-hover/button:scale-110" />
+                  <span className="flex-1 text-left font-medium">Agents</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
 
             {/* Tools Section (now last) */}
@@ -201,8 +176,8 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
                         <div className="p-1 text-xs text-muted-foreground">No tools found.</div>
                       ) : (
                         <>
-                          <ToolSubfolder key="active-tools" title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
-                          <ToolSubfolder key="unset-tools" title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                          {/* <ToolSubfolder key="active-tools" title="Active" tools={activeTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} />
+                          <ToolSubfolder key="unset-tools" title="Unset" tools={unsetTools} selectedTool={selectedTool} selectToolAndSetView={selectToolAndSetView} /> */}
                         </>
                       )}
                     </SidebarMenuSub>

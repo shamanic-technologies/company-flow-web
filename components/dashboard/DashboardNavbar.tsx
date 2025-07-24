@@ -2,6 +2,12 @@
 
 import { useState } from 'react';
 import { useUserContext } from './context/UserProvider';
+import { useOrganizationContext } from './context/OrganizationProvider';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ChevronsUpDown, PlusCircle } from "lucide-react"
+import CreateOrganizationDialog from './left-panel/CreateOrganizationDialog';
 
 const aiAgentQuotes = [
   {
@@ -108,6 +114,8 @@ const aiAgentQuotes = [
 
 export default function DashboardNavbar() {
   const { clerkUser } = useUserContext();
+  const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
+  const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(() =>
     Math.floor(Math.random() * aiAgentQuotes.length)
   );
@@ -115,32 +123,58 @@ export default function DashboardNavbar() {
   const currentQuote = aiAgentQuotes[currentQuoteIndex];
 
   return (
-    <div className="h-12 bg-background border-b border-border/40 px-6 flex items-center justify-between relative">
-      {/* Left: Product Name */}
-      <div className="flex items-center">
-        <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Agent Base
-        </h1>
-      </div>
+    <>
+      <CreateOrganizationDialog open={isCreateOrgOpen} onOpenChange={setCreateOrgOpen} />
+      <div className="h-12 bg-background border-b border-border/40 px-6 flex items-center justify-between relative">
+        {/* Left: Organization Switcher */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="flex items-center space-x-2 p-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={currentOrganization?.profileImage} />
+                <AvatarFallback>{currentOrganization?.name?.charAt(0) || '?'}</AvatarFallback>
+              </Avatar>
+              <span className="font-medium text-sm">{currentOrganization?.name}</span>
+              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60 p-1 bg-popover border-border text-popover-foreground">
+            {organizations.map((org) => (
+              <Button
+                key={org.id}
+                variant="ghost"
+                className="w-full justify-start p-2 text-sm"
+                onClick={() => switchOrganization(org.id)}
+              >
+                {org.name}
+              </Button>
+            ))}
+            <div className="border-t border-border my-1" />
+            <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => setCreateOrgOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Create Organization
+            </Button>
+          </PopoverContent>
+        </Popover>
 
-      {/* Middle: User Greeting (absolutely centered) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <span className="text-base font-medium text-foreground">
-          Hello {clerkUser?.firstName || 'there'}!
-        </span>
-      </div>
+        {/* Middle: User Greeting (absolutely centered) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <span className="text-base font-medium text-foreground">
+            Hello {clerkUser?.firstName || 'there'}!
+          </span>
+        </div>
 
-      {/* Right: AI Agent Quote */}
-      <div className="flex items-center max-w-lg">
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground italic truncate">
-            "{currentQuote.quote}"
-          </p>
-          <p className="text-[10px] text-muted-foreground/80 mt-0.5">
-            — {currentQuote.author}, {currentQuote.role}
-          </p>
+        {/* Right: AI Agent Quote */}
+        <div className="flex items-center max-w-lg">
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground italic truncate">
+              "{currentQuote.quote}"
+            </p>
+            <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+              — {currentQuote.author}, {currentQuote.role}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 } 
