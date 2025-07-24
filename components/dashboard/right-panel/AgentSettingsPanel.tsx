@@ -8,6 +8,8 @@ import { useConversationsQuery } from '@/hooks/useConversationsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import ConversationViewer from './ConversationViewer';
 import { useUserContext } from '@/providers/UserProvider';
+import { formatDistanceToNow } from 'date-fns';
+import { MessageSquareText } from 'lucide-react';
 
 interface AgentSettingsPanelProps {
     agent: Agent;
@@ -19,9 +21,9 @@ function ExecutionsList({ agentId, onConversationSelect }: { agentId: string, on
     if (isLoadingConversations) {
         return (
             <div className="space-y-2 p-4">
-                <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-6 w-5/6" />
-                <Skeleton className="h-6 w-2/3" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
             </div>
         );
     }
@@ -30,21 +32,38 @@ function ExecutionsList({ agentId, onConversationSelect }: { agentId: string, on
         return <div className="p-4 text-sm text-red-500">Error: {conversationError.message}</div>;
     }
 
-    if (conversations.length === 0) {
+    if (!conversations || conversations.length === 0) {
         return <div className="p-4 text-sm text-muted-foreground">No executions found for this agent.</div>;
     }
 
+    const sortedConversations = [...conversations].sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+
     return (
         <ul className="space-y-2 p-4">
-            {conversations.map((convo: Conversation) => (
-                <li 
-                  key={convo.conversationId} 
-                  className="text-xs p-2 border rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                  onClick={() => onConversationSelect(convo)}
-                >
-                    ID: {convo.conversationId}
-                </li>
-            ))}
+            {sortedConversations.map((convo: Conversation) => {
+                const hasMessages = convo.messages && convo.messages.length > 0;
+                const relativeTime = formatDistanceToNow(new Date(convo.createdAt), { addSuffix: true });
+
+                return (
+                    <li
+                        key={convo.conversationId}
+                        className={`flex items-center justify-between p-3 border rounded-md transition-colors ${
+                            hasMessages
+                                ? 'bg-muted/50 hover:bg-muted cursor-pointer'
+                                : 'bg-muted/20 opacity-60 cursor-not-allowed'
+                        }`}
+                        onClick={() => hasMessages && onConversationSelect(convo)}
+                    >
+                        <span className="text-xs text-muted-foreground">{relativeTime}</span>
+                        <div className="flex items-center space-x-2">
+                            <MessageSquareText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs font-medium">{convo.messages.length}</span>
+                        </div>
+                    </li>
+                );
+            })}
         </ul>
     );
 }
