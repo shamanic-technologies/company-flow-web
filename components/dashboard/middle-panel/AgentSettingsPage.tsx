@@ -6,24 +6,24 @@ import InputTab from "@/components/agent-settings/InputTab";
 import OutputTab from "@/components/agent-settings/OutputTab";
 import InstructionsTab from "@/components/agent-settings/InstructionsTab";
 import ToolsTab from "@/components/agent-settings/ToolsTab";
-import { useViewContext } from "../context/ViewProvider";
+import Link from "next/link";
 
 interface AgentSettingsPageProps {
   agent: Agent;
+  isPanel?: boolean;
 }
 
-export default function AgentSettingsPage({ agent }: AgentSettingsPageProps) {
-  const { setActiveView } = useViewContext();
-
+export default function AgentSettingsPage({ agent, isPanel = false }: AgentSettingsPageProps) {
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className={`h-full overflow-y-auto ${isPanel ? 'p-0' : 'p-6'}`}>
        <h1 className="text-2xl font-bold">
-        <span
-          className="cursor-pointer text-muted-foreground hover:text-foreground"
-          onClick={() => setActiveView('agents')}
-        >
-          Agents
-        </span>
+        <Link href="/dashboard/agents">
+          <span
+            className="cursor-pointer text-muted-foreground hover:text-foreground"
+          >
+            Agents
+          </span>
+        </Link>
         <span className="text-muted-foreground mx-2">&gt;</span>
         <span>{agent.firstName} {agent.lastName}</span>
       </h1>

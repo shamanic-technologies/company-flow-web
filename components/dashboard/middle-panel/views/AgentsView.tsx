@@ -11,14 +11,12 @@ import { useAgentContext } from "../../context/AgentProvider"
 import { useViewContext } from "../../context/ViewProvider"
 
 export function AgentsView() {
-  const { agents, isLoadingAgents, selectAgentId } = useAgentContext()
-  const { setActiveView, setIsRightPanelOpen } = useViewContext()
+  const { agents, isLoadingAgents, setSelectedAgentForPanel } = useAgentContext()
+  const { setIsRightPanelOpen } = useViewContext()
 
   const handleRowClick = (agent: Agent) => {
-    if (selectAgentId) {
-      selectAgentId(agent.id)
-    }
-    setActiveView("memory")
+    setSelectedAgentForPanel(agent);
+    setIsRightPanelOpen(true);
   }
 
   if (isLoadingAgents) {
@@ -37,7 +35,10 @@ export function AgentsView() {
         <Button
           variant="default"
           className="bg-blue-600 hover:bg-blue-700 text-white"
-          onClick={() => setIsRightPanelOpen(true)}
+          onClick={() => {
+            setSelectedAgentForPanel(null); // Clear agent selection
+            setIsRightPanelOpen(true);
+          }}
         >
           <PlusCircle className="mr-2 h-4 w-4" />
           Create New Agent

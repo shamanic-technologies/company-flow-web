@@ -1,12 +1,10 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { Agent } from '@agent-base/types';
-import { useAgents } from '../../../hooks/useAgents';
-import { useOrganizationContext } from './OrganizationProvider';
-import { useUserContext } from './UserProvider';
+import { useAgents as useAgentsHook } from '../../../hooks/useAgents';
 import { useUser } from '@clerk/nextjs';
-import { useWebhooks } from "@/hooks/useWebhooks";
+import { useOrganizationContext } from './OrganizationProvider';
 
 interface AgentContextType {
   agents: Agent[];
@@ -18,6 +16,8 @@ interface AgentContextType {
   isCreatingAgent: boolean;
   fetchAgents: () => Promise<void>;
   isAgentsReady: boolean;
+  selectedAgentForPanel: Agent | null;
+  setSelectedAgentForPanel: (agent: Agent | null) => void;
 }
 
 export const AgentContext = createContext<AgentContextType>({
@@ -30,6 +30,8 @@ export const AgentContext = createContext<AgentContextType>({
   isCreatingAgent: false,
   fetchAgents: async () => {},
   isAgentsReady: false,
+  selectedAgentForPanel: null,
+  setSelectedAgentForPanel: () => {},
 });
 
 export function AgentProvider({ children }: { children: ReactNode }) {
@@ -46,11 +48,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     isCreatingAgent,
     fetchAgents,
     isAgentsReady,
-  } = useAgents({ 
+  } = useAgentsHook({ 
     user: user ?? undefined,
     isUserLoaded: isLoaded,
     activeOrgId: activeOrgId ?? undefined,
   });
+
+  const [selectedAgentForPanel, setSelectedAgentForPanel] = useState<Agent | null>(null);
 
   // Effect to select the first agent by default if none is selected
   useEffect(() => {
@@ -69,16 +73,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     isCreatingAgent,
     fetchAgents,
     isAgentsReady,
+    selectedAgentForPanel,
+    setSelectedAgentForPanel,
   }), [
     agents, 
-    selectedAgentId,
+    selectedAgentId, 
     selectAgentId,
     isLoadingAgents, 
     agentError, 
     handleCreateAgent,
     isCreatingAgent,
-    fetchAgents,
+    fetchAgents, 
     isAgentsReady,
+    selectedAgentForPanel,
   ]);
 
   return (
@@ -88,10 +95,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAgentContext() {
+export const useAgentContext = () => {
   const context = useContext(AgentContext);
   if (context === undefined) {
     throw new Error('useAgentContext must be used within an AgentProvider');
   }
   return context;
-} 
+}; 

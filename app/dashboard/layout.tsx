@@ -3,7 +3,7 @@
 import React from 'react';
 import { UserProvider } from '@/components/dashboard/context/UserProvider';
 import { OrganizationProvider } from '@/components/dashboard/context/OrganizationProvider';
-import { AgentProvider } from '@/components/dashboard/context/AgentProvider';
+import { AgentProvider, useAgentContext } from '@/components/dashboard/context/AgentProvider';
 import { ConversationProvider } from '@/components/dashboard/context/ConversationProvider';
 import { ChatProvider } from '@/components/dashboard/context/ChatProvider';
 import { ApiToolsProvider } from '@/components/dashboard/context/ApiToolsProvider';
@@ -19,11 +19,13 @@ import RightPanel from '@/components/dashboard/right-panel/RightPanel';
 import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import AgentSettingsPanel from '@/components/dashboard/right-panel/AgentSettingsPanel';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasInitiallyLoaded } = useReadinessContext();
   const { isLandingPromptProcessing } = useLandingPromptContext();
   const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
+  const { selectedAgentForPanel } = useAgentContext();
 
   if (!hasInitiallyLoaded || isLandingPromptProcessing) {
     return (
@@ -45,9 +47,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <Sheet open={isRightPanelOpen} onOpenChange={setIsRightPanelOpen}>
           <SheetContent className="w-[400px] sm:w-[540px]">
             <SheetHeader>
-              <SheetTitle>Create New Agent</SheetTitle>
+              <SheetTitle>
+                {selectedAgentForPanel ? 'Agent Settings' : 'Create New Agent'}
+              </SheetTitle>
             </SheetHeader>
-            <RightPanel />
+            {selectedAgentForPanel ? (
+              <AgentSettingsPanel agent={selectedAgentForPanel} />
+            ) : (
+              <div className="p-4">
+                <p>Create new agent form will go here.</p>
+              </div>
+            )}
           </SheetContent>
         </Sheet>
       </div>
