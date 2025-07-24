@@ -16,7 +16,6 @@ import {
   Bot,
   FolderClosed,
   MessageSquare,
-  List,
   MemoryStick,
   ToyBrick,
   Webhook as WebhookIcon,
@@ -31,7 +30,6 @@ import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToo
 import WebhookSubfolder from './WebhookSubfolder';
 import { renderSectionContent } from './SidebarSectionRenderer';
 import ToolSubfolder from './ToolSubfolder';
-import { SidebarCreditBalance } from "./SidebarCreditBalance"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useAgentContext } from '../context/AgentProvider';
 import { useViewContext } from '../context/ViewProvider';
@@ -61,21 +59,17 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// Agent sub-menu configuration
-const agentSubMenuItems = [
-  { id: 'memory', label: 'Settings', icon: Settings },
-]
+
 
 // Main Sidebar Component
 export default function SidebarComponent({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
   const { organizations, currentOrganization, switchOrganization } = useOrganizationContext();
-  const { agents, isLoadingAgents, agentError, selectedAgentId } = useAgentContext();
+  const { agents, isLoadingAgents, agentError } = useAgentContext();
   const { 
     activeView, 
     setActiveView, 
-    selectAgentAndSetView,
     selectedWebhook,
     selectWebhookAndSetView,
     selectedTool,
@@ -88,12 +82,8 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
 
-  // State to track which agent's sub-menu is expanded (from old sidebar)
-  const [expandedAgentId, setExpandedAgentId] = useState<string | null>(selectedAgentId)
-
   // State for main collapsible sections
   const [isDashboardsOpen, setIsDashboardsOpen] = useState(true)
-  const [isAgentsOpen, setIsAgentsOpen] = useState(true)
   const [isToolsOpen, setIsToolsOpen] = useState(false)
   const [isWebhooksOpen, setIsWebhooksOpen] = useState(true)
 
@@ -186,90 +176,15 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
               </SidebarMenuItem>
             )}
 
-            {/* Agents Section (moved below Inbound) */}
+            {/* Agents Section - Changed from collapsible to single button */}
             <SidebarMenuItem key="agents-section">
-              <Collapsible open={isAgentsOpen} onOpenChange={setIsAgentsOpen}>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton className="w-full justify-start text-xs h-6 px-1 data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground gap-1">
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isAgentsOpen && "rotate-90")} />
-                    <span className="flex-1 text-left">Agents</span>
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="pl-1">
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="w-full justify-start text-xs h-6 px-1 gap-1"
-                        onClick={() => setActiveView('agents')}
-                      >
-                        <List className="h-3.5 w-3.5 shrink-0" />
-                        All Agents
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    {renderSectionContent(
-                      isLoadingAgents,
-                      agentError,
-                      agents,
-                      "No agents found.",
-                      (agent: Agent) => (
-                        <SidebarMenuItem key={agent.id}>
-                          <Collapsible
-                            open={expandedAgentId === agent.id}
-                            onOpenChange={(isOpen) => setExpandedAgentId(isOpen ? agent.id : null)}
-                          >
-                            <CollapsibleTrigger asChild>
-                              <SidebarMenuButton
-                                data-active={selectedAgentId === agent.id && activeView === null}
-                                className={cn(
-                                  "w-full justify-start text-xs h-6 px-1 gap-1",
-                                  "data-[state=closed]:hover:bg-accent/50 data-[state=open]:text-accent-foreground",
-                                  "data-[active=true]:text-accent-foreground data-[active=true]:font-semibold"
-                                )}
-                                onClick={(e) => {
-                                  if (expandedAgentId === agent.id && e.target === e.currentTarget) {
-                                    selectAgentAndSetView(agent.id)
-                                  } else if (expandedAgentId !== agent.id) {
-                                    selectAgentAndSetView(agent.id)
-                                  }
-                                }}
-                              >
-                                <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expandedAgentId === agent.id && "rotate-90")} />
-                                <span className="truncate flex-1 text-left">{`${agent.firstName} ${agent.lastName}`}</span>
-                              </SidebarMenuButton>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <SidebarMenuSub className="pl-1">
-                                {agentSubMenuItems.map((item) => {
-                                  const Icon = item.icon
-                                  const isActive = activeView === item.id && selectedAgentId === agent.id
-                                  return (
-                                    <SidebarMenuItem key={item.id}>
-                                      <SidebarMenuButton
-                                        data-active={isActive}
-                                        className={cn(
-                                          "w-full justify-start text-xs h-6 px-1 gap-1",
-                                          "hover:text-accent-foreground",
-                                          isActive
-                                            ? "text-accent-foreground font-semibold"
-                                            : "font-normal text-muted-foreground"
-                                        )}
-                                        onClick={() => setActiveView(item.id as any)}
-                                      >
-                                        <Icon className="h-3.5 w-3.5 shrink-0" />
-                                        {item.label}
-                                      </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                  )
-                                })}
-                              </SidebarMenuSub>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </SidebarMenuItem>
-                      )
-                    )}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </Collapsible>
+              <SidebarMenuButton
+                className="group/button w-full justify-start text-sm h-8 px-2 gap-2"
+                onClick={() => setActiveView('agents')}
+              >
+                <Bot className="h-4 w-4 shrink-0 transition-transform duration-200 ease-in-out group-hover/button:scale-110" />
+                <span className="flex-1 text-left font-medium">Agents</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
 
             {/* Tools Section (now last) */}
@@ -306,12 +221,7 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
         </SidebarContent>
 
         <SidebarFooter className="p-2 border-t border-border/40">
-          {/* Credit Balance Display */}
-          <div className="mb-2">
-            <SidebarCreditBalance 
-              className="border-border/30" 
-            />
-          </div>
+          {/* Credit Balance Display moved to settings page */}
         </SidebarFooter>
       </Sidebar>
     </>
