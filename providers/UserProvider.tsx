@@ -4,6 +4,8 @@ import { createContext, useContext, useState, ReactNode, useMemo, useCallback, u
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useClerk } from '@clerk/nextjs';
 import type { UserResource } from '@clerk/types';
+import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
+import type { Organization } from '@agent-base/types';
 
 interface UserContextType {
   clerkUser: UserResource | null | undefined;
@@ -11,6 +13,12 @@ interface UserContextType {
   isSignedIn: boolean | undefined;
   handleClerkLogout: () => Promise<void>;
   getClerkUserInitials: () => string;
+  organizations: Organization[];
+  currentOrganization: Organization | null;
+  isLoadingOrganizations: boolean;
+  isPendingOrganizations: boolean;
+  isOrganizationsReady: boolean;
+  switchOrganization: (orgId: string) => void;
 }
 
 export const UserContext = createContext<UserContextType>({
@@ -19,6 +27,12 @@ export const UserContext = createContext<UserContextType>({
   isSignedIn: undefined,
   handleClerkLogout: async () => {},
   getClerkUserInitials: () => '?',
+  organizations: [],
+  currentOrganization: null,
+  isLoadingOrganizations: true,
+  isPendingOrganizations: false,
+  isOrganizationsReady: false,
+  switchOrganization: () => {},
 });
 
 export function UserProvider({ children }: { children: ReactNode }) {
@@ -26,6 +40,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser();
   const { isSignedIn, isLoaded: authIsLoaded } = useAuth();
   const { signOut } = useClerk();
+
+  const { 
+    organizations, 
+    currentOrganization, 
+    isLoadingOrganizations, 
+    isPendingOrganizations,
+    isOrganizationsReady,
+    switchOrganization 
+  } = useOrganizationsQuery();
 
   const handleClerkLogout = useCallback(async () => {
     try {
@@ -59,7 +82,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     isSignedIn,
     handleClerkLogout,
     getClerkUserInitials,
-  }), [clerkUser, isClerkLoading, isSignedIn, handleClerkLogout, getClerkUserInitials]);
+    organizations,
+    currentOrganization,
+    isLoadingOrganizations,
+    isPendingOrganizations,
+    isOrganizationsReady,
+    switchOrganization,
+  }), [
+    clerkUser, 
+    isClerkLoading,
+    isSignedIn,
+    handleClerkLogout,
+    getClerkUserInitials,
+    organizations,
+    currentOrganization,
+    isLoadingOrganizations,
+    isPendingOrganizations,
+    isOrganizationsReady,
+    switchOrganization
+  ]);
   
   return (
     <UserContext.Provider value={contextValue}>

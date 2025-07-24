@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { Agent } from '@agent-base/types';
+import { useOrganizationsQuery } from './useOrganizationsQuery';
 
 async function fetchAgents(getToken: () => Promise<string | null>, organizationId: string): Promise<Agent[]> {
     const token = await getToken();
@@ -26,7 +27,7 @@ export function useAgentsQuery(organizationId: string | null | undefined) {
     const queryClient = useQueryClient();
     const queryKey = ['agents', organizationId];
 
-    const { data: agents, isLoading, isError, error } = useQuery({
+    const { data: agents, isLoading, isError, error, isPending } = useQuery({
         queryKey,
         queryFn: () => fetchAgents(getToken, organizationId!),
         enabled: !!organizationId,
@@ -36,6 +37,7 @@ export function useAgentsQuery(organizationId: string | null | undefined) {
     return {
         agents: agents ?? [],
         isLoadingAgents: isLoading,
+        isPendingAgents: isPending,
         agentError: error?.message ?? null,
     };
 } 

@@ -12,6 +12,7 @@ import { BillingProvider } from '@/providers/BillingProvider';
 import { ViewProvider, useViewContext } from '@/providers/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { LandingPromptProvider, useLandingPromptContext } from '@/providers/LandingPromptProvider';
+import { usePathname } from 'next/navigation';
 
 import SidebarComponent from '@/components/dashboard/sidebar/Sidebar';
 import RightPanel from '@/components/dashboard/right-panel/ChatPanel';
@@ -21,6 +22,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import AgentSettingsPanel from '@/components/dashboard/right-panel/AgentSettingsPanel';
 import QueryProvider from '@/providers/QueryProvider';
 import { useConversationContext } from '@/providers/ConversationProvider';
+import { DashboardShellSkeleton } from '@/components/dashboard/skeletons/skeletons';
+import { useUserContext } from '@/providers/UserProvider';
 
 function DebugDisplay() {
   const { selectedAgentForChat } = useAgentContext();
@@ -46,39 +49,11 @@ function DebugDisplay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const isFetching = useIsFetching();
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-
-  useEffect(() => {
-    // Once fetching is complete for the first time, we mark it as loaded.
-    // This prevents the main loader from showing up for background refetches.
-    if (isFetching === 0 && !hasLoadedOnce) {
-      setHasLoadedOnce(true);
-    }
-  }, [isFetching, hasLoadedOnce]);
-
   const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
   const { selectedAgentForSettings } = useAgentContext();
 
-  if (!hasLoadedOnce) {
-    return (
-      <div className="flex h-screen w-full flex-col">
-      <DashboardNavbar />
-      <div className="flex flex-1 overflow-hidden">
-        <SidebarComponent className="w-64 flex-shrink-0" />
-        <div className="flex flex-1 flex-col overflow-hidden p-4">
-          <Skeleton className="h-full w-full" />
-        </div>
-        <div className="w-[400px] p-4">
-          <Skeleton className="h-full w-full" />
-        </div>
-      </div>
-    </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen w-full bg-background text-foreground flex-col">
+    <div className="flex h-screen w-full flex-col bg-background text-foreground">
       <DashboardNavbar />
       <div className="flex flex-1 overflow-hidden">
         <SidebarComponent className="w-64 flex-shrink-0" />
@@ -109,6 +84,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // This is a temporary wrapper to access the hook.
+  // In a real app, you might have a different structure
+  // if the skeleton needs to be outside the UserProvider.
+  const InnerLayout = ({ children }: { children: React.ReactNode }) => {
+    const { isPendingOrganizations } = useUserContext();
+
+    if (isPendingOrganizations) {
+      return <DashboardShellSkeleton />;
+    }
+
+    return <AppLayout>{children}</AppLayout>;
+  };
+
   return (
     <QueryProvider>
       <UserProvider>
@@ -120,7 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <ViewProvider>
                     <SidebarProvider>
                       <ChatProvider>
-                        <AppLayout>{children}</AppLayout>
+                        <InnerLayout>{children}</InnerLayout>
                       </ChatProvider>
                     </SidebarProvider>
                   </ViewProvider>

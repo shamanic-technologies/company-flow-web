@@ -23,9 +23,13 @@ export function AgentsView() {
     setIsRightPanelOpen(true);
   }
 
+  // The parent layout now handles the skeleton loading state.
+  // This internal loading state is no longer needed.
+  /*
   if (isLoadingAgents) {
     return <div>Loading agents...</div>
   }
+  */
 
   return (
     <div className="h-full overflow-y-auto p-6">

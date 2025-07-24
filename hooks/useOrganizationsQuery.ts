@@ -55,7 +55,7 @@ export function useOrganizationsQuery() {
 
   const queryKey = ['organizations', clerkUser?.id];
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isPending, isError, error } = useQuery({
     queryKey,
     queryFn: () => fetchOrganizations(clerkUser, setActive, activeOrgIdFromClerk),
     enabled: !!clerkUser && clerkIsLoaded && authIsLoaded && !!setActive,
@@ -125,6 +125,7 @@ export function useOrganizationsQuery() {
     organizations: data?.orgList ?? [],
     currentOrganization: data?.activeOrg ?? null,
     isLoadingOrganizations: isLoading,
+    isPendingOrganizations: isPending,
     isOrganizationsReady: !isLoading && !isError,
     organizationError: error?.message ?? null,
     

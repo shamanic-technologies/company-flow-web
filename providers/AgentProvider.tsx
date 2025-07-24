@@ -15,6 +15,7 @@ import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 interface AgentContextType {
   agents: Agent[];
   isLoadingAgents: boolean;
+  isPendingAgents: boolean;
   agentError: string | null;
   selectedAgentForChat: Agent | null; 
   selectedAgentForSettings: Agent | null;
@@ -26,7 +27,7 @@ const AgentContext = createContext<AgentContextType | undefined>(undefined);
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   const { activeOrgId } = useOrganizationsQuery();
-  const { agents, isLoadingAgents, agentError } = useAgentsQuery(activeOrgId);
+  const { agents, isLoadingAgents, isPendingAgents, agentError } = useAgentsQuery(activeOrgId);
   
   const [selectedAgentIdForChat, setSelectedAgentIdForChat] = useState<string | null>(null);
   const [selectedAgentForSettings, setSelectedAgentForSettings] = useState<Agent | null>(null);
@@ -50,6 +51,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     () => ({
       agents: agents || [],
       isLoadingAgents,
+      isPendingAgents,
       agentError,
       selectedAgentForChat,
       selectedAgentForSettings,
@@ -59,6 +61,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     [
       agents,
       isLoadingAgents,
+      isPendingAgents,
       agentError,
       selectedAgentForChat,
       selectedAgentForSettings,
