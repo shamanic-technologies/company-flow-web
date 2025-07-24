@@ -1,13 +1,11 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { useChat, type UseChatOptions, type UseChatHelpers } from 'ai/react';
+import { useChat, type UseChatHelpers } from 'ai/react';
 import { Agent } from '@agent-base/types';
 import { useAgentContext } from './AgentProvider';
 import { useConversationContext } from './ConversationProvider';
 import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
-import { useUser } from '@clerk/nextjs';
-import { useViewContext } from './ViewProvider';
 
 interface ChatContextType extends UseChatHelpers {
   chatAgent: Agent | null;
@@ -15,60 +13,33 @@ interface ChatContextType extends UseChatHelpers {
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
-function ChatInitializer({ chatAgent, children }: { chatAgent: Agent, children: ReactNode }) {
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const { selectedAgentForChat } = useAgentContext();
   const { activeOrgId } = useOrganizationsQuery();
-  const { user } = useUser();
   const { currentConversationId } = useConversationContext();
   
   const chat = useChat({
+    // The 'id' prop expects string | undefined, so we convert null to undefined.
+    id: currentConversationId ?? undefined,
     api: '/api/agents/run',
     body: {
+      // The conversationId in the body is now slightly redundant but can be useful
+      // for backend logic that doesn't rely on the top-level `id`.
       conversationId: currentConversationId,
       activeOrgId: activeOrgId,
-      agent: chatAgent,
+      agent: selectedAgentForChat,
     },
   });
 
   const chatContextValue: ChatContextType = {
     ...chat,
-    chatAgent,
+    chatAgent: selectedAgentForChat,
   };
 
   return (
     <ChatContext.Provider value={chatContextValue}>
       {children}
     </ChatContext.Provider>
-  );
-}
-
-export function ChatProvider({ children }: { children: ReactNode }) {
-  const { selectedAgentForChat, isLoadingAgents } = useAgentContext();
-  const { isCreatingAgent } = useViewContext();
-
-  if (isCreatingAgent) {
-    const newAgentPlaceholder: Agent = {
-      id: 'new-agent',
-      firstName: 'New',
-      lastName: 'Agent',
-      profilePicture: '',
-      gender: 'other',
-      modelId: 'default',
-      memory: 'none',
-      jobTitle: 'New Agent',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    return <ChatInitializer chatAgent={newAgentPlaceholder}>{children}</ChatInitializer>;
-  }
-
-  if (isLoadingAgents || !selectedAgentForChat) {
-    return <ChatContext.Provider value={null}>{children}</ChatContext.Provider>;
-  }
-
-  return (
-    <ChatInitializer chatAgent={selectedAgentForChat}>
-      {children}
-    </ChatInitializer>
   );
 }
 
