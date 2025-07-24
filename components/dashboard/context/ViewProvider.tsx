@@ -27,6 +27,8 @@ interface ViewContextType {
   selectDashboardAndSetView: (dashboard: DashboardInfo | null) => void;
   initialPrompt: string | null;
   setInitialPrompt: (prompt: string | null) => void;
+  isRightPanelOpen: boolean;
+  setIsRightPanelOpen: (isOpen: boolean) => void;
 }
 
 export const ViewContext = createContext<ViewContextType>({
@@ -43,6 +45,8 @@ export const ViewContext = createContext<ViewContextType>({
   selectDashboardAndSetView: () => {},
   initialPrompt: null,
   setInitialPrompt: () => {},
+  isRightPanelOpen: false,
+  setIsRightPanelOpen: () => {},
 });
 
 export function ViewProvider({ children }: { children: ReactNode }) {
@@ -58,6 +62,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const [selectedWebhook, setSelectedWebhook] = useState<SearchWebhookResultItem | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState<DashboardInfo | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   
   const POLLING_INTERVAL = 5000;
 
@@ -132,6 +137,8 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     selectDashboardAndSetView,
     initialPrompt,
     setInitialPrompt,
+    isRightPanelOpen,
+    setIsRightPanelOpen,
   }), [
     activeView,
     selectedTool,
@@ -144,6 +151,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     selectToolAndSetView,
     selectDashboardAndSetView,
     initialPrompt,
+    isRightPanelOpen,
   ]);
   
   return (

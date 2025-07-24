@@ -24,6 +24,7 @@ import {
   CreditCard,
   ChevronsUpDown,
   PlusCircle,
+  MoreVertical,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToolStatus } from '@agent-base/types';
@@ -132,13 +133,6 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
               <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => setCreateOrgOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Create Organization
               </Button>
-              <div className="border-t border-border my-1" />
-              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => router.push('/dashboard/settings/billing')}>
-                <Settings className="mr-2 h-4 w-4" /> Settings
-              </Button>
-              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={handleClerkLogout}>
-                <LogOut className="mr-2 h-4 w-4" /> Logout
-              </Button>
             </PopoverContent>
           </Popover>
         </SidebarHeader>
@@ -222,6 +216,29 @@ export default function SidebarComponent({ ...props }: React.ComponentProps<type
 
         <SidebarFooter className="p-2 border-t border-border/40">
           {/* Credit Balance Display moved to settings page */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="w-full flex justify-between items-center p-2">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={clerkUser?.imageUrl} />
+                    <AvatarFallback>{getClerkUserInitials()}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium text-sm">{clerkUser?.firstName} {clerkUser?.lastName}</span>
+                </div>
+                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-1 bg-popover border-border text-popover-foreground">
+              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={() => router.push('/dashboard/settings/billing')}>
+                <Settings className="mr-2 h-4 w-4" /> Settings
+              </Button>
+              <div className="border-t border-border my-1" />
+              <Button variant="ghost" className="w-full justify-start p-2 text-sm" onClick={handleClerkLogout}>
+                <LogOut className="mr-2 h-4 w-4" /> Logout
+              </Button>
+            </PopoverContent>
+          </Popover>
         </SidebarFooter>
       </Sidebar>
     </>
