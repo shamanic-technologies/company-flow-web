@@ -17,14 +17,13 @@ import MessageInput, { MessageInputRef } from './MessageInput';
 import ThinkingIndicator from './ThinkingIndicator';
 import { useChatViewEffects } from '@/hooks/chat/useChatViewEffects';
 import { ChatErrorDisplay } from './ChatErrorDisplay';
-import { ConfiguredChatHelpers } from '../context/ChatProvider';
+import { ConfiguredChatHelpers } from '@/providers/ChatProvider';
 
 interface ChatInterfaceProps {
   userInitials: string;
   agentFirstName: string;
   agentLastName: string;
   chat: ConfiguredChatHelpers;
-  isReadOnly?: boolean;
 }
 
 export default function ChatInterface({ 
@@ -32,7 +31,6 @@ export default function ChatInterface({
   agentFirstName,
   agentLastName,
   chat,
-  isReadOnly = false,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<MessageInputRef>(null);
@@ -125,16 +123,14 @@ export default function ChatInterface({
         </div>
         
         <div className="flex-shrink-0">
-          {!isReadOnly && (
-            <MessageInput
-              ref={inputRef}
-              input={input}
-              isLoading={isLoading}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit} 
-              stop={stop}
-            />
-          )}
+          <MessageInput
+            ref={inputRef}
+            input={input}
+            isLoading={isLoading}
+            handleInputChange={handleInputChange}
+            handleSubmit={handleSubmit} 
+            stop={stop}
+          />
         </div>
       </CardContent>
     </Card>

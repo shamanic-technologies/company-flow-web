@@ -38,11 +38,11 @@ export default function ChatPanel() {
         );
     }
 
-    if (chat.isLoading && !chat.chatAgent) {
+    if (chat.isLoading && !chat.agent) {
         return <div className="p-4">Loading Chat...</div>;
     }
 
-    if (!chat.chatAgent) {
+    if (!chat.agent) {
         return (
             <div className="flex flex-col h-full items-center justify-center">
                 <p>No Agent available for chat.</p>
@@ -54,13 +54,13 @@ export default function ChatPanel() {
     return (
         <div className="flex flex-col h-full bg-background">
             <AgentHeader 
-                agent={chat.chatAgent}
+                agent={chat.agent}
             />
             <div className="flex-1 overflow-y-auto">
                 <ChatInterface
                     userInitials={getClerkUserInitials()}
-                    agentFirstName={chat.chatAgent.firstName}
-                    agentLastName={chat.chatAgent.lastName}
+                    agentFirstName={chat.agent.firstName}
+                    agentLastName={chat.agent.lastName}
                     chat={chat}
                 />
             </div>
