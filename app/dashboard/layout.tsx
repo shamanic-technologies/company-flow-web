@@ -20,6 +20,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AgentSettingsPanel from '@/components/dashboard/right-panel/AgentSettingsPanel';
 import QueryProvider from '@/providers/QueryProvider';
+import { useConversationContext } from '@/providers/ConversationProvider';
+
+function DebugDisplay() {
+  const { selectedAgentForChat } = useAgentContext();
+  const { currentConversationId } = useConversationContext();
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-black/70 p-3 text-white shadow-lg">
+      <h3 className="mb-2 border-b border-gray-500 pb-1 text-sm font-bold">
+        Debug Info
+      </h3>
+      <div className="text-xs">
+        <p>
+          <span className="font-semibold">Agent ID:</span>{' '}
+          {selectedAgentForChat?.id ?? 'null'}
+        </p>
+        <p>
+          <span className="font-semibold">Conv. ID:</span>{' '}
+          {currentConversationId ?? 'null'}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const isFetching = useIsFetching();
@@ -33,16 +57,23 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isFetching, hasLoadedOnce]);
 
-  const { isLandingPromptProcessing } = useLandingPromptContext();
   const { isRightPanelOpen, setIsRightPanelOpen } = useViewContext();
   const { selectedAgentForSettings } = useAgentContext();
 
-  if (!hasLoadedOnce || isLandingPromptProcessing) {
+  if (!hasLoadedOnce) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-background">
-        <Skeleton className="h-16 w-16 rounded-full bg-muted" />
-        <p className="ml-4 text-lg text-muted-foreground">Loading Dashboard...</p>
+      <div className="flex h-screen w-full flex-col">
+      <DashboardNavbar />
+      <div className="flex flex-1 overflow-hidden">
+        <SidebarComponent className="w-64 flex-shrink-0" />
+        <div className="flex flex-1 flex-col overflow-hidden p-4">
+          <Skeleton className="h-full w-full" />
+        </div>
+        <div className="w-[400px] p-4">
+          <Skeleton className="h-full w-full" />
+        </div>
       </div>
+    </div>
     );
   }
 
@@ -72,6 +103,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           </SheetContent>
         </Sheet>
       </div>
+      <DebugDisplay />
     </div>
   );
 }
@@ -81,23 +113,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <QueryProvider>
       <UserProvider>
         <BillingProvider>
-          <ConversationProvider>
-            <AgentProvider>
+          <AgentProvider>
+            <ConversationProvider>
               <ApiToolsProvider>
                 <WebhookProvider>
                   <ViewProvider>
                     <SidebarProvider>
                       <ChatProvider>
-                        <LandingPromptProvider>
-                          <AppLayout>{children}</AppLayout>
-                        </LandingPromptProvider>
+                        <AppLayout>{children}</AppLayout>
                       </ChatProvider>
                     </SidebarProvider>
                   </ViewProvider>
                 </WebhookProvider>
               </ApiToolsProvider>
-            </AgentProvider>
-          </ConversationProvider>
+            </ConversationProvider>
+          </AgentProvider>
         </BillingProvider>
       </UserProvider>
     </QueryProvider>

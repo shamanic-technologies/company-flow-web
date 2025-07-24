@@ -12,7 +12,7 @@ interface ViewContextType {
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
 
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
   const handleSetIsRightPanelOpen = (isOpen: boolean) => {

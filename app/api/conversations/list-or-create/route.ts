@@ -65,6 +65,7 @@ export const GET = async (req: NextRequest) => {
     }
 
     const conversations : Conversation[] = getResponse.data;
+    console.debug('conversations', conversations);
     // Return successful response with data from the API client
     // Directly construct the Response to bypass linter issue with createSuccessResponse signature
     return createSuccessResponse(conversations, 200);

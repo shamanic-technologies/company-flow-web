@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 import { useUserContext } from '@/providers/UserProvider';
 import { usePathname } from 'next/navigation';
@@ -127,11 +127,11 @@ export default function DashboardNavbar() {
   const { clerkUser, getClerkUserInitials, handleClerkLogout } = useUserContext();
   const userInitials = getClerkUserInitials();
   const [isCreateOrgOpen, setCreateOrgOpen] = useState(false);
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(() =>
-    Math.floor(Math.random() * aiAgentQuotes.length)
-  );
+  const [currentQuote, setCurrentQuote] = useState(aiAgentQuotes[0]);
 
-  const currentQuote = aiAgentQuotes[currentQuoteIndex];
+  useEffect(() => {
+    setCurrentQuote(aiAgentQuotes[Math.floor(Math.random() * aiAgentQuotes.length)]);
+  }, []);
 
   return (
     <>

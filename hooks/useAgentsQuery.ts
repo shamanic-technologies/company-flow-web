@@ -30,7 +30,7 @@ export function useAgentsQuery(organizationId: string | null | undefined) {
         queryKey,
         queryFn: () => fetchAgents(getToken, organizationId!),
         enabled: !!organizationId,
-        refetchInterval: 5000,
+        // Disabling polling for performance, will rely on cache invalidation
     });
 
     return {

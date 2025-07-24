@@ -10,7 +10,6 @@ import {
 } from 'react';
 import { Agent } from '@agent-base/types';
 import { useAgentsQuery } from '@/hooks/useAgentsQuery';
-import { useConversationContext } from './ConversationProvider';
 import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 
 interface AgentContextType {
@@ -28,25 +27,15 @@ const AgentContext = createContext<AgentContextType | undefined>(undefined);
 export function AgentProvider({ children }: { children: ReactNode }) {
   const { activeOrgId } = useOrganizationsQuery();
   const { agents, isLoadingAgents, agentError } = useAgentsQuery(activeOrgId);
-  const { getOrCreateConversationForAgent } = useConversationContext();
   
   const [selectedAgentIdForChat, setSelectedAgentIdForChat] = useState<string | null>(null);
   const [selectedAgentForSettings, setSelectedAgentForSettings] = useState<Agent | null>(null);
 
-  // Effect 1: Auto-select the first agent for the chat on initial load.
   useEffect(() => {
     if (!isLoadingAgents && agents && agents.length > 0 && !selectedAgentIdForChat) {
-      const firstAgentId = agents[0].id;
-      setSelectedAgentIdForChat(firstAgentId);
+      setSelectedAgentIdForChat(agents[0].id);
     }
   }, [agents, isLoadingAgents, selectedAgentIdForChat]);
-
-  // Effect 2: When the chat agent changes, trigger conversation loading.
-  useEffect(() => {
-    if (selectedAgentIdForChat) {
-      getOrCreateConversationForAgent(selectedAgentIdForChat);
-    }
-  }, [selectedAgentIdForChat, getOrCreateConversationForAgent]);
 
   const selectAgentForChat = (agentId: string | null) => {
     setSelectedAgentIdForChat(agentId);
