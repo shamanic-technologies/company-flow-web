@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useUserContext } from './context/UserProvider';
-import { useOrganizationContext } from './context/OrganizationProvider';
+import { useUserContext } from '@/providers/UserProvider';
+import { useOrganizationContext } from '@/providers/OrganizationProvider';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronsUpDown, PlusCircle } from "lucide-react"
-import CreateOrganizationDialog from './left-panel/CreateOrganizationDialog';
+import CreateOrganizationDialog from './sidebar/CreateOrganizationDialog';
 
 const aiAgentQuotes = [
   {

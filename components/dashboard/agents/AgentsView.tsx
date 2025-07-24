@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { columns } from "@/components/dashboard/agents-list-page/columns"
-import { DataTable } from "@/components/dashboard/agents-list-page/data-table"
-import { useAgentContext } from "../../context/AgentProvider"
-import { useViewContext } from "../../context/ViewProvider"
+import { columns } from "@/components/dashboard/agents/columns"
+import { DataTable } from "@/components/dashboard/agents/data-table"
+import { useAgentContext } from "@/providers/AgentProvider"
+import { useViewContext } from "@/providers/ViewProvider"
 
 export function AgentsView() {
   const { agents, isLoadingAgents, setSelectedAgentForPanel } = useAgentContext()

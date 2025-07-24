@@ -29,16 +29,16 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SearchWebhookResultItem, WebhookStatus, SearchApiToolResultItem, ApiToolStatus } from '@agent-base/types';
-import WebhookSubfolder from './WebhookSubfolder';
-import { renderSectionContent } from './SidebarSectionRenderer';
-import ToolSubfolder from './ToolSubfolder';
+// import WebhookSubfolder from './WebhookSubfolder';
+// import { renderSectionContent } from './SidebarSectionRenderer';
+// import ToolSubfolder from './ToolSubfolder';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useAgentContext } from '../context/AgentProvider';
-import { useViewContext } from '../context/ViewProvider';
-import { useApiToolsContext } from '../context/ApiToolsProvider';
-import { useWebhookContext } from '../context/WebhookProvider';
-import { useOrganizationContext } from '../context/OrganizationProvider';
-import { useUserContext } from '../context/UserProvider';
+import { useAgentContext } from '@/providers/AgentProvider';
+import { useViewContext } from '@/providers/ViewProvider';
+import { useApiToolsContext } from '@/providers/ApiToolsProvider';
+import { useWebhookContext } from '@/providers/WebhookProvider';
+import { useOrganizationContext } from '@/providers/OrganizationProvider';
+import { useUserContext } from '@/providers/UserProvider';
 import { Agent, DashboardInfo } from '@agent-base/types';
 import CreateOrganizationDialog from './CreateOrganizationDialog';
 import {

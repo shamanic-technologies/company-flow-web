@@ -8,11 +8,11 @@
  * currently selected agent and conversation, using data from DashboardContext.
  */
 
-import { useAgentContext } from '../context/AgentProvider';
-import { useConversationContext } from '../context/ConversationProvider';
-import { useChatContext } from '../context/ChatProvider';
-import { useViewContext } from '../context/ViewProvider';
-import { useUserContext } from '../context/UserProvider';
+import { useAgentContext } from '@/providers/AgentProvider';
+import { useConversationContext } from '@/providers/ConversationProvider';
+import { useChatContext } from '@/providers/ChatProvider';
+import { useViewContext } from '@/providers/ViewProvider';
+import { useUserContext } from '@/providers/UserProvider';
 import ChatInterface from '../chat/ChatInterface';
 import AgentHeader from './AgentHeader'; // Assuming AgentHeader is in the same directory
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,20 +24,14 @@ import { Agent } from '@agent-base/types';
  * Renders the agent header and chat interface based on the selected agent 
  * and conversation data from the DashboardContext.
  */
-export default function RightPanel() {
+export default function ChatPanel() {
     const { getClerkUserInitials } = useUserContext();
-    const { createNewChatAndSetView } = useViewContext();
     const { chat } = useChatContext();
 
     const { 
         agent: chatAgent,
         isLoading: isLoadingMessages, 
     } = chat;
-
-    const handleNewChat = () => {
-        console.log("RightPanel: 'New Chat' button clicked.");
-        createNewChatAndSetView();
-    };
 
     if (isLoadingMessages && !chatAgent) {
         return <div className="p-4">Loading Chat...</div>;
@@ -56,7 +50,6 @@ export default function RightPanel() {
         <div className="flex flex-col h-full bg-background">
             <AgentHeader 
                 agent={chatAgent}
-                onNewChat={handleNewChat}
             />
             <div className="flex-1 overflow-y-auto">
                 <ChatInterface

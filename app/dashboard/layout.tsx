@@ -1,21 +1,21 @@
 'use client';
 
 import React from 'react';
-import { UserProvider } from '@/components/dashboard/context/UserProvider';
-import { OrganizationProvider } from '@/components/dashboard/context/OrganizationProvider';
-import { AgentProvider, useAgentContext } from '@/components/dashboard/context/AgentProvider';
-import { ConversationProvider } from '@/components/dashboard/context/ConversationProvider';
-import { ChatProvider } from '@/components/dashboard/context/ChatProvider';
-import { ApiToolsProvider } from '@/components/dashboard/context/ApiToolsProvider';
-import { WebhookProvider } from '@/components/dashboard/context/WebhookProvider';
-import { BillingProvider } from '@/components/dashboard/context/BillingProvider';
-import { ViewProvider, useViewContext } from '@/components/dashboard/context/ViewProvider';
+import { UserProvider } from '@/providers/UserProvider';
+import { OrganizationProvider } from '@/providers/OrganizationProvider';
+import { AgentProvider, useAgentContext } from '@/providers/AgentProvider';
+import { ConversationProvider } from '@/providers/ConversationProvider';
+import { ChatProvider } from '@/providers/ChatProvider';
+import { ApiToolsProvider } from '@/providers/ApiToolsProvider';
+import { WebhookProvider } from '@/providers/WebhookProvider';
+import { BillingProvider } from '@/providers/BillingProvider';
+import { ViewProvider, useViewContext } from '@/providers/ViewProvider';
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ReadinessProvider, useReadinessContext } from '@/components/dashboard/context/ReadinessProvider';
-import { LandingPromptProvider, useLandingPromptContext } from '@/components/dashboard/context/LandingPromptProvider';
+import { ReadinessProvider, useReadinessContext } from '@/providers/ReadinessProvider';
+import { LandingPromptProvider, useLandingPromptContext } from '@/providers/LandingPromptProvider';
 
-import SidebarComponent from '@/components/dashboard/left-panel/Sidebar';
-import RightPanel from '@/components/dashboard/right-panel/RightPanel';
+import SidebarComponent from '@/components/dashboard/sidebar/Sidebar';
+import RightPanel from '@/components/dashboard/right-panel/ChatPanel';
 import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -46,6 +46,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <Sheet open={isRightPanelOpen} onOpenChange={setIsRightPanelOpen}>
           <SheetContent className="w-[400px] sm:w-[540px] p-0">
+            {/* The SheetTitle is required for accessibility but is visually hidden to not affect the UI */}
+            <SheetHeader>
+              <SheetTitle className="sr-only">
+                {selectedAgentForPanel
+                  ? `Agent Settings - ${selectedAgentForPanel.firstName} ${selectedAgentForPanel.lastName}`
+                  : "Chat Panel"}
+              </SheetTitle>
+            </SheetHeader>
             {selectedAgentForPanel ? (
               <AgentSettingsPanel agent={selectedAgentForPanel} />
             ) : (

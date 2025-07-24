@@ -11,14 +11,13 @@ import { Agent } from '@agent-base/types';
 // Define props for the component
 interface AgentHeaderProps {
   agent: Agent;
-  onNewChat: () => void;
 }
 
 /**
  * AgentHeader Component
  * Displays information about the currently selected agent and a button to start a new chat.
  */
-export default function AgentHeader({ agent, onNewChat }: AgentHeaderProps) {
+export default function AgentHeader({ agent }: AgentHeaderProps) {
   return (
     <div className="flex items-center justify-between p-4 border-b border-border bg-card">
       {agent ? (
@@ -47,7 +46,7 @@ export default function AgentHeader({ agent, onNewChat }: AgentHeaderProps) {
         <Button 
             variant="outline" 
             size="sm"
-            onClick={onNewChat}
+            onClick={() => {}} // Placeholder for onNewChat
         >
             <PlusCircle className="mr-2 h-4 w-4" />
             New Chat

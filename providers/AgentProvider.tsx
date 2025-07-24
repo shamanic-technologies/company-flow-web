@@ -2,7 +2,7 @@
 
 import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { Agent } from '@agent-base/types';
-import { useAgents as useAgentsHook } from '../../../hooks/useAgents';
+import { useAgents as useAgentsHook } from '@/hooks/useAgents';
 import { useUser } from '@clerk/nextjs';
 import { useOrganizationContext } from './OrganizationProvider';
 

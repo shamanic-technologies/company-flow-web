@@ -1,7 +1,7 @@
 'use client';
 
 import { Agent } from '@agent-base/types';
-import AgentSettingsPage from '../middle-panel/AgentSettingsPage';
+import AgentSettings from '../agents/agent-settings/AgentSettings';
 
 interface AgentSettingsPanelProps {
     agent: Agent;
@@ -10,7 +10,7 @@ interface AgentSettingsPanelProps {
 export default function AgentSettingsPanel({ agent }: AgentSettingsPanelProps) {
     return (
         <div className="h-full overflow-y-auto">
-            <AgentSettingsPage agent={agent} isPanel={true} />
+            <AgentSettings agent={agent} isPanel={true} />
         </div>
     );
 } 

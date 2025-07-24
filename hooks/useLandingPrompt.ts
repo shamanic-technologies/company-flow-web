@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useOrganizations } from './useOrganizations';
-import { useChatContext } from '@/components/dashboard/context/ChatProvider';
-import { useReadinessContext } from '@/components/dashboard/context/ReadinessProvider';
+import { useChatContext } from '@/providers/ChatProvider';
+import { useReadinessContext } from '@/providers/ReadinessProvider';
 
 const LANDING_PAGE_MESSAGE_KEY = 'landing_page_message';
 
