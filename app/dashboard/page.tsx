@@ -1,7 +1,7 @@
 'use client';
 
-import { HomeView } from '@/components/dashboard/middle-panel/views/HomeView';
+import RightPanel from '@/components/dashboard/right-panel/RightPanel';
 
 export default function DashboardHomePage() {
-  return <HomeView />;
+  return <RightPanel />;
 } 

@@ -45,18 +45,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         <Sheet open={isRightPanelOpen} onOpenChange={setIsRightPanelOpen}>
-          <SheetContent className="w-[400px] sm:w-[540px]">
-            <SheetHeader>
-              <SheetTitle>
-                {selectedAgentForPanel ? 'Agent Settings' : 'Create New Agent'}
-              </SheetTitle>
-            </SheetHeader>
+          <SheetContent className="w-[400px] sm:w-[540px] p-0">
             {selectedAgentForPanel ? (
               <AgentSettingsPanel agent={selectedAgentForPanel} />
             ) : (
-              <div className="p-4">
-                <p>Create new agent form will go here.</p>
-              </div>
+              <RightPanel />
             )}
           </SheetContent>
         </Sheet>
