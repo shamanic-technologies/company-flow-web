@@ -43,15 +43,15 @@ export default function ChatInterface({
     handleInputChange,
     handleSubmit,
     isLoading,
-    error: chatError,
+    error,
     append,
     reload,
     stop,
     addToolResult,
     data,
+    errorInfo,
+    rawError,
   } = chat;
-
-  console.log('ChatInterface received handleSubmit:', handleSubmit.toString());
 
   useChatViewEffects({
     messages,
@@ -74,9 +74,9 @@ export default function ChatInterface({
     <Card className="flex-1 flex flex-col overflow-hidden bg-background border-none shadow-none rounded-none">
       <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
         <ChatErrorDisplay 
-          chatError={chatError?.message ?? null}
-          errorInfo={data?.errorInfo}
-          rawError={chatError}
+          chatError={error?.message ?? null}
+          errorInfo={errorInfo}
+          rawError={rawError}
           showErrorDetails={showErrorDetails}
           onRetry={handleRetry}
           onShowDetails={() => setShowErrorDetails(!showErrorDetails)}

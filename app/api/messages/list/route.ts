@@ -55,7 +55,6 @@ export async function GET(req: NextRequest) {
       { conversationId },
       credentials
     );
-    console.debug('[API /messages/list] getMessagesFromConversationResponse', getMessagesFromConversationResponse);
 
     // If the backend call was NOT successful, handle the error properly
     if (!getMessagesFromConversationResponse.success) {

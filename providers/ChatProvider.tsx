@@ -7,9 +7,9 @@ import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
 import { useConfiguredChat } from '@/hooks/chat/useConfiguredChat';
 import { useUser } from '@clerk/nextjs';
 
-type ChatContextType = ReturnType<typeof useConfiguredChat>;
+export type ConfiguredChatHelpers = ReturnType<typeof useConfiguredChat>;
 
-const ChatContext = createContext<ChatContextType | null>(null);
+const ChatContext = createContext<ConfiguredChatHelpers | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { selectedAgentForChat } = useAgentContext();
