@@ -42,7 +42,7 @@ const nextConfig = {
     // Improve path alias resolution
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': require('path').resolve(__dirname, './')
+      '@': require('path').resolve(__dirname, './src')
     };
     
     // Define paths to be ignored by the watcher using glob patterns
