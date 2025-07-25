@@ -233,58 +233,58 @@ function BillingPageClientContent() {
           // Clerk has loaded. Now check isSignedIn.
           if (isSignedIn && planInfo) {
             // User is signed in. Check if plan info is still loading.
-            return (
-              <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-700/50">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                        {hasActiveSubscription ? (
-                          <>
-                            <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-400" suppressHydrationWarning />
-                            Current Plan: {planInfo.planStatus?.name}
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" suppressHydrationWarning />
-                            Free Plan
-                          </>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="text-gray-700 dark:text-gray-300">
-                        {hasActiveSubscription
-                          ? `Status: ${planInfo.planStatus?.status} • ${planInfo.planStatus?.price} ${planInfo.planStatus?.billingPeriod}`
-                          : "You're currently on the free plan"}
-                      </CardDescription>
+              return (
+                <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-700/50">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                          {hasActiveSubscription ? (
+                            <>
+                              <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-400" suppressHydrationWarning />
+                              Current Plan: {planInfo.planStatus?.name}
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" suppressHydrationWarning />
+                              Free Plan
+                            </>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="text-gray-700 dark:text-gray-300">
+                          {hasActiveSubscription
+                            ? `Status: ${planInfo.planStatus?.status} • ${planInfo.planStatus?.price} ${planInfo.planStatus?.billingPeriod}`
+                            : "You're currently on the free plan"}
+                        </CardDescription>
+                      </div>
+                      {hasActiveSubscription && (
+                        <Button
+                          onClick={handleManageSubscription}
+                          disabled={isCreatingPortalSession}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {isCreatingPortalSession ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" suppressHydrationWarning />
+                              Loading...
+                            </>
+                          ) : (
+                            'Manage Subscription'
+                          )}
+                        </Button>
+                      )}
                     </div>
-                    {hasActiveSubscription && (
-                      <Button
-                        onClick={handleManageSubscription}
-                        disabled={isCreatingPortalSession}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        {isCreatingPortalSession ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" suppressHydrationWarning />
-                            Loading...
-                          </>
-                        ) : (
-                          'Manage Subscription'
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
+                  </CardHeader>
                 {creditBalance && (
-                  <CardContent>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">Credits Balance: </span>
+                    <CardContent>
+                      <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Credits Balance: </span>
                       {creditBalance.balance} credits
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
           }
           // isLoaded is true, but user is not signed in.
           // This should ideally not be reached if middleware is effective.

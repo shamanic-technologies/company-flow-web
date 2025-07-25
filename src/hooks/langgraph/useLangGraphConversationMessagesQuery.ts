@@ -5,7 +5,7 @@ import { BaseMessage } from '@langchain/core/messages';
 
 async function fetchLangGraphConversationMessages(getToken: () => Promise<string | null>, conversationId: string): Promise<BaseMessage[]> {
     const token = await getToken();
-    const response = await fetch(`/api/conversations-langgraph/get-conversation/${conversationId}`, {
+    const response = await fetch(`/api/messages-langgraph/list?conversationId=${conversationId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!response.ok) {

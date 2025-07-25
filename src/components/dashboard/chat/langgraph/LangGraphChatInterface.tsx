@@ -62,11 +62,12 @@ export default function LangGraphChatInterface({
           <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-2">
             <div className="space-y-4">
               {messages.map((msg: Message, index: number) => {
+                console.log('Rendering message with key:', msg.id);
                 const isLastMessage = index === messages.length - 1;
                 const isStreaming = isLastMessage && msg.type === 'ai' && isLoading;
 
                 return (
-                <div key={msg.id}>
+                <div key={index}>
                   <LangGraphChatMessage
                     message={msg}
                     userInitials={userInitials} 
