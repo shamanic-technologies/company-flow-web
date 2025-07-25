@@ -4,7 +4,7 @@
  * Displays an animated "Thinking" indicator when the AI is processing a response
  */
 
-import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
+import { Avatar, AvatarFallback } from '../../../ui/avatar';
 import { Brain } from 'lucide-react';
 
 const LangGraphThinkingIndicator = () => {

@@ -1,10 +1,10 @@
 'use client';
 
 import { useAgentContext } from '@/providers/AgentProvider';
-import { useUserContext } from '@/providers/UserProvider';
-import LangGraphChatInterface from '../chat/langgraph/LangGraphChatInterface';
-import AgentHeader from './AgentHeader';
-import { useLangGraphChatContext } from '@/providers/LangGraphChatProvider';
+import { useUserContext } from '../../../../providers/UserProvider';
+import LangGraphChatInterface from '../../chat/langgraph/LangGraphChatInterface';
+import AgentHeader from '../AgentHeader';
+import { useLangGraphChatContext } from '../../../../providers/langgraph/LangGraphChatProvider';
 
 /**
  * LangGraphChatPanel Component

@@ -1,3 +1,4 @@
+/*
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
@@ -27,4 +28,5 @@ export function useLandingPromptContext() {
     throw new Error('useLandingPromptContext must be used within a LandingPromptProvider');
   }
   return context;
-} 
+}
+*/ 

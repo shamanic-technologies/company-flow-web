@@ -9,11 +9,11 @@ import {
   useEffect,
   useCallback,
 } from 'react';
-import { useConversationsQuery } from '@/hooks/useConversationsQuery';
+import { useLangGraphConversationsQuery } from '@/hooks/langgraph/useLangGraphConversationsQuery';
 import { Conversation } from '@agent-base/types';
-import { useAgentContext } from './AgentProvider';
+import { useAgentContext } from '../AgentProvider';
 
-interface ConversationContextType {
+interface LangGraphConversationContextType {
   conversations: Conversation[];
   isLoadingConversations: boolean;
   conversationError: string | null;
@@ -21,11 +21,11 @@ interface ConversationContextType {
   selectConversationId: (id: string | null) => void;
 }
 
-const ConversationContext = createContext<ConversationContextType | undefined>(
+const LangGraphConversationContext = createContext<LangGraphConversationContextType | undefined>(
   undefined
 );
 
-export function ConversationProvider({ children }: { children: ReactNode }) {
+export function LangGraphConversationProvider({ children }: { children: ReactNode }) {
   const { selectedAgentForChat } = useAgentContext();
   const agentId = selectedAgentForChat?.id ?? null;
 
@@ -33,13 +33,10 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     conversations, 
     isLoadingConversations, 
     conversationError 
-  } = useConversationsQuery(agentId);
-  console.debug('[ConversationProvider] conversations', conversations);
+  } = useLangGraphConversationsQuery(agentId);
 
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
-  // Step 1: When the agent changes, reset the conversation selection.
-  // This cleans the slate and prepares for the new conversation list.
   useEffect(() => {
     setCurrentConversationId(null);
   }, [agentId]);
@@ -66,17 +63,17 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ConversationContext.Provider value={contextValue}>
+    <LangGraphConversationContext.Provider value={contextValue}>
       {children}
-    </ConversationContext.Provider>
+    </LangGraphConversationContext.Provider>
   );
 }
 
-export function useConversationContext() {
-  const context = useContext(ConversationContext);
+export function useLangGraphConversationContext() {
+  const context = useContext(LangGraphConversationContext);
   if (context === undefined) {
     throw new Error(
-      'useConversationContext must be used within a ConversationProvider'
+      'useLangGraphConversationContext must be used within a LangGraphConversationProvider'
     );
   }
   return context;

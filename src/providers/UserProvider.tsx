@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useClerk } from '@clerk/nextjs';
 import type { UserResource } from '@clerk/types';
 import { useOrganizationsQuery } from '@/hooks/useOrganizationsQuery';
-import type { Organization } from '@agent-base/types';
+import type { ClientOrganization } from '@agent-base/types';
 
 interface UserContextType {
   clerkUser: UserResource | null | undefined;
@@ -13,8 +13,8 @@ interface UserContextType {
   isSignedIn: boolean | undefined;
   handleClerkLogout: () => Promise<void>;
   getClerkUserInitials: () => string;
-  organizations: Organization[];
-  currentOrganization: Organization | null;
+  organizations: ClientOrganization[];
+  currentOrganization: ClientOrganization | null;
   isLoadingOrganizations: boolean;
   isPendingOrganizations: boolean;
   isOrganizationsReady: boolean;

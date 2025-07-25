@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, Crown, Zap, Loader2, Star } from 'lucide-react';
-import { usePlanInfo } from '@/hooks/old/usePlanInfo';
-import { PlansList } from '@/types/credit'; // PlanDetails might not be directly used here anymore if uiPlanDetails handles all display aspects
+import { useBillingQuery } from '@/hooks/useBillingQuery';
 
 /**
  * Client-side content for the Billing Settings Page.
@@ -17,7 +16,7 @@ import { PlansList } from '@/types/credit'; // PlanDetails might not be directly
 function BillingPageClientContent() {
   const router = useRouter();
   const { isSignedIn, isLoaded, orgId } = useAuth();
-  const { planInfo, isLoading: planInfoLoading, fetch: fetchPlanInfo } = usePlanInfo({ activeOrgId: orgId });
+  const { planInfo, creditBalance, plans, isLoadingBilling, billingError } = useBillingQuery(orgId);
   const [isCreatingPortalSession, setIsCreatingPortalSession] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -43,11 +42,12 @@ function BillingPageClientContent() {
             const message = data.message?.toLowerCase() || '';
             if (message.includes('granted') || message.includes('processed') || message.includes('re-applied')) {
               console.log(`[BillingPage] Session ${sessionId} verified successfully. API Message: ${data.message}. Refreshing plan info.`);
-              await fetchPlanInfo();
+              // The useBillingQuery hook will automatically refetch data if orgId changes or if the session is verified.
+              // No need to call fetchPlanInfo here directly.
               setProcessedSessionId(sessionId);
             } else {
                console.warn(`[BillingPage] Session ${sessionId} paid, but API message indicates credits might not have been processed as expected:`, data.message);
-               await fetchPlanInfo();
+               // The useBillingQuery hook will automatically refetch data if orgId changes or if the session is verified.
                setProcessedSessionId(sessionId);
             }
           } else if (response.ok && data.paymentStatus !== 'paid') {
@@ -63,7 +63,7 @@ function BillingPageClientContent() {
 
       verifySessionAndRefreshData();
     }
-  }, [searchParams, fetchPlanInfo, router, processedSessionId]);
+  }, [searchParams, orgId, processedSessionId]); // Added orgId to dependency array
 
   /**
    * Subscription plans configuration - Now uses PlansList from types/credit.ts
@@ -109,7 +109,7 @@ function BillingPageClientContent() {
   };
 
   // Combine PlanDetails from types/credit.ts with UI specific details
-  const displayPlans = PlansList.filter(plan => plan.id !== 'free').map(plan => ({
+  const displayPlans = plans.filter(plan => plan.id !== 'free').map(plan => ({
     ...plan,
     ...(uiPlanDetails as any)[plan.id] // Type assertion for dynamic access
   }));
@@ -214,7 +214,7 @@ function BillingPageClientContent() {
         {(() => {
           // If Clerk is still initializing, show the skeleton immediately.
           // We assume the middleware has ensured the user is authenticated.
-          if (!isLoaded) {
+          if (!isLoaded || isLoadingBilling) {
             return (
               <Card className="bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 min-h-[140px] flex flex-col justify-center">
                 <CardHeader>
@@ -231,79 +231,60 @@ function BillingPageClientContent() {
           }
 
           // Clerk has loaded. Now check isSignedIn.
-          if (isSignedIn) {
+          if (isSignedIn && planInfo) {
             // User is signed in. Check if plan info is still loading.
-            if (planInfoLoading) {
-              return (
-                <Card className="bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 min-h-[140px] flex flex-col justify-center">
-                  <CardHeader>
+            return (
+              <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-700/50">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
                     <div>
-                      <Skeleton className="h-6 w-48 mb-2 rounded-md" />
-                      <Skeleton className="h-4 w-64 rounded-md" />
+                      <CardTitle className="text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                        {hasActiveSubscription ? (
+                          <>
+                            <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-400" suppressHydrationWarning />
+                            Current Plan: {planInfo.planStatus?.name}
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" suppressHydrationWarning />
+                            Free Plan
+                          </>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="text-gray-700 dark:text-gray-300">
+                        {hasActiveSubscription
+                          ? `Status: ${planInfo.planStatus?.status} • ${planInfo.planStatus?.price} ${planInfo.planStatus?.billingPeriod}`
+                          : "You're currently on the free plan"}
+                      </CardDescription>
                     </div>
-                  </CardHeader>
+                    {hasActiveSubscription && (
+                      <Button
+                        onClick={handleManageSubscription}
+                        disabled={isCreatingPortalSession}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {isCreatingPortalSession ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" suppressHydrationWarning />
+                            Loading...
+                          </>
+                        ) : (
+                          'Manage Subscription'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                {creditBalance && (
                   <CardContent>
-                    <Skeleton className="h-4 w-40 rounded-md" />
-                  </CardContent>
-                </Card>
-              );
-            } else if (planInfo) {
-              // Plan info has loaded, display it.
-              return (
-                <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-700/50">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                          {hasActiveSubscription ? (
-                            <>
-                              <Crown className="h-5 w-5 text-yellow-500 dark:text-yellow-400" suppressHydrationWarning />
-                              Current Plan: {planInfo.planStatus?.name}
-                            </>
-                          ) : (
-                            <>
-                              <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" suppressHydrationWarning />
-                              Free Plan
-                            </>
-                          )}
-                        </CardTitle>
-                        <CardDescription className="text-gray-700 dark:text-gray-300">
-                          {hasActiveSubscription
-                            ? `Status: ${planInfo.planStatus?.status} • ${planInfo.planStatus?.price} ${planInfo.planStatus?.billingPeriod}`
-                            : "You're currently on the free plan"}
-                        </CardDescription>
-                      </div>
-                      {hasActiveSubscription && (
-                        <Button
-                          onClick={handleManageSubscription}
-                          disabled={isCreatingPortalSession}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {isCreatingPortalSession ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" suppressHydrationWarning />
-                              Loading...
-                            </>
-                          ) : (
-                            'Manage Subscription'
-                          )}
-                        </Button>
-                      )}
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Credits Balance: </span>
+                      {creditBalance.balance} credits
                     </div>
-                  </CardHeader>
-                  {planInfo.credits && (
-                    <CardContent>
-                      <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Credits Balance: </span>
-                        {(-planInfo.credits.balance)} credits
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            }
-            // If planInfo is null/undefined after loading, render nothing for now
-            return null;
+                  </CardContent>
+                )}
+              </Card>
+            );
           }
           // isLoaded is true, but user is not signed in.
           // This should ideally not be reached if middleware is effective.

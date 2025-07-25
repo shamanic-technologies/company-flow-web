@@ -1,11 +1,11 @@
-'use client';
+/*'use client';
 
 import { useState, useCallback, useMemo } from 'react';
 import { useAgentContext } from '@/providers/AgentProvider';
 import { useConversationContext } from '@/providers/ConversationProvider';
 import { useChatContext } from '@/providers/ChatProvider'; // Corrected import path
 import { Message, CreateMessage } from 'ai';
-
+*/
 /**
  * Custom hook for managing the landing page prompt functionality.
  * This hook will be responsible for:
@@ -13,6 +13,7 @@ import { Message, CreateMessage } from 'ai';
  * 2. Creating a new conversation if necessary.
  * 3. Appending the message to the chat.
  */
+/*
 export function useLandingPrompt() {
   const [isProcessing, setIsProcessing] = useState(false);
   const chat = useChatContext();
@@ -43,3 +44,4 @@ export function useLandingPrompt() {
     submitLandingPrompt,
   }), [isProcessing, submitLandingPrompt]);
 } 
+*/

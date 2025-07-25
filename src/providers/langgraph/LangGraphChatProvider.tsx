@@ -1,15 +1,15 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { useConversationContext } from '../ConversationProvider';
-import { useLangGraphStream } from '@/hooks/chat/useLangGraphStream';
+import { useLangGraphConversationContext } from './LangGraphConversationProvider';
+import { useLangGraphStream } from '../../hooks/chat/langgraph/useLangGraphStream';
 
 export type LangGraphChatHelpers = ReturnType<typeof useLangGraphStream>;
 
-const LangGraphChatContext = createContext<LangGraphChatHelpers | null>(null);
+const LangGraphChatContext = createContext<LangGraphChatHelpers | undefined>(undefined);
 
 export function LangGraphChatProvider({ children }: { children: ReactNode }) {
-  const { currentConversationId } = useConversationContext();
+  const { currentConversationId } = useLangGraphConversationContext();
 
   const chatHelpers = useLangGraphStream({
     conversationId: currentConversationId,
@@ -24,7 +24,7 @@ export function LangGraphChatProvider({ children }: { children: ReactNode }) {
 
 export function useLangGraphChatContext() {
   const context = useContext(LangGraphChatContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useLangGraphChatContext must be used within a LangGraphChatProvider');
   }
   return context;

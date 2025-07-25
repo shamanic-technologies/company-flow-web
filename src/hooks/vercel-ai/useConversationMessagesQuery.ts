@@ -1,3 +1,4 @@
+/*
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { Message } from 'ai';
@@ -32,4 +33,5 @@ export function useConversationMessagesQuery(conversationId: string | null | und
         isLoadingMessages: isLoading,
         messagesError: error?.message ?? null,
     };
-} 
+}
+*/ 

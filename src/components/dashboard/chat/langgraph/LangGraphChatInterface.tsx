@@ -13,7 +13,7 @@ import { ScrollArea } from '../../../ui/scroll-area';
 import { Card, CardContent } from '../../../ui/card';
 import LangGraphChatMessage from './LangGraphChatMessage';
 import LangGraphMessageInput, { LangGraphMessageInputRef } from './LangGraphMessageInput';
-import LangGraphThinkingIndicator from '../LangGraphThinkingIndicator';
+import LangGraphThinkingIndicator from './LangGraphThinkingIndicator';
 import { LangGraphChatErrorDisplay } from './LangGraphChatErrorDisplay';
 import { useLangGraphChatViewEffects } from '../../../../hooks/chat/langgraph/useLangGraphChatViewEffects';
 import { LangGraphChatHelpers } from '../../../../providers/langgraph/LangGraphChatProvider';
@@ -57,7 +57,7 @@ export default function LangGraphChatInterface({
   return (
     <Card className="flex-1 flex flex-col overflow-hidden bg-background border-none shadow-none rounded-none">
       <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
-        <LangGraphChatErrorDisplay error={error} />
+        <LangGraphChatErrorDisplay error={error as Error | null} />
         <div className="flex-1 overflow-hidden">
           <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-2">
             <div className="space-y-4">

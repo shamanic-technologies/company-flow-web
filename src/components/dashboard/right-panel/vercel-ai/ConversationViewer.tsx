@@ -1,4 +1,4 @@
-'use client';
+/*'use client';
 
 import { useState } from 'react';
 import { useConversationMessagesQuery } from '@/hooks/useConversationMessagesQuery';
@@ -108,3 +108,4 @@ export default function ConversationViewer({
     </Dialog>
   );
 } 
+*/

@@ -1,4 +1,4 @@
-/*
+
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { CreditBalance, PlanInfo, PlanDetails } from '@/types/credit';
@@ -38,4 +38,3 @@ export function useBillingQuery(organizationId: string | null | undefined) {
         billingError: error?.message ?? null,
     };
 }
-*/ 

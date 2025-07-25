@@ -1,4 +1,4 @@
-'use client';
+//'use client';
 
 /**
  * RightPanel Component
@@ -7,23 +7,24 @@
  * primarily displaying the Agent Header and the Chat Interface for the 
  * currently selected agent and conversation, using data from DashboardContext.
  */
-
-import { useAgentContext } from '@/providers/AgentProvider';
-import { useConversationContext } from '@/providers/ConversationProvider';
-import { useChatContext } from '@/providers/ChatProvider';
-import { useViewContext } from '@/providers/ViewProvider';
-import { useUserContext } from '@/providers/UserProvider';
-import ChatInterface from '../chat/vercel-ai/ChatInterface';
-import AgentHeader from './AgentHeader'; // Assuming AgentHeader is in the same directory
-import { Skeleton } from '@/components/ui/skeleton';
+/*
+import { useAgentContext } from '../../../../providers/AgentProvider';
+import { useConversationContext } from '../../../../providers/ConversationProvider';
+import { useChatContext } from '../../../../providers/vercel-ai/ChatProvider';
+import { useViewContext } from '../../../../providers/ViewProvider';
+import { useUserContext } from '../../../../providers/UserProvider';
+import ChatInterface from '../../chat/vercel-ai/ChatInterface';
+import AgentHeader from '../AgentHeader'; // Assuming AgentHeader is in the same directory
+import { Skeleton } from '../../../../components/ui/skeleton'; // Assuming Skeleton is in the same directory
 import { MessageCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Agent } from '@agent-base/types';
-
+*/
 /**
  * RightPanel Component
  * Renders the agent header and chat interface based on the selected agent 
  * and conversation data from the DashboardContext.
  */
+/*
 export default function ChatPanel() {
     const { getClerkUserInitials } = useUserContext();
     const chat = useChatContext();
@@ -67,3 +68,4 @@ export default function ChatPanel() {
         </div>
     );
 } 
+*/

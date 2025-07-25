@@ -2,33 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import { useIsFetching } from '@tanstack/react-query';
-import { UserProvider } from '@/providers/UserProvider';
-import { AgentProvider, useAgentContext } from '@/providers/AgentProvider';
-import { ConversationProvider } from '@/providers/ConversationProvider';
-import { ChatProvider } from '@/providers/ChatProvider';
-import { LangGraphChatProvider } from '@/providers/LangGraphChatProvider';
-import { ApiToolsProvider } from '@/providers/ApiToolsProvider';
-import { WebhookProvider } from '@/providers/WebhookProvider';
-import { BillingProvider } from '@/providers/BillingProvider';
-import { ViewProvider, useViewContext } from '@/providers/ViewProvider';
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { LandingPromptProvider, useLandingPromptContext } from '@/providers/LandingPromptProvider';
+import { UserProvider } from '../../providers/UserProvider';
+import { AgentProvider, useAgentContext } from '../../providers/AgentProvider';
+import { LangGraphConversationProvider } from '../../providers/langgraph/LangGraphConversationProvider';
+import { LangGraphChatProvider } from '../../providers/langgraph/LangGraphChatProvider';
+import { ApiToolsProvider } from '../../providers/ApiToolsProvider';
+import { WebhookProvider } from '../../providers/WebhookProvider';
+import { BillingProvider } from '../../providers/BillingProvider';
+import { ViewProvider, useViewContext } from '../../providers/ViewProvider';
+import { SidebarProvider } from "../../components/ui/sidebar";
+import { LangGraphLandingPromptProvider } from '../../providers/langgraph/LangGraphLandingPromptProvider';
 import { usePathname } from 'next/navigation';
 
-import SidebarComponent from '@/components/dashboard/sidebar/Sidebar';
-import RightPanel from '@/components/dashboard/right-panel/LangGraphChatPanel';
-import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import AgentSettingsPanel from '@/components/dashboard/right-panel/AgentSettingsPanel';
-import QueryProvider from '@/providers/QueryProvider';
-import { useConversationContext } from '@/providers/ConversationProvider';
-import { DashboardShellSkeleton } from '@/components/dashboard/skeletons/skeletons';
-import { useUserContext } from '@/providers/UserProvider';
+import SidebarComponent from '../../components/dashboard/sidebar/Sidebar';
+import RightPanel from '../../components/dashboard/right-panel/langgraph/LangGraphChatPanel';
+import DashboardNavbar from '../../components/dashboard/DashboardNavbar';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
+import LangGraphAgentSettingsPanel from '../../components/dashboard/right-panel/langgraph/LangGraphAgentSettingsPanel';
+import QueryProvider from '../../providers/QueryProvider';
+import { useLangGraphConversationContext } from '../../providers/langgraph/LangGraphConversationProvider';
+import { DashboardShellSkeleton } from '../../components/dashboard/skeletons/skeletons';
+import { useUserContext } from '../../providers/UserProvider';
 
 function DebugDisplay() {
   const { selectedAgentForChat } = useAgentContext();
-  const { currentConversationId } = useConversationContext();
+  const { currentConversationId } = useLangGraphConversationContext();
 
   return (
     <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-black/70 p-3 text-white shadow-lg">
@@ -72,7 +71,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               </SheetTitle>
             </SheetHeader>
             {selectedAgentForSettings ? (
-              <AgentSettingsPanel agent={selectedAgentForSettings} />
+              <LangGraphAgentSettingsPanel agent={selectedAgentForSettings} />
             ) : (
               <RightPanel />
             )}
@@ -103,21 +102,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <UserProvider>
         <BillingProvider>
           <AgentProvider>
-            <ConversationProvider>
-              <ApiToolsProvider>
-                <WebhookProvider>
-                  <ViewProvider>
-                    <SidebarProvider>
-                      <LangGraphChatProvider>
-                        <ChatProvider>
-                          <InnerLayout>{children}</InnerLayout>
-                        </ChatProvider>
-                      </LangGraphChatProvider>
-                    </SidebarProvider>
-                  </ViewProvider>
-                </WebhookProvider>
-              </ApiToolsProvider>
-            </ConversationProvider>
+            <LangGraphConversationProvider>
+                <ApiToolsProvider>
+                  <WebhookProvider>
+                    <ViewProvider>
+                      <SidebarProvider>
+                        <LangGraphChatProvider>
+                          <LangGraphLandingPromptProvider>
+                            <InnerLayout>{children}</InnerLayout>
+                          </LangGraphLandingPromptProvider>
+                        </LangGraphChatProvider>
+                      </SidebarProvider>
+                    </ViewProvider>
+                  </WebhookProvider>
+                </ApiToolsProvider>
+            </LangGraphConversationProvider>
           </AgentProvider>
         </BillingProvider>
       </UserProvider>

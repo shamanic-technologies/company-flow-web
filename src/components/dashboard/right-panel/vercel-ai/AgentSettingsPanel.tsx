@@ -1,4 +1,4 @@
-'use client';
+/*'use client';
 
 import { useState } from 'react';
 import { Agent, Conversation } from '@agent-base/types';
@@ -6,7 +6,7 @@ import AgentSettings from '../agents/agent-settings/AgentSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useConversationsQuery } from '@/hooks/useConversationsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
-import ConversationViewer from './ConversationViewer';
+import ConversationViewer from './vercel-ai/ConversationViewer';
 import { useUserContext } from '@/providers/UserProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquareText } from 'lucide-react';
@@ -109,3 +109,4 @@ export default function AgentSettingsPanel({ agent }: AgentSettingsPanelProps) {
         </div>
     );
 } 
+*/
